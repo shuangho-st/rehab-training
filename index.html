@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>復健中病人狀況判讀｜互動練習示範</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1D6873" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E181B" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="狀況判讀">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F4; --surface:#FBFCFC; --surface2:#E3EBED; --ink:#13262F; --ink2:#4B5E66; --line:#CFDADD;
+  --accent:#1D6873; --on-accent:#F4FAFB; --accent-soft:#D6EAEC;
+  --danger:#B83434; --danger-soft:#F6DEDC; --ok:#2B7349; --ok-soft:#DCEFE2; --warn:#8A5E00; --warn-soft:#F5E9CC;
+  --sans:'Noto Sans TC','PingFang TC','Microsoft JhengHei',Arial,sans-serif;
+  --num:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E181B; --surface:#152227; --surface2:#1C2D33; --ink:#E5EEF0; --ink2:#A7B9BF; --line:#2A3C43;
+    --accent:#5FB6C2; --on-accent:#0B1A1D; --accent-soft:#1E3A40;
+    --danger:#F08A84; --danger-soft:#3A2222; --ok:#79CF9A; --ok-soft:#1D3527; --warn:#E6C06A; --warn-soft:#3A3120;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E181B; --surface:#152227; --surface2:#1C2D33; --ink:#E5EEF0; --ink2:#A7B9BF; --line:#2A3C43;
+  --accent:#5FB6C2; --on-accent:#0B1A1D; --accent-soft:#1E3A40;
+  --danger:#F08A84; --danger-soft:#3A2222; --ok:#79CF9A; --ok-soft:#1D3527; --warn:#E6C06A; --warn-soft:#3A3120;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding:0 18px 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-inner{max-width:720px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:700;font-size:15px}
+.brand small{display:block;font-weight:400;color:var(--ink2);font-size:12px}
+.tabs{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:10px}
+.tabs button{border:0;background:transparent;padding:6px 12px;border-radius:7px;font-size:14px;color:var(--ink2)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+h1{font-size:26px;line-height:1.3;margin:28px 0 6px}
+h2{font-size:19px;line-height:1.4;margin:26px 0 10px}
+p{margin:0 0 10px}
+.muted{color:var(--ink2)}
+.small{font-size:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:12px 18px;font-weight:700;font-size:16px;background:var(--accent);color:var(--on-accent);min-height:48px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn.block{width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.chip{display:inline-block;font-size:13px;font-weight:500;padding:2px 10px;border-radius:999px;white-space:nowrap}
+.c-ok{background:var(--ok-soft);color:var(--ok)}
+.c-due{background:var(--warn-soft);color:var(--warn)}
+.c-bad{background:var(--danger-soft);color:var(--danger)}
+.c-idle{background:var(--surface2);color:var(--ink2)}
+.c-acc{background:var(--accent-soft);color:var(--accent)}
+.concept{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.concept:last-child{border-bottom:0}
+.concept b{display:block;font-size:16px}
+.dots{display:flex;gap:5px;margin-top:4px}
+.dots i{width:22px;height:6px;border-radius:3px;background:var(--line)}
+.dots i.on{background:var(--ok)}
+/* scenario */
+.stepper{display:flex;gap:6px;margin:18px 0 12px;font-size:13px}
+.stepper span{flex:1;text-align:center;padding:6px 4px;border-radius:8px;background:var(--surface2);color:var(--ink2)}
+.stepper span.on{background:var(--accent);color:var(--on-accent);font-weight:700}
+.stepper span.done{background:var(--accent-soft);color:var(--accent)}
+.story{font-size:17px;line-height:1.75}
+.monitor{background:#0A1517;border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0;color:#DDE6E8;position:relative;transition:box-shadow .3s}
+@media (min-width:560px){.monitor{grid-template-columns:repeat(4,1fr)}}
+.monitor.alarm{box-shadow:0 0 0 3px #E0484888}
+.mcell{background:#101F22;border-radius:10px;padding:8px 12px;min-height:92px;position:relative;overflow:hidden}
+.mlabel{font-size:12px;letter-spacing:.5px;color:#8FA3A8;display:flex;justify-content:space-between}
+.mval{font-family:var(--num);font-weight:600;font-size:44px;line-height:1.05;font-variant-numeric:tabular-nums}
+.mval small{font-size:18px;font-weight:500;margin-left:2px}
+.mnote{font-size:12px;color:#8FA3A8}
+.v-spo2{color:#5CD3E8}.v-hr{color:#6BDB8F}.v-bp{color:#F2C14E}.v-rr{color:#E4E8EA}
+.mcell.hidden .mval{color:#44585D}
+.mcell.al .mval{color:#FF7070}
+.mcell.al::after{content:"";position:absolute;inset:0;border:2px solid #FF6B6B;border-radius:10px;animation:blink 1s steps(2) infinite}
+.mcell.al .mlabel span:last-child{color:#FF8A8A}
+@keyframes blink{50%{opacity:0}}
+.pleth{position:absolute;right:0;bottom:6px;width:120px;height:26px;opacity:.55;overflow:hidden}
+.pleth svg{width:240px;height:26px;animation:scroll 2.2s linear infinite}
+@keyframes scroll{to{transform:translateX(-120px)}}
+@media (prefers-reduced-motion:reduce){.pleth svg,.mcell.al::after{animation:none}}
+.events{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}
+.ev{font-size:15px;padding:8px 12px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 8px 8px 0}
+.ev.bad{border-left-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+.ev b{font-weight:700}
+.q{font-weight:700;font-size:17px;margin:18px 0 10px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:16px;line-height:1.55;min-height:48px}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.used{opacity:.45}
+.opt:disabled{cursor:default}
+.feedback{border-radius:12px;padding:12px 14px;margin-top:12px;font-size:15px;line-height:1.7}
+.fb-ok{background:var(--ok-soft);color:var(--ok)}
+.fb-bad{background:var(--danger-soft);color:var(--danger)}
+.fb-info{background:var(--surface2);color:var(--ink)}
+.seq{display:flex;flex-direction:column;gap:6px;min-height:40px}
+.seq .it{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:15px}
+.num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.num.bad{background:var(--danger)}
+.num.good{background:var(--ok)}
+.result-head{font-size:22px;font-weight:700;margin:8px 0 6px}
+.check{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.check:last-child{border-bottom:0}
+.check .chip{flex:none}
+.teach{font-size:18px;font-weight:700;padding:14px 16px;border-radius:12px;background:var(--accent-soft);color:var(--accent);margin:12px 0}
+/* summary */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-family:var(--num);font-size:34px;line-height:1.1;font-weight:600}
+.stat span{font-size:13px;color:var(--ink2)}
+.video{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.thumb{flex:none;width:96px;height:64px;border-radius:8px;background:#13262F;display:flex;align-items:center;justify-content:center;color:#F2C14E;font-size:12px;flex-direction:column}
+.thumb svg{width:22px;height:22px}
+.vparts{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)}
+.line{background:#C9D8DE;border-radius:14px;padding:14px;color:#13262F}
+.line .who{font-size:13px;font-weight:700;margin-bottom:8px}
+.bubble{background:#FFFFFF;border-radius:4px 16px 16px 16px;padding:12px 14px;font-size:15px;line-height:1.65;max-width:92%}
+.bubble .lbtn{margin-top:10px;text-align:center;border:1.5px solid #1F8A4C;color:#16603A;border-radius:999px;padding:6px;font-weight:700}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:700;color:var(--ink2);font-size:13px;background:var(--surface2)}
+tr:last-child td{border-bottom:0}
+.foot{margin-top:36px;font-size:13px;color:var(--ink2);border-top:1px solid var(--line);padding-top:14px}
+.linkbtn{background:none;border:0;color:var(--accent);text-decoration:underline;padding:4px 0;font-size:14px}
+[hidden]{display:none!important}
+.fld{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--ink2);font-weight:500}
+.fld input,.fld select{font:inherit;font-size:16px;font-weight:400;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:48px;width:100%}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.consent{display:flex;gap:12px;align-items:flex-start;margin-top:16px;font-size:15px;line-height:1.6;cursor:pointer}
+.consent input{width:22px;height:22px;margin:2px 0 0;flex:none;accent-color:var(--accent)}
+.check .chip{align-self:flex-start;margin-top:2px}
+table.dash{min-width:900px}
+table.dash th,table.dash td:first-child{white-space:nowrap}
+table.dash th:first-child,table.dash td:first-child{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 var(--line)}
+table.dash td:first-child{background:var(--surface)}
+table.dash th:first-child{background:var(--surface2)}
+.install{max-width:720px;margin:12px auto 0;padding:0 18px}
+.install-in{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.install-in img{width:44px;height:44px;border-radius:10px;flex:none}
+.install-in .txt{flex:1;font-size:14px;line-height:1.55}
+.install-in .txt b{display:block;font-size:15px}
+.install-in .btn{min-height:40px;padding:8px 14px;font-size:14px}
+.install-x{border:0;background:transparent;color:var(--ink2);font-size:20px;line-height:1;padding:6px;min-width:36px;min-height:36px}
+.ios-steps{margin:8px 0 0;padding-left:20px;font-size:14px;color:var(--ink2)}
+.offline-tag{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">復健中病人狀況判讀<small><span id="mode-label">互動練習</span><span class="offline-tag" id="offline" hidden>離線中</span></small></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-learn" aria-selected="true">學員</button>
+      <button role="tab" id="tab-teach" aria-selected="false">帶教者</button>
+    </div>
+  </div>
+</header>
+<div class="install" id="install" hidden>
+  <div class="install-in">
+    <img src="icons/icon-192.png" alt="" aria-hidden="true">
+    <div class="txt" id="install-txt"><b>安裝到手機</b>從主畫面直接開啟，沒有網路也能練習。</div>
+    <button class="btn" id="install-go" hidden>安裝</button>
+    <button class="install-x" id="install-x" aria-label="關閉安裝提示">×</button>
+  </div>
+</div>
+<main class="wrap" id="app"></main>
+
+<script>
+/* ================= 設定（部署時只需要改這裡） ================= */
+// ① 貼上 Google Apps Script 部署後的「網頁應用程式網址」，留空則不上傳資料
+const API_URL = 'https://script.google.com/macros/s/AKfycbwm-SP-h0OvqrvCJsij_xUU88XtdIAiroBroof83-RXOitUX5n1PZW6rFk3Y97WjDh4cQ/exec';
+// ② 研究說明：請換成 IRB 核准的版本
+const CONSENT_TEXT = '本研究將記錄你在練習中的作答內容、作答時間與精熟進度，用於評估互動式學習的成效。資料只以研究編號記錄，不會出現你的姓名。參與與否不影響你的考核，你可以隨時告知研究團隊退出研究。';
+const APP_VER = 'research-1';
+// 網址加上 ?demo=1 會變成示範模式：不需登入、不上傳資料、可以模擬時間前進
+const DEMO = new URLSearchParams(location.search).has('demo');
+/* ============================================================== */
+const CONCEPTS=[
+{id:'asp',name:'疑似吸入的處置',field:'語言治療',
+ video:{title:'辨識疑似吸入：病人說「還好」不等於沒事',len:'1:30',parts:['常見錯誤：看到病人說還好，就繼續餵','為什麼危險：安靜型吸入沒有咳嗽，卻可能造成吸入性肺炎','正確做法：停止進食、前傾咳嗽、必要時抽痰並通報','一句重點：病人說「還好」，不等於沒事']},
+ variants:[
+ {title:'布丁質地試吃',setting:'病房床邊',
+  story:'78 歲男性，左側中風第 10 天，床邊吞嚥訓練進行布丁質地試吃。第三口後出現濕潤嗓音、輕咳，病人說「還好，沒事」。',
+  vit:{spo2:90,hr:98,bp:[134,80],rr:24},worse:{spo2:84,hr:112,bp:[140,84],rr:30},
+  assess:[
+   {t:'量血氧、觀察呼吸',type:'key',reveal:['spo2','hr','rr'],find:'血氧 90%（治療前 96%），呼吸 24 次／分、稍費力'},
+   {t:'請病人發「啊」，聽音質',type:'key',find:'聲音濕潤、有咕嚕聲'},
+   {t:'請病人用力咳嗽',type:'key',find:'咳嗽力量偏弱，咳不太出來'},
+   {t:'翻閱病歷',type:'neutral',find:'左側大腦中動脈梗塞第 10 天，目前鼻胃管留置'},
+   {t:'再餵一口，觀察吞嚥',type:'harm',find:'病人再次嗆咳，血氧持續下降'}],
+  stop:[{t:'要，停止進食，有疑似吸入的警訊',ok:true},{t:'不用，病人說還好，改成較稠的質地繼續',ok:false}],
+  why:'濕潤嗓音、咳嗽無力加上血氧下降，是疑似吸入的警訊。病人主觀的「還好」不能作為判斷依據。',
+  steps:['立即停止進食，清除口中殘留食物','協助坐姿前傾，鼓勵用力咳嗽','咳不出或血氧持續下降時抽痰，呼叫護理師，必要時給氧','持續監測血氧與呼吸，直到穩定','通知醫師，完成治療紀錄與事件通報'],
+  distractor:{t:'給病人喝一口水，把食物沖下去',why:'疑似吸入時再給水，會增加吸入的風險。'},
+  teach:'病人說「還好」，不等於沒事。'},
+ {title:'稀液體試飲',setting:'治療室',
+  story:'66 歲女性，鼻咽癌放射治療後半年，進行稀液體試飲。喝完第二口後沒有咳嗽，但聲音變得濕濕的，病人點頭表示可以繼續。',
+  vit:{spo2:91,hr:92,bp:[124,76],rr:22},worse:{spo2:86,hr:106,bp:[128,80],rr:28},
+  assess:[
+   {t:'量血氧、觀察呼吸',type:'key',reveal:['spo2','hr','rr'],find:'血氧 91%（治療前 97%），呼吸變快'},
+   {t:'請病人發聲，聽音質',type:'key',find:'聲音濕潤'},
+   {t:'觀察吞嚥後是否有延遲咳嗽',type:'key',find:'約 20 秒後出現微弱咳嗽'},
+   {t:'確認放療結束的時間',type:'neutral',find:'放療結束 6 個月，頸部有纖維化'},
+   {t:'請病人再喝一口確認',type:'harm',find:'病人仍未咳嗽，但呼吸更急促，血氧下降'}],
+  stop:[{t:'要，停止進食，沒有咳嗽不代表沒有吸入',ok:true},{t:'不用，沒有嗆咳，可以繼續',ok:false}],
+  why:'放療後病人的喉部感覺可能變差，常出現沒有咳嗽的「安靜型吸入」。濕潤嗓音與血氧下降就是警訊。',
+  steps:['立即停止進食，清除口中殘留食物','協助坐姿前傾，鼓勵用力咳嗽','咳不出或血氧持續下降時抽痰，呼叫護理師，必要時給氧','持續監測血氧與呼吸，直到穩定','通知醫師，完成治療紀錄與事件通報'],
+  distractor:{t:'請病人躺平休息',why:'平躺會讓口咽殘留物更容易流入氣道。'},
+  teach:'沒有咳嗽，不代表沒有吸入。'}]},
+{id:'exe',name:'運動中生命徵象異常',field:'物理治療',
+ video:{title:'運動中何時該停：生命徵象的警訊',len:'1:45',parts:['常見錯誤：降低強度，讓病人繼續運動','為什麼危險：胸悶、冒冷汗、血壓下降可能是心臟缺血或循環不穩','正確做法：立即停止、坐下或平躺、呼叫支援並持續監測','一句重點：運動中不舒服，先停再說']},
+ variants:[
+ {title:'腳踏車訓練',setting:'治療室',
+  story:'65 歲男性，冠狀動脈繞道術後第 7 天，進行固定式腳踏車訓練。第 6 分鐘時說胸口悶悶的，額頭冒汗。',
+  vit:{spo2:94,hr:128,bp:[96,62],rr:24},worse:{spo2:90,hr:142,bp:[84,54],rr:28},
+  assess:[
+   {t:'量血壓與心跳',type:'key',reveal:['bp','hr'],find:'血壓 96/62（運動前 128/76），心跳 128，血壓下降且心跳偏快'},
+   {t:'詢問胸悶的位置與性質',type:'key',find:'胸口中間有壓迫感，延伸到左肩'},
+   {t:'觀察膚色與出汗',type:'key',reveal:['spo2','rr'],find:'臉色蒼白、冒冷汗，血氧 94%'},
+   {t:'查看今天的運動處方',type:'neutral',find:'目標心跳 110 以下，輕度強度'},
+   {t:'請病人再騎兩分鐘，看會不會好轉',type:'harm',find:'胸悶加劇，血壓持續下降'}],
+  stop:[{t:'要，立即停止運動',ok:true},{t:'先降低阻力，讓病人慢慢騎',ok:false}],
+  why:'運動中胸悶、冒冷汗，加上血壓下降、心跳過快，都是應立即停止運動的警訊。',
+  steps:['立即停止運動，協助病人坐下或平躺','呼叫護理師與醫師','持續監測血壓、心跳與血氧，準備急救設備','若病人無反應、沒有正常呼吸，啟動急救流程並開始 CPR','完成紀錄與事件通報'],
+  distractor:{t:'讓病人自己走回病房休息',why:'狀況不穩定時讓病人自行走動，可能昏倒或跌倒，也離開了監測。'},
+  teach:'運動中出現胸悶、冒冷汗，先停再說。'},
+ {title:'床邊站立訓練',setting:'病房床邊',
+  story:'82 歲女性，臥床兩週後第一次進行床邊站立訓練。站起來約 1 分鐘，說頭很暈、眼前發黑，臉色蒼白。',
+  vit:{spo2:96,hr:108,bp:[92,58],rr:20},worse:{spo2:95,hr:118,bp:[78,48],rr:22},
+  assess:[
+   {t:'量血壓與心跳',type:'key',reveal:['bp','hr'],find:'血壓 92/58（坐姿 134/78），心跳 108'},
+   {t:'詢問症狀',type:'key',find:'頭暈、視線模糊、想吐'},
+   {t:'觀察意識與反應',type:'key',reveal:['spo2','rr'],find:'回答變慢，但叫得醒'},
+   {t:'確認今天是否有吃早餐',type:'neutral',find:'早餐吃了半份'},
+   {t:'鼓勵病人再撐 30 秒',type:'harm',find:'病人腿軟，差點跌倒'}],
+  stop:[{t:'要，立即讓病人坐下或平躺',ok:true},{t:'讓病人扶著床欄再站一下，適應看看',ok:false}],
+  why:'站起後血壓明顯下降並出現頭暈、眼前發黑，是姿勢性低血壓的表現，繼續站立可能暈倒、跌倒。',
+  steps:['立即協助病人坐下或平躺，必要時抬高下肢','持續監測血壓、心跳與意識','呼叫護理師，依狀況通知醫師','若病人無反應、沒有正常呼吸，啟動急救流程並開始 CPR','完成紀錄，調整下次站立訓練的進程'],
+  distractor:{t:'鬆開扶持，讓病人自己站穩',why:'病人隨時可能暈倒，應維持扶持，並盡快讓病人坐下或躺下。'},
+  teach:'站起來頭暈，先讓病人坐下或躺下。'}]},
+{id:'trach',name:'氣切相關緊急狀況',field:'語言治療',
+ video:{title:'氣切病人的緊急狀況：說話閥與痰液阻塞',len:'1:50',parts:['常見錯誤：以為病人只是緊張，說話閥繼續戴著','為什麼危險：吐氣出不去或痰液阻塞，血氧會快速下降','正確做法：移除說話閥、評估氣道、必要時抽痰給氧','一句重點：氣道問題，永遠優先於訓練']},
+ variants:[
+ {title:'說話閥發聲訓練',setting:'病房床邊',
+  story:'70 歲男性，氣切術後，第三次配戴說話閥進行發聲訓練。約 3 分鐘後呼吸變得很費力，吸氣時有喘鳴聲，病人顯得焦躁。',
+  vit:{spo2:89,hr:118,bp:[146,88],rr:30},worse:{spo2:83,hr:128,bp:[152,92],rr:34},
+  assess:[
+   {t:'觀察呼吸型態與胸廓起伏',type:'key',reveal:['rr'],find:'吸氣費力，使用呼吸輔助肌'},
+   {t:'量血氧',type:'key',reveal:['spo2','hr'],find:'血氧 89%（配戴前 97%）'},
+   {t:'確認氣囊是否已完全放氣',type:'key',find:'氣囊仍有部分充氣'},
+   {t:'確認說話閥的型號',type:'neutral',find:'單向閥型說話閥'},
+   {t:'鼓勵病人繼續發聲練習',type:'harm',find:'病人呼吸更加困難，無法說話'}],
+  stop:[{t:'要，立即停止並移除說話閥',ok:true},{t:'先讓病人休息，說話閥繼續戴著',ok:false}],
+  why:'說話閥使用中出現呼吸窘迫，常見原因是氣囊未完全放氣或上呼吸道阻塞，吐氣出不去，應立即移除說話閥。',
+  steps:['立即移除說話閥','評估氣道，必要時抽痰','呼叫護理師，必要時給氧','持續監測血氧與呼吸，直到穩定','通知醫師、完成紀錄，重新評估說話閥使用條件'],
+  distractor:{t:'把說話閥壓緊一點，再試一次',why:'說話閥下呼吸困難時繼續配戴，會讓吐氣出不去，情況更危險。'},
+  teach:'戴說話閥喘不過氣，第一步是拿掉。'},
+ {title:'口腔動作訓練',setting:'病房床邊',
+  story:'75 歲女性，長期氣切，進行口腔動作訓練時開始咳嗽，氣切口傳出明顯痰音，接著呼吸變得急促。',
+  vit:{spo2:90,hr:112,bp:[138,84],rr:28},worse:{spo2:85,hr:122,bp:[142,86],rr:32},
+  assess:[
+   {t:'聽呼吸聲與痰音',type:'key',reveal:['rr'],find:'氣切口有明顯痰音'},
+   {t:'量血氧',type:'key',reveal:['spo2','hr'],find:'血氧 90%（治療前 96%）'},
+   {t:'觀察病人能否自己咳出',type:'key',find:'咳嗽無力，痰咳不出來'},
+   {t:'確認今天的訓練項目',type:'neutral',find:'舌頭與嘴唇的動作訓練'},
+   {t:'先把今天的訓練做完再處理',type:'harm',find:'痰音變大，血氧持續下降'}],
+  stop:[{t:'要，停止訓練，先處理氣道',ok:true},{t:'請病人自己咳，繼續訓練',ok:false}],
+  why:'痰液阻塞會讓血氧快速下降，氣道問題永遠優先於訓練。',
+  steps:['停止訓練，協助病人坐高','鼓勵咳嗽，咳不出時抽痰','呼叫護理師，必要時給氧','持續監測血氧與呼吸，直到穩定','完成紀錄，必要時通知醫師'],
+  distractor:{t:'用手指從氣切口把痰挖出來',why:'不可用手指伸入氣切口，會造成感染與傷害，應以抽痰處理。'},
+  teach:'氣道問題，永遠優先於訓練。'}]},
+{id:'neuro',name:'治療中意識或神經學改變',field:'職能／語言治療',
+ video:{title:'治療中意識改變：中風與低血糖的辨識',len:'2:00',parts:['常見錯誤：讓病人休息，等症狀自己好','為什麼危險：中風治療以分鐘計算；低血糖可能很快失去意識','正確做法：停止治療、記下時間、立即通報，不從嘴巴餵東西','一句重點：神經學或意識突然改變，馬上通報']},
+ variants:[
+ {title:'上肢功能訓練',setting:'治療室',
+  story:'68 歲男性，因腰椎手術住院，進行上肢功能訓練。訓練中突然口齒不清，右手握不住杯子，嘴角往一邊歪。',
+  vit:{spo2:96,hr:92,bp:[178,98],rr:18},worse:{spo2:95,hr:96,bp:[184,102],rr:18},
+  assess:[
+   {t:'快速評估臉、手、說話（FAST）',type:'key',find:'右側嘴角下垂、右手無力、說話含糊'},
+   {t:'確認症狀出現的時間',type:'key',find:'約 3 分鐘前開始，之前完全正常'},
+   {t:'量血壓與血糖',type:'key',reveal:['bp','hr','spo2','rr'],find:'血壓 178/98，血糖 132 mg/dL'},
+   {t:'確認今天的治療目標',type:'neutral',find:'上肢精細動作訓練'},
+   {t:'讓病人休息一下，晚點再看',type:'harm',find:'延誤處置，症狀沒有改善'}],
+  stop:[{t:'要，立即停止並通報',ok:true},{t:'先休息 10 分鐘，觀察症狀會不會自己好',ok:false}],
+  why:'突然出現臉歪、單側無力、說話含糊，要懷疑急性中風。治療的黃金時間以分鐘計算，不能等。',
+  steps:['停止治療，讓病人安全坐好或躺好','記下症狀出現的確切時間','立即通知護理師與醫師，依院內急性中風流程處理','持續監測意識與生命徵象，暫時禁止進食','完成紀錄與事件通報'],
+  distractor:{t:'先讓病人喝水休息，等症狀緩解',why:'疑似中風時吞嚥功能可能受影響，不可給水；等待也會延誤治療。'},
+  teach:'臉歪、手無力、說話不清：記下時間，馬上通報。'},
+ {title:'床邊語言訓練',setting:'病房床邊',
+  story:'72 歲女性，糖尿病、使用胰島素，上午進行語言訓練。治療到一半反應越來越慢，冒冷汗、手在發抖，要叫好幾次才回應。',
+  vit:{spo2:97,hr:106,bp:[128,76],rr:20},worse:{spo2:96,hr:112,bp:[124,74],rr:20},
+  assess:[
+   {t:'觀察意識與反應',type:'key',reveal:['hr','spo2','rr'],find:'叫名字才勉強回應，答非所問'},
+   {t:'詢問進食與用藥',type:'key',find:'早上打了胰島素，早餐只吃兩口'},
+   {t:'請護理師協助測血糖',type:'key',reveal:['bp'],find:'血糖 52 mg/dL'},
+   {t:'確認今天的訓練目標',type:'neutral',find:'命名與口語表達練習'},
+   {t:'繼續做完今天的命名練習',type:'harm',find:'病人反應更差，幾乎叫不醒'}],
+  stop:[{t:'要，停止治療，懷疑低血糖',ok:true},{t:'病人可能只是累了，放慢速度繼續',ok:false}],
+  why:'冒冷汗、手抖、意識變差，在使用胰島素的病人要先懷疑低血糖，需要立即處理。',
+  steps:['停止治療，確保病人安全','呼叫護理師測量血糖','依醫囑或院內流程處理低血糖','持續監測意識與生命徵象','完成紀錄，通知醫師'],
+  distractor:{t:'意識不清時直接餵病人喝果汁',why:'意識不清時經口給食物容易嗆到、吸入，應由護理師依流程處理。'},
+  teach:'意識變差的病人，不要從嘴巴餵東西。'}]}
+];
+const MASTER=2;
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const byId=id=>CONCEPTS.find(c=>c.id===id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+function fresh(){const p={};CONCEPTS.forEach(c=>p[c.id]={streak:0,attempts:0,wrong:0,mastered:false,next:1,seen:false});return{day:1,prog:p,log:[]}}
+
+/* 使用者與研究天數 */
+const RESEARCH=!DEMO;
+let U=RESEARCH?LS.get('rehab-user-v1'):null;   // {code, role, consentAt, start}
+const skey=()=>DEMO?'rehab-demo-v1':'rehab-state-'+(U?U.code:'');
+let S=fresh();
+function loadState(){S=fresh();const x=LS.get(skey());if(x&&x.prog&&CONCEPTS.every(c=>x.prog[c.id]))S=x}
+function save(){LS.set(skey(),S)}
+loadState();
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYmd=s=>{const[y,m,d]=String(s).split('-').map(Number);return new Date(y,(m||1)-1,d||1)};
+function studyDay(){if(!U||!U.start)return 1;return Math.max(1,Math.round((parseYmd(ymd(new Date()))-parseYmd(U.start))/864e5)+1)}
+function dayDate(n){const d=parseYmd(U.start);d.setDate(d.getDate()+n-1);return`${d.getMonth()+1}/${d.getDate()}`}
+const dayLabel=n=>RESEARCH&&U?`第 ${n} 天（${dayDate(n)}）`:`第 ${n} 天`;
+function syncDay(){if(RESEARCH)S.day=studyDay()}
+function rebuild(attempts){const s=fresh();
+  attempts.forEach(a=>{const p=s.prog[a.cid];if(!p)return;p.seen=true;p.attempts++;
+    if(a.pass){p.streak++;if(p.streak>=MASTER)p.mastered=true;else p.next=a.day+3}
+    else{p.streak=0;p.wrong++;p.next=a.day+1}
+    s.log.push({cid:a.cid,day:a.day,pass:a.pass,stopMs:Math.round((a.stopSec||0)*1000)})});
+  return s}
+
+/* 上傳佇列：沒網路時先存在手機，連上網路後自動補傳 */
+const OUT='rehab-outbox-v1';
+const pending=()=>(LS.get(OUT)||[]).length;
+let flushing=false;
+function queue(item){if(!API_URL)return;const q=LS.get(OUT)||[];q.push(item);LS.set(OUT,q);renderSync();flush()}
+async function flush(){
+  if(!API_URL||flushing||!navigator.onLine)return;flushing=true;
+  try{let q=LS.get(OUT)||[];
+    while(q.length){
+      await fetch(API_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(q[0])});
+      q=LS.get(OUT)||[];q.shift();LS.set(OUT,q);}
+  }catch(e){}finally{flushing=false;renderSync()}}
+function renderSync(){const el=document.getElementById('sync');if(!el)return;
+  if(!API_URL){el.textContent='尚未設定資料上傳（只存在這支手機）';return}
+  const n=pending();el.textContent=n?`有 ${n} 筆紀錄待上傳，連上網路後會自動傳送`:'作答紀錄已全部上傳';}
+async function getJSON(url,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms||10000);
+  try{const r=await fetch(url,{signal:ac.signal});return await r.json()}finally{clearTimeout(t)}}
+const uid=()=>(U?U.code:'x')+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+const app=document.getElementById('app');
+let tab='learn', session=null, cur=null, ticker=null;
+
+function status(c){const p=S.prog[c.id];
+  if(p.mastered)return['精熟','c-ok'];
+  if(!p.seen)return['尚未練習','c-idle'];
+  if(p.next<=S.day)return['今天到期','c-due'];
+  return[RESEARCH&&U?`${dayDate(p.next)} 複習`:`第 ${p.next} 天複習`,'c-acc'];}
+function due(){return CONCEPTS.filter(c=>!S.prog[c.id].mastered&&S.prog[c.id].next<=S.day).map(c=>c.id)}
+function nextDay(){const n=CONCEPTS.filter(c=>!S.prog[c.id].mastered).map(c=>S.prog[c.id].next);return n.length?Math.min(...n):null}
+function dots(p){let s='';for(let i=0;i<MASTER;i++)s+=`<i class="${(p.mastered||i<p.streak)?'on':''}"></i>`;return`<span class="dots" aria-label="連續答對 ${p.mastered?MASTER:p.streak} / ${MASTER}">${s}</span>`}
+
+/* ---------- registration (research mode) ---------- */
+function register(){
+  stopTicker();window.scrollTo(0,0);
+  app.innerHTML=`
+  <h1>開始之前</h1>
+  <p class="muted">這是復健醫學部新人訓練研究的互動練習。請輸入研究團隊給你的研究編號，換手機時用同一個編號就能接回進度。</p>
+  <div class="panel stack" style="margin-top:16px">
+    <label class="fld"><span>研究編號</span><input id="r-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例如 ST01"></label>
+    <label class="fld"><span>職類</span><select id="r-role"><option value="">請選擇</option><option>物理治療</option><option>職能治療</option><option>語言治療</option><option>其他</option></select></label>
+  </div>
+  <h2>研究說明</h2>
+  <div class="panel small" style="line-height:1.85">${esc(CONSENT_TEXT)}</div>
+  <label class="consent"><input type="checkbox" id="r-ok"><span>我已閱讀研究說明，同意參與並提供作答紀錄</span></label>
+  <p class="small" id="r-err" role="alert" style="color:var(--danger);min-height:24px;margin:8px 0 4px"></p>
+  <button class="btn block" id="r-go">開始練習</button>`;
+  const err=document.getElementById('r-err'),go=document.getElementById('r-go');
+  ['r-code','r-role','r-ok'].forEach(id=>document.getElementById(id).addEventListener('input',()=>err.textContent=''));
+  go.onclick=async()=>{
+    const code=document.getElementById('r-code').value.trim().toUpperCase();
+    const role=document.getElementById('r-role').value;
+    if(!/^[A-Z0-9_-]{2,20}$/.test(code)){err.textContent='請輸入研究編號（英文字母或數字，2 到 20 個字）';return}
+    if(!role){err.textContent='請選擇職類';return}
+    if(!document.getElementById('r-ok').checked){err.textContent='請先勾選同意參與';return}
+    go.disabled=true;go.textContent='確認中…';
+    let start=ymd(new Date()),restored=null,serverRole='';
+    if(API_URL&&navigator.onLine){
+      try{const r=await getJSON(`${API_URL}?action=progress&id=${encodeURIComponent(code)}`,10000);
+        if(r&&r.ok&&r.found){if(r.start)start=r.start;serverRole=r.role||'';restored=r.attempts||[]}}catch(e){}
+    }
+    U={code,role:serverRole||role,consentAt:new Date().toISOString(),start};
+    LS.set('rehab-user-v1',U);
+    loadState();
+    if(restored&&restored.length>=S.log.length){S=rebuild(restored)}
+    save();
+    queue({type:'register',code:U.code,role:U.role,consentAt:U.consentAt,start:U.start,device:navigator.userAgent.slice(0,200)});
+    home();
+  };
+}
+
+/* ---------- home ---------- */
+function home(){
+  stopTicker();
+  if(RESEARCH&&!U){register();return}
+  window.scrollTo(0,0);syncDay();save();
+  const d=due(), mastered=CONCEPTS.filter(c=>S.prog[c.id].mastered).length;
+  let cta='';
+  if(mastered===CONCEPTS.length){
+    cta=`<div class="feedback fb-ok"><b>全部概念都已精熟。</b>${DEMO?'正式版會在一個月後再抽考一次，並安排實作演練。':'請和帶教者約實作演練的時間。'}</div>
+    ${DEMO?`<div class="row" style="margin-top:12px"><button class="btn" id="reset">重新開始示範</button></div>`:''}`;
+  }else if(d.length){
+    cta=`<button class="btn block" id="start">開始今天的練習（${d.length} 題，約 ${d.length*3} 分鐘）</button>`;
+  }else{
+    const n=nextDay();
+    cta=`<div class="feedback fb-info">今天沒有到期的題目。下一次複習在${dayLabel(n)}。</div>
+    ${DEMO?`<div class="row" style="margin-top:12px"><button class="btn" id="jump">模擬時間前進到第 ${n} 天</button></div>`:''}`;
+  }
+  app.innerHTML=`
+  <h1>第 ${S.day} 天</h1>
+  ${RESEARCH?`<p class="small muted" style="margin:-4px 0 8px">研究編號 ${esc(U.code)}・${esc(U.role)}・${esc(U.start)} 開始</p>`:''}
+  <p class="muted">模組：復健中病人惡化的辨識與處置。每個概念連續答對 ${MASTER} 次才算精熟，答錯會隔天換一個情境再考。</p>
+  <div style="margin:18px 0">${cta}</div>
+  <h2>精熟進度　${mastered} / ${CONCEPTS.length}</h2>
+  <div class="panel">${CONCEPTS.map(c=>{const p=S.prog[c.id],[t,k]=status(c);
+    return`<div class="concept"><div><b>${c.name}</b><span class="muted small">${c.field}</span>${dots(p)}</div><span class="chip ${k}">${t}</span></div>`}).join('')}</div>
+  ${RESEARCH?`<p class="small muted" id="sync" style="margin-top:12px"></p>`:`<p class="small muted" style="margin-top:10px">示範版有 4 個概念，每個概念有 2 種情境；正式版預計 10–12 個概念。</p>`}
+  ${DEMO&&(S.day>1||S.log.length)?`<button class="linkbtn" id="reset2">清除紀錄，從第 1 天重新開始</button>`:''}
+  ${RESEARCH?`<button class="linkbtn" id="switch">不是 ${esc(U.code)}？切換使用者</button>`:''}
+  <div class="foot">內容處置流程與停止標準需經醫師確認並依院內規範調整。</div>`;
+  const on=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f};
+  on('start',()=>{session={queue:shuffle(d),idx:0,results:[]};startScenario()});
+  on('jump',()=>{S.day=nextDay();save();home()});
+  on('reset',()=>{S=fresh();save();home()});
+  on('reset2',()=>{S=fresh();save();home()});
+  on('switch',()=>{if(!confirm('切換使用者後，需要重新輸入研究編號。尚未上傳的紀錄仍會在連上網路後自動傳送。'))return;U=null;LS.del('rehab-user-v1');S=fresh();home()});
+  renderSync();
+}
+
+/* ---------- scenario ---------- */
+const VK=[['spo2','血氧','%'],['hr','心跳','bpm'],['bp','血壓','mmHg'],['rr','呼吸','次/分']];
+function startScenario(){
+  const c=byId(session.queue[session.idx]), p=S.prog[c.id], v=c.variants[p.attempts%c.variants.length];
+  cur={c,v,stage:1,picked:[],harm:false,shown:{spo2:false,hr:false,bp:false,rr:false},vit:JSON.parse(JSON.stringify(v.vit)),target:null,stopOk:null,order:[],pool:shuffle([...v.steps,v.distractor.t]),stopOpts:shuffle(v.stop),t0:0,stopMs:0};
+  window.scrollTo(0,0);
+  app.innerHTML=`
+  <div class="stepper" id="stepper"></div>
+  <div class="row" style="align-items:center;gap:8px;margin-bottom:6px"><span class="chip c-acc">${c.field}</span><span class="small muted">${v.setting}・${v.title}・第 ${session.idx+1} / ${session.queue.length} 題</span></div>
+  <p class="story">${v.story}</p>
+  <div class="monitor" id="monitor" aria-live="polite">${VK.map(([k,l,u])=>`
+    <div class="mcell" id="c-${k}"><div class="mlabel"><span>${l}</span><span id="n-${k}"></span></div>
+    <div class="mval v-${k}" id="m-${k}">--</div><div class="mnote" id="u-${k}">尚未量測</div>
+    ${k==='spo2'?`<div class="pleth" aria-hidden="true"><svg viewBox="0 0 240 26"><path d="M0 20 L10 20 L16 6 L22 16 L26 13 L32 20 L40 20 L46 6 L52 16 L56 13 L62 20 L70 20 L76 6 L82 16 L86 13 L92 20 L100 20 L106 6 L112 16 L116 13 L122 20 L130 20 L136 6 L142 16 L146 13 L152 20 L160 20 L166 6 L172 16 L176 13 L182 20 L190 20 L196 6 L202 16 L206 13 L212 20 L220 20 L226 6 L232 16 L236 13 L240 20" fill="none" stroke="#5CD3E8" stroke-width="1.6"/></svg></div>`:''}
+    </div>`).join('')}</div>
+  <div class="events" id="events"></div>
+  <div id="stage"></div>`;
+  paintMonitor();startTicker();stage1();
+}
+function stepper(){const n=['評估','判斷','處置'];document.getElementById('stepper').innerHTML=n.map((t,i)=>`<span class="${i+1===cur.stage?'on':(i+1<cur.stage?'done':'')}">${i+1}　${t}</span>`).join('')}
+function alarmOf(k,val){if(k==='spo2')return val<92;if(k==='hr')return val>120||val<50;if(k==='rr')return val>24||val<10;if(k==='bp')return val[0]<90||val[0]>170;return false}
+function paintMonitor(j){
+  if(!cur)return;let any=false;
+  VK.forEach(([k,,u])=>{const cell=document.getElementById('c-'+k);if(!cell)return;
+    const m=document.getElementById('m-'+k),un=document.getElementById('u-'+k),nn=document.getElementById('n-'+k);
+    if(!cur.shown[k]){cell.className='mcell hidden';m.textContent='--';un.textContent='尚未量測';nn.textContent='';return}
+    let val=cur.vit[k];
+    if(j&&k==='spo2')val=Math.min(100,val+(Math.random()<.3?(Math.random()<.5?-1:1):0));
+    if(j&&k==='hr')val=val+Math.round((Math.random()-.5)*4);
+    const al=alarmOf(k,val);any=any||al;
+    cell.className='mcell'+(al?' al':'');
+    m.innerHTML=k==='bp'?`${val[0]}/${val[1]}`:`${val}<small>${u==='%'?'%':''}</small>`;
+    un.textContent=u; nn.textContent=al?'警示':'';});
+  document.getElementById('monitor').classList.toggle('alarm',any);
+}
+function startTicker(){stopTicker();ticker=setInterval(()=>{
+  if(cur&&cur.target){let moved=false;const t=cur.target,v=cur.vit;
+    ['spo2','hr','rr'].forEach(k=>{if(v[k]!==t[k]){v[k]+=Math.sign(t[k]-v[k]);moved=true}});
+    [0,1].forEach(i=>{if(v.bp[i]!==t.bp[i]){v.bp[i]+=Math.sign(t.bp[i]-v.bp[i])*Math.min(2,Math.abs(t.bp[i]-v.bp[i]));moved=true}});
+    if(!moved)cur.target=null;}
+  paintMonitor(true);},700)}
+function stopTicker(){if(ticker){clearInterval(ticker);ticker=null}}
+function worsen(){if(!cur.target&&cur.vit.spo2!==cur.v.worse.spo2)cur.target=JSON.parse(JSON.stringify(cur.v.worse))}
+function addEvent(html,bad){const e=document.createElement('div');e.className='ev'+(bad?' bad':'');e.innerHTML=html;document.getElementById('events').appendChild(e)}
+
+function stage1(){
+  cur.stage=1;stepper();
+  const st=document.getElementById('stage');
+  st.innerHTML=`<p class="q">你想先評估什麼？（可以選多項）</p>
+  <div class="stack" id="as">${shuffle(cur.v.assess.map((a,i)=>({a,i}))).map(({a,i})=>`<button class="opt" data-i="${i}">${a.t}</button>`).join('')}</div>
+  <div id="as-note"></div>
+  <div style="margin-top:16px"><button class="btn block" id="to2" disabled>完成評估，進入判斷</button></div>`;
+  st.querySelectorAll('#as .opt').forEach(b=>b.onclick=()=>{
+    const a=cur.v.assess[+b.dataset.i];b.disabled=true;b.classList.add('used');cur.picked.push(a);
+    (a.reveal||[]).forEach(k=>cur.shown[k]=true);paintMonitor();
+    if(a.type==='harm'){cur.harm=true;cur.shown.spo2=true;worsen();addEvent(`<b>${a.t}：</b>${a.find}`,true);
+      document.getElementById('as-note').innerHTML=`<div class="feedback fb-bad">這個選擇讓病人暴露在更高的風險中。監視器上的數值正在變化。</div>`;}
+    else addEvent(`<b>${a.t}：</b>${a.find}`);
+    document.getElementById('to2').disabled=false;});
+  document.getElementById('to2').onclick=()=>{
+    const hidden=VK.filter(([k])=>!cur.shown[k]).map(([,l])=>l);
+    if(hidden.length){VK.forEach(([k])=>cur.shown[k]=true);paintMonitor();addEvent(`護理師協助量測：${hidden.join('、')}`)}
+    stage2();};
+}
+function stage2(){
+  cur.stage=2;stepper();cur.t0=performance.now();
+  const st=document.getElementById('stage');let sel=null;
+  st.innerHTML=`<p class="q">這個狀況要不要停止治療？</p>
+  <div class="stack" id="so">${cur.stopOpts.map((o,i)=>`<button class="opt" data-i="${i}">${o.t}</button>`).join('')}</div>
+  <p class="small" id="err2" style="color:var(--danger);min-height:22px;margin:6px 0 0"></p>
+  <button class="btn block" id="sub2">送出判斷</button><div id="fb2"></div>`;
+  st.querySelectorAll('#so .opt').forEach(b=>b.onclick=()=>{st.querySelectorAll('#so .opt').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');sel=+b.dataset.i;document.getElementById('err2').textContent=''});
+  document.getElementById('sub2').onclick=()=>{
+    if(sel===null){document.getElementById('err2').textContent='請先選一個答案';return}
+    cur.stopMs=performance.now()-cur.t0;const o=cur.stopOpts[sel];cur.stopOk=o.ok;
+    st.querySelectorAll('#so .opt').forEach(b=>b.disabled=true);
+    const sub=document.getElementById('sub2');sub.textContent='進入處置';
+    if(o.ok){document.getElementById('fb2').innerHTML=`<div class="feedback fb-ok"><b>判斷正確。</b>${cur.v.why}</div>`}
+    else{worsen();addEvent('你選擇繼續治療，病人狀況惡化',true);
+      document.getElementById('fb2').innerHTML=`<div class="feedback fb-bad"><b>應該停止。</b>${cur.v.why}<br>接下來請排出處置步驟。</div>`}
+    sub.onclick=stage3;};
+}
+function stage3(){
+  cur.stage=3;stepper();cur.order=[];
+  const st=document.getElementById('stage');
+  const draw=()=>{
+    st.innerHTML=`<p class="q">接下來要做什麼？請依序點選 5 個步驟</p>
+    <p class="small muted" style="margin-top:-6px">選項中有一個是不該做的。</p>
+    <div class="stack" id="pool">${cur.pool.map((t,i)=>`<button class="opt ${cur.order.includes(i)?'used':''}" data-i="${i}" ${cur.order.includes(i)?'disabled':''}>${t}</button>`).join('')}</div>
+    <p class="q" style="font-size:15px">你的順序</p>
+    <div class="seq">${cur.order.length?cur.order.map((i,n)=>`<div class="it"><span class="num">${n+1}</span><span>${cur.pool[i]}</span></div>`).join(''):'<p class="small muted">尚未選擇</p>'}</div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="sub3" ${cur.order.length<5?'disabled':''}>送出順序</button><button class="btn ghost" id="rs3" ${cur.order.length?'':'disabled'}>重排</button></div>`;
+    st.querySelectorAll('#pool .opt').forEach(b=>b.onclick=()=>{if(cur.order.length>=5)return;cur.order.push(+b.dataset.i);draw()});
+    document.getElementById('rs3').onclick=()=>{cur.order=[];draw()};
+    document.getElementById('sub3').onclick=finish;};
+  draw();
+}
+function finish(){
+  const v=cur.v,chosen=cur.order.map(i=>cur.pool[i]);
+  const usedBad=chosen.includes(v.distractor.t);
+  const orderOk=!usedBad&&chosen.every((t,i)=>t===v.steps[i]);
+  const pass=!cur.harm&&cur.stopOk&&orderOk;
+  const p=S.prog[cur.c.id];p.seen=true;p.attempts++;
+  if(pass){p.streak++;if(p.streak>=MASTER){p.mastered=true}else p.next=S.day+3}
+  else{p.streak=0;p.wrong++;p.next=S.day+1}
+  S.log.push({cid:cur.c.id,day:S.day,pass,stopMs:Math.round(cur.stopMs)});save();
+  session.results.push({cid:cur.c.id,pass,title:v.title});
+  const keys=v.assess.filter(a=>a.type==='key'),gotK=cur.picked.filter(a=>a.type==='key');
+  const missed=keys.filter(k=>!cur.picked.includes(k)).map(k=>k.t);
+  const harmPick=cur.picked.find(a=>a.type==='harm');
+  if(RESEARCH&&U)queue({type:'attempt',id:uid(),at:new Date().toISOString(),code:U.code,role:U.role,day:S.day,
+    cid:cur.c.id,cname:cur.c.name,variant:v.title,attemptNo:p.attempts,pass,
+    keyHit:gotK.length,keyTotal:keys.length,missed:missed.join('、'),harm:harmPick?harmPick.t:'',
+    stopOk:!!cur.stopOk,stopSec:+(cur.stopMs/1000).toFixed(2),orderOk,distractor:usedBad,order:chosen.join('｜'),
+    streak:p.streak,mastered:p.mastered,next:p.mastered?'':p.next,ver:APP_VER});
+  const assessLine=harmPick?`你選了「${harmPick.t}」，讓病人暴露在風險中。`:`評估了 ${gotK.length} / ${keys.length} 個關鍵項目${missed.length?`，漏了：${missed.join('、')}`:''}。`;
+  const orderLine=usedBad?`你選了「${v.distractor.t}」。${v.distractor.why}`:(orderOk?'順序完全正確。':'步驟都對，但順序不同，請對照下方的標準流程。');
+  let mastery;
+  if(p.mastered)mastery=`<b>此概念已精熟。</b>連續答對 ${MASTER} 次。`;
+  else if(pass)mastery=`連續答對 ${p.streak} / ${MASTER} 次。${dayLabel(p.next)}會換一個情境抽考，確認你記得住。`;
+  else mastery=`${dayLabel(p.next)}會換一個新情境重考這個概念。`;
+  window.scrollTo(0,0);
+  app.querySelector('#events').innerHTML='';
+  document.getElementById('stepper').innerHTML='';
+  document.getElementById('stage').innerHTML=`
+  <div class="result-head" style="color:${pass?'var(--ok)':'var(--danger)'}">${pass?'處理得很好':'這一題還需要再練習'}</div>
+  <div class="panel">
+    <div class="check"><span class="chip ${harmPick?'c-bad':(missed.length?'c-due':'c-ok')}">評估</span><span>${assessLine}</span></div>
+    <div class="check"><span class="chip ${cur.stopOk?'c-ok':'c-bad'}">判斷</span><span>${cur.stopOk?'正確判斷要停止治療。':'應該停止治療。'}（用時 ${(cur.stopMs/1000).toFixed(1)} 秒）</span></div>
+    <div class="check"><span class="chip ${orderOk?'c-ok':'c-bad'}">處置</span><span>${orderLine}</span></div>
+  </div>
+  <div class="teach">${v.teach}</div>
+  <p class="q" style="font-size:15px">標準處置流程</p>
+  <div class="seq">${v.steps.map((t,i)=>{const same=chosen[i]===t;return`<div class="it"><span class="num ${same?'good':'bad'}">${i+1}</span><span>${t}<br><span class="small" style="color:${same?'var(--ok)':'var(--danger)'}">${same?'你的第 '+(i+1)+' 步相同':'你的第 '+(i+1)+' 步：'+(chosen[i]||'—')}</span></span></div>`}).join('')}</div>
+  <div class="feedback fb-info">${mastery}</div>
+  <div style="margin-top:16px"><button class="btn block" id="nx">${session.idx+1<session.queue.length?'下一題':'看總回饋'}</button></div>`;
+  document.getElementById('nx').onclick=()=>{session.idx++;if(session.idx<session.queue.length)startScenario();else summary()};
+}
+
+/* ---------- summary ---------- */
+function summary(){
+  stopTicker();cur=null;window.scrollTo(0,0);
+  const r=session.results,ok=r.filter(x=>x.pass).length;
+  const todays=S.log.filter(l=>l.day===S.day),avg=todays.length?(todays.reduce((a,b)=>a+b.stopMs,0)/todays.length/1000).toFixed(1):'—';
+  const mastered=CONCEPTS.filter(c=>S.prog[c.id].mastered).length;
+  const weak=[...new Set(r.filter(x=>!x.pass).map(x=>x.cid))].map(byId);
+  const n=nextDay(), dueNext=n?CONCEPTS.filter(c=>!S.prog[c.id].mastered&&S.prog[c.id].next===n):[];
+  const wrongNext=dueNext.filter(c=>weak.includes(c));
+  app.innerHTML=`
+  <h1>${RESEARCH?'今天':`第 ${S.day} 天`}的練習結果</h1>
+  <div class="stats" style="margin-top:14px">
+    <div class="stat"><b>${ok} / ${r.length}</b><span>本次答對</span></div>
+    <div class="stat"><b>${mastered} / ${CONCEPTS.length}</b><span>已精熟概念</span></div>
+    <div class="stat"><b>${avg}</b><span>平均判斷秒數</span></div>
+  </div>
+  <h2>${weak.length?'推薦你看的影片':'今天沒有需要補強的影片'}</h2>
+  ${weak.length?`<div class="stack">${weak.map(c=>`<button class="video" data-id="${c.id}" aria-expanded="false">
+    <span class="thumb"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>${c.video.len}</span>
+    <span><b>${c.video.title}</b><br><span class="small muted">點開看影片大綱（示範版以大綱代替影片）</span>
+    <ol class="vparts" hidden>${c.video.parts.map(x=>`<li>${x}</li>`).join('')}</ol></span></button>`).join('')}</div>`
+  :`<p class="muted">這次的題目都處理得很好。答對的概念會在幾天後換情境抽考，確認記得住。</p>`}
+  ${n&&DEMO?`<h2>第 ${n} 天早上，你會收到</h2>
+  <div class="line"><div class="who">復健新人學習｜LINE 官方帳號</div>
+   <div class="bubble">早安！你今天有 ${dueNext.length} 題到期複習，約 ${dueNext.length*3} 分鐘。${wrongNext.length?`<br>其中包含上次答錯的「${wrongNext.map(c=>c.name).join('」「')}」，這次會換一個新情境。`:'<br>這次是抽考之前答對的概念，確認你還記得。'}
+   <div class="lbtn">開始複習</div></div></div>
+  <div class="row" style="margin-top:18px"><button class="btn" id="go">模擬時間前進到第 ${n} 天</button><button class="btn ghost" id="hm">回首頁</button></div>`
+  :n?`<h2>下一次複習</h2>
+  <div class="panel"><p style="margin:0">${dayLabel(n)}，共 ${dueNext.length} 題，約 ${dueNext.length*3} 分鐘。${wrongNext.length?`<br><span class="muted small">包含這次答錯的「${wrongNext.map(c=>c.name).join('」「')}」，會換一個新情境。</span>`:''}</p></div>
+  <div class="row" style="margin-top:18px"><button class="btn" id="hm">回首頁</button></div>`
+  :`<div class="feedback fb-ok" style="margin-top:18px"><b>全部概念都已精熟。</b>接下來可以報名實作演練。</div>
+  <div class="row" style="margin-top:12px"><button class="btn" id="hm">回首頁</button></div>`}`;
+  app.querySelectorAll('.video').forEach(b=>b.onclick=()=>{const ol=b.querySelector('ol');ol.hidden=!ol.hidden;b.setAttribute('aria-expanded',String(!ol.hidden))});
+  const go=document.getElementById('go');if(go)go.onclick=()=>{S.day=n;save();home()};
+  document.getElementById('hm').onclick=home;
+}
+
+/* ---------- teacher ---------- */
+const cell=(t,k)=>`<span class="chip ${k}">${t}</span>`;
+function conceptCell(p){if(p.mastered)return cell('精熟','c-ok');if(!p.seen)return cell('尚未練習','c-idle');if(p.wrong>=2)return cell(`弱點・錯 ${p.wrong} 次`,'c-bad');return cell(p.streak?'複習中':`錯 ${p.wrong} 次`,p.streak?'c-acc':'c-due')}
+function teacher(){
+  stopTicker();window.scrollTo(0,0);
+  if(RESEARCH&&API_URL)teacherLive();else teacherSample();
+}
+async function teacherLive(){
+  const key=LS.get('rehab-teacher-key');
+  if(!key){teacherLogin('');return}
+  app.innerHTML=`<h1>帶教者後台</h1><p class="muted">讀取資料中…</p>`;
+  let r;
+  try{r=await getJSON(`${API_URL}?action=dashboard&key=${encodeURIComponent(key)}`,15000)}
+  catch(e){
+    if(tab!=='teach')return;
+    app.innerHTML=`<h1>帶教者後台</h1><div class="feedback fb-bad">無法連線到試算表，請確認網路後再試一次。</div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="t-retry">重新讀取</button></div>`;
+    document.getElementById('t-retry').onclick=teacherLive;return}
+  if(tab!=='teach')return;
+  if(!r||!r.ok){LS.del('rehab-teacher-key');teacherLogin(r&&r.error==='密碼錯誤'?'密碼不正確，請再輸入一次':'讀取失敗：'+(r&&r.error||'未知錯誤'));return}
+  const by={};(r.participants||[]).forEach(p=>by[p.code]={...p,att:[]});
+  (r.attempts||[]).forEach(a=>{(by[a.code]=by[a.code]||{code:a.code,role:'',start:'',att:[]}).att.push(a)});
+  const people=Object.values(by).sort((a,b)=>a.code.localeCompare(b.code));
+  const all=r.attempts||[];
+  const rows=people.map(pp=>{const s=rebuild(pp.att);const n=pp.att.length;
+    const avg=n?(pp.att.reduce((x,a)=>x+(a.stopSec||0),0)/n).toFixed(1)+' 秒':'—';
+    const last=n?String(pp.att[n-1].at).slice(0,10):'—';
+    const done=CONCEPTS.filter(c=>s.prog[c.id].mastered).length;
+    return`<tr><td><b>${esc(pp.code)}</b><br><span class="small muted">${esc(pp.role||'')}</span></td>${CONCEPTS.map(c=>`<td>${conceptCell(s.prog[c.id])}</td>`).join('')}<td>${done} / ${CONCEPTS.length}</td><td>${n}</td><td>${avg}</td><td>${esc(last)}</td></tr>`}).join('');
+  const allDone=people.filter(pp=>{const s=rebuild(pp.att);return CONCEPTS.every(c=>s.prog[c.id].mastered)}).length;
+  const errs=CONCEPTS.map(c=>{const a=all.filter(x=>x.cid===c.id),bad=a.filter(x=>!x.pass);
+    return{c,n:a.length,rate:a.length?bad.length/a.length:0,stop:a.filter(x=>!x.stopOk).length,dis:a.filter(x=>x.distractor).length,harm:a.filter(x=>x.harm).length}})
+    .filter(x=>x.n).sort((a,b)=>b.rate-a.rate);
+  app.innerHTML=`
+  <h1>帶教者後台</h1>
+  <div class="stats" style="margin-top:14px">
+    <div class="stat"><b>${people.length}</b><span>參與人數</span></div>
+    <div class="stat"><b>${all.length}</b><span>作答筆數</span></div>
+    <div class="stat"><b>${allDone}</b><span>全部精熟</span></div>
+  </div>
+  <h2>每位學員的精熟狀況</h2>
+  ${people.length?`<div class="tablewrap"><table class="dash">
+    <tr><th>研究編號</th>${CONCEPTS.map(c=>`<th>${c.name}</th>`).join('')}<th>精熟</th><th>作答次數</th><th>平均判斷時間</th><th>最後作答</th></tr>${rows}</table></div>`
+  :`<p class="muted">還沒有人開始練習。</p>`}
+  <h2>最常出錯的概念</h2>
+  ${errs.length?`<div class="panel">${errs.map((x,i)=>`<div class="check"><span class="chip ${x.rate>=.4?'c-bad':x.rate>=.2?'c-due':'c-ok'}">錯誤率 ${Math.round(x.rate*100)}%</span><span><b>${x.c.name}</b><br><span class="small muted">共 ${x.n} 次作答・判斷錯 ${x.stop} 次・選到不該做的事 ${x.dis} 次・評估時選到危險項 ${x.harm} 次</span></span></div>`).join('')}</div>`
+  :`<p class="muted">累積作答後會顯示在這裡。</p>`}
+  <div class="row" style="margin-top:18px">
+    <button class="btn" id="t-ref">重新整理</button>
+    ${r.sheetUrl?`<a class="btn ghost" href="${esc(r.sheetUrl)}" target="_blank" rel="noopener" style="text-decoration:none">開啟試算表</a>`:''}
+  </div>
+  <button class="linkbtn" id="t-out" style="margin-top:12px">登出帶教者</button>
+  <div class="foot">完整原始資料在 Google 試算表的「作答紀錄」工作表，可直接下載做統計分析。</div>`;
+  document.getElementById('t-ref').onclick=teacherLive;
+  document.getElementById('t-out').onclick=()=>{LS.del('rehab-teacher-key');teacherLogin('')};
+}
+function teacherLogin(msg){
+  app.innerHTML=`<h1>帶教者後台</h1>
+  <p class="muted">請輸入研究團隊設定的帶教者密碼。</p>
+  <div class="panel stack" style="margin-top:14px"><label class="fld"><span>帶教者密碼</span><input id="t-key" type="password" autocomplete="current-password"></label></div>
+  <p class="small" id="t-err" role="alert" style="color:var(--danger);min-height:24px;margin:8px 0 4px">${esc(msg)}</p>
+  <button class="btn block" id="t-go">查看</button>`;
+  const inp=document.getElementById('t-key');inp.addEventListener('input',()=>document.getElementById('t-err').textContent='');
+  const go=()=>{const k=inp.value.trim();if(!k){document.getElementById('t-err').textContent='請輸入密碼';return}LS.set('rehab-teacher-key',k);teacherLive()};
+  document.getElementById('t-go').onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+}
+function teacherSample(){
+  const me=CONCEPTS.map(c=>conceptCell(S.prog[c.id]));
+  const tries=S.log.length, myAvg=tries?(S.log.reduce((a,b)=>a+b.stopMs,0)/tries/1000).toFixed(1)+' 秒':'—';
+  const rows=[
+    {n:'你（示範中）',cells:me,t:tries,a:myAvg},
+    {n:'林〇〇（示意）',cells:[cell('精熟','c-ok'),cell('精熟','c-ok'),cell('精熟','c-ok'),cell('精熟','c-ok')],t:9,a:'6.2 秒'},
+    {n:'張〇〇（示意）',cells:[cell('弱點・錯 3 次','c-bad'),cell('精熟','c-ok'),cell('複習中','c-acc'),cell('尚未練習','c-idle')],t:8,a:'11.4 秒'},
+    {n:'陳〇〇（示意）',cells:[cell('複習中','c-acc'),cell('錯 1 次','c-due'),cell('精熟','c-ok'),cell('精熟','c-ok')],t:7,a:'8.0 秒'}];
+  app.innerHTML=`
+  <h1>帶教者後台</h1>
+  ${RESEARCH&&!API_URL?`<div class="feedback fb-info" style="margin-bottom:10px">尚未連接 Google 試算表，以下為示意資料。設定方式請看部署說明。</div>`:''}
+  <p class="muted">一眼看到每位新人各概念的精熟狀況。第一列是你自己的紀錄，其餘為示意資料。</p>
+  <div class="tablewrap" style="margin-top:16px"><table class="dash">
+    <tr><th>學員</th>${CONCEPTS.map(c=>`<th>${c.name}</th>`).join('')}<th>練習次數</th><th>平均判斷時間</th></tr>
+    ${rows.map(r=>`<tr><td><b>${r.n}</b></td>${r.cells.map(x=>`<td>${x}</td>`).join('')}<td>${r.t}</td><td>${r.a}</td></tr>`).join('')}
+  </table></div>
+  <h2>全體最常錯的概念</h2>
+  <div class="panel">
+    <div class="check"><span class="chip c-bad">第 1</span><span>疑似吸入的處置：最常見的錯誤是選擇「給水把食物沖下去」</span></div>
+    <div class="check"><span class="chip c-due">第 2</span><span>運動中生命徵象異常：常選擇「降低阻力繼續」而非停止</span></div>
+  </div>
+  <p class="small muted" style="margin-top:10px">帶教時可以針對這些概念安排實作演練或個別討論。</p>
+  <div class="foot">示範版內容僅供展示，處置流程與停止標準需經醫師確認並依院內規範調整。</div>`;
+}
+
+/* ---------- tabs ---------- */
+function setTab(t){tab=t;document.getElementById('tab-learn').setAttribute('aria-selected',String(t==='learn'));document.getElementById('tab-teach').setAttribute('aria-selected',String(t==='teach'));
+  if(t==='teach'){teacher()}else{cur=null;session=null;home()}}
+document.getElementById('tab-learn').onclick=()=>setTab('learn');
+document.getElementById('tab-teach').onclick=()=>setTab('teach');
+document.getElementById('mode-label').textContent=DEMO?'互動練習示範版':'互動練習';
+window.addEventListener('online',flush);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){flush();if(tab==='learn'&&!session&&(DEMO||U))home()}});
+home();flush();
+
+/* ---------- app install & offline ---------- */
+(function(){
+  if('serviceWorker' in navigator && location.protocol!=='file:'){
+    window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+  }
+  const off=document.getElementById('offline');
+  const net=()=>{off.hidden=navigator.onLine};
+  window.addEventListener('online',net);window.addEventListener('offline',net);net();
+
+  const box=document.getElementById('install'),go=document.getElementById('install-go'),txt=document.getElementById('install-txt');
+  const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  let dismissed=false;try{dismissed=localStorage.getItem('rehab-install-x')==='1'}catch(e){}
+  if(standalone||dismissed)return;
+  document.getElementById('install-x').onclick=()=>{box.hidden=true;try{localStorage.setItem('rehab-install-x','1')}catch(e){}};
+  const ua=navigator.userAgent, isIOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(isIOS){
+    const safari=/Safari/.test(ua)&&!/CriOS|FxiOS|EdgiOS|Line\//.test(ua);
+    txt.innerHTML=safari
+      ?'<b>安裝到 iPhone 主畫面</b><ol class="ios-steps"><li>點下方工具列的「分享」按鈕</li><li>選「加入主畫面」</li><li>按右上角「新增」</li></ol>'
+      :'<b>安裝到 iPhone 主畫面</b>請先用 Safari 開啟這個網址，再點「分享」→「加入主畫面」。';
+    box.hidden=false;return;
+  }
+  if(/Line\/|FBAN|FBAV|Instagram/.test(ua)){
+    txt.innerHTML='<b>安裝到手機主畫面</b>請點右上角選單，選「用預設瀏覽器開啟」，再從 Chrome 安裝。';
+    box.hidden=false;return;
+  }
+  let deferred=null;
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;go.hidden=false;box.hidden=false});
+  go.onclick=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;box.hidden=true};
+  window.addEventListener('appinstalled',()=>{box.hidden=true});
+})();
+</script>
+</body>
+</html>

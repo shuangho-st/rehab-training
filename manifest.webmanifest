@@ -1,0 +1,18 @@
+{
+  "name": "復健中病人狀況判讀",
+  "short_name": "狀況判讀",
+  "description": "復健醫學部新人訓練：復健中病人惡化的辨識與處置互動練習",
+  "lang": "zh-Hant-TW",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF3F4",
+  "theme_color": "#1D6873",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
