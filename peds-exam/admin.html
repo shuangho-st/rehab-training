@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>兒科前後測教師端</title>
+<meta name="theme-color" content="#1D6873" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E181B" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+</head>
+<body>
+<header class="top wide">
+  <div class="top-inner">
+    <div class="brand">兒科前後測・教師端<small>出卷、發連結、看成績</small></div>
+    <nav class="tabs" role="tablist" aria-label="功能">
+      <button role="tab" data-tab="paper" aria-selected="true">出卷</button>
+      <button role="tab" data-tab="report" aria-selected="false">成績報表</button>
+      <button role="tab" data-tab="bank" aria-selected="false">題庫</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap wide" id="app"></main>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+const { CFG, esc, LS, SS, loadBanks, loadBank, paperCode, paperQuery, PHASE, drawPaper, buildReport, toCSV, download, fmt, getJSON, rng, shuffle } = Peds;
+const API_URL = CFG.API_URL || '';
+const app = document.getElementById('app');
+let TAB = 'paper', BANKS = [];
+const ST = LS.get('peds-admin-v1') || {};   // 出卷設定記憶
+const saveST = () => LS.set('peds-admin-v1', ST);
+
+document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => show(b.dataset.tab));
+function show(t) {
+  TAB = t;
+  document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  ({ paper: paperTab, report: reportTab, bank: bankTab })[t]();
+  window.scrollTo(0, 0);
+}
+const testURL = (paper) => new URL('index.html', location.href).href.split('?')[0] + paperQuery(paper);
+function copy(text, btn) {
+  const done = () => { const t = btn.textContent; btn.textContent = '已複製'; setTimeout(() => btn.textContent = t, 1200); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => prompt('請手動複製', text));
+  else prompt('請手動複製', text);
+}
+
+/* ======================= 出卷 ======================= */
+async function paperTab() {
+  app.innerHTML = '<p class="muted" style="margin-top:24px">載入題庫…</p>';
+  try { BANKS = await loadBanks(); } catch (e) { app.innerHTML = `<div class="callout" style="margin-top:24px">${esc(e.message)}</div>`; return; }
+  const bankId = ST.bank && BANKS.some(b => b.id === ST.bank) ? ST.bank : BANKS[0].id;
+  const bank = await loadBank(bankId);
+  const cats = Array.from(new Set(bank.questions.map(q => q.category)));
+  const catCount = c => bank.questions.filter(q => q.category === c).length;
+  const sel = ST.cats && ST.cats.length ? ST.cats : cats;
+  const today = new Date();
+  const defBatch = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')} 梯次`;
+  app.innerHTML = `
+  <h1>出卷</h1>
+  <p class="muted">抽好題目後會產生<b>前測</b>與<b>後測</b>兩個連結。兩個連結的題目清單完全相同，所以一定是同一卷；只差在標記是前測還是後測。</p>
+  <div class="panel stack" style="margin-top:14px">
+    <div class="grid2">
+      <label class="fld"><span>題庫</span><select id="f-bank">${BANKS.map(b => `<option value="${esc(b.id)}" ${b.id === bankId ? 'selected' : ''}>${esc(b.title)}（${b.count} 題）</option>`).join('')}</select></label>
+      <label class="fld"><span>題數</span><input id="f-n" type="number" min="1" max="${bank.questions.length}" value="${ST.n || 30}"></label>
+      <label class="fld"><span>科別配比</span><select id="f-mode">
+        <option value="prop">依題庫比例</option><option value="propmin">依比例，每科至少 1 題</option><option value="equal">每科平均</option></select></label>
+      <label class="fld"><span>亂數種子（同一個種子抽出同一份卷）</span><input id="f-seed" value="${esc(ST.seed || String(Math.floor(Math.random() * 1e6)))}"></label>
+    </div>
+    <fieldset style="border:0;padding:0;margin:0"><legend class="small muted" style="margin-bottom:6px">納入科別</legend>
+      <div class="row small">${cats.map(c => `<label style="display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border:1px solid var(--line);border-radius:999px"><input type="checkbox" class="f-cat" value="${esc(c)}" ${sel.includes(c) ? 'checked' : ''}>${esc(c)} <span class="muted">${catCount(c)}</span></label>`).join('')}</div>
+    </fieldset>
+    <div class="row"><button class="btn" id="f-draw">抽題</button><button class="btn ghost" id="f-reseed">換一組種子再抽</button></div>
+  </div>
+
+  <div id="picked"></div>`;
+  document.getElementById('f-mode').value = ST.mode || 'prop';
+  document.getElementById('f-bank').onchange = e => { ST.bank = e.target.value; ST.cats = null; ST.nums = null; saveST(); paperTab(); };
+  const draw = () => {
+    const n = +document.getElementById('f-n').value || 30;
+    const mode = document.getElementById('f-mode').value;
+    const seed = document.getElementById('f-seed').value.trim() || '1';
+    const chosen = Array.from(document.querySelectorAll('.f-cat:checked')).map(x => x.value);
+    const pool = bank.questions.filter(q => chosen.includes(q.category));
+    if (!pool.length) { alert('至少要勾一個科別'); return; }
+    Object.assign(ST, { bank: bankId, n, mode, seed, cats: chosen, nums: drawPaper(pool, n, mode, seed) });
+    saveST(); renderPicked(bank, defBatch);
+  };
+  document.getElementById('f-draw').onclick = draw;
+  document.getElementById('f-reseed').onclick = () => { document.getElementById('f-seed').value = String(Math.floor(Math.random() * 1e6)); draw(); };
+  if (ST.nums && ST.bank === bankId) renderPicked(bank, defBatch);
+}
+
+function renderPicked(bank, defBatch) {
+  const nums = ST.nums.filter(n => bank.byNo[n]);
+  const box = document.getElementById('picked');
+  const dist = {};
+  nums.forEach(n => { const c = bank.byNo[n].category; dist[c] = (dist[c] || 0) + 1; });
+  const ansDist = {};
+  nums.forEach(n => { const a = bank.byNo[n].answer; ansDist[a] = (ansDist[a] || 0) + 1; });
+  box.innerHTML = `
+  <h2>抽出 ${nums.length} 題・卷別碼 <span class="mono" style="font-size:18px">${paperCode(bank.id, nums)}</span></h2>
+  <p class="small muted">科別：${Object.keys(dist).map(c => `${esc(c)} ${dist[c]}`).join('、')}<br>正解分布：${bank.letters.split('').map(L => `${L} ${ansDist[L] || 0}`).join('、')}</p>
+  <details class="panel" style="margin:10px 0"><summary><b>題目清單</b>（點開檢查；可直接改題號）</summary>
+    <label class="fld" style="margin-top:12px"><span>題號（用逗號或空白分隔）</span><textarea id="f-nums" rows="2">${nums.join(', ')}</textarea></label>
+    <button class="btn small ghost" id="f-apply" style="margin-top:8px">套用題號</button>
+    <div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th class="n">題號</th><th>科別</th><th>題幹</th><th class="c">正解</th></tr></thead><tbody>
+    ${nums.map(n => { const q = bank.byNo[n]; return `<tr><td class="n">${n}</td><td>${esc(q.category)}</td><td>${esc(q.stem.slice(0, 90))}${q.stem.length > 90 ? '…' : ''}${q.image ? ' <span class="chip c-acc">附圖</span>' : ''}</td><td class="c"><b>${q.answer}</b></td></tr>`; }).join('')}
+    </tbody></table></div>
+  </details>
+
+  <h2>測驗設定</h2>
+  <div class="panel stack">
+    <div class="grid2">
+      <label class="fld"><span>測驗名稱（學員看得到）</span><input id="f-title" value="${esc(ST.title || '兒科題庫測驗')}"></label>
+      <label class="fld"><span>梯次名稱（報表用這個分組，前後測要一樣）</span><input id="f-batch" value="${esc(ST.batch || defBatch)}"></label>
+    </div>
+    <label class="row small"><input type="checkbox" id="f-sq" ${ST.sq !== false ? 'checked' : ''}> 每位學員的題目順序打亂（建議，減少互相對答案）</label>
+    <label class="row small"><input type="checkbox" id="f-so" ${ST.so ? 'checked' : ''}> 選項順序也打亂（報表一律換算回原始字母）</label>
+    <label class="row small"><input type="checkbox" id="f-rpre" ${ST.rpre ? 'checked' : ''}> 前測交卷後公布正解（不建議：會放大後測的記憶效應）</label>
+    <label class="row small"><input type="checkbox" id="f-rpost" ${ST.rpost !== false ? 'checked' : ''}> 後測交卷後公布正解與逐題檢討</label>
+    <button class="btn" id="f-make">產生前測／後測連結</button>
+  </div>
+  <div id="links"></div>`;
+  document.getElementById('f-apply').onclick = () => {
+    const arr = document.getElementById('f-nums').value.split(/[^0-9]+/).map(Number).filter(n => n > 0);
+    const bad = arr.filter(n => !bank.byNo[n]);
+    if (bad.length) { alert('題庫裡沒有這些題號：' + bad.join('、')); return; }
+    ST.nums = Array.from(new Set(arr)); saveST(); renderPicked(bank, defBatch);
+  };
+  document.getElementById('f-make').onclick = () => {
+    const g = id => document.getElementById(id);
+    Object.assign(ST, { title: g('f-title').value.trim(), batch: g('f-batch').value.trim(), sq: g('f-sq').checked, so: g('f-so').checked, rpre: g('f-rpre').checked, rpost: g('f-rpost').checked });
+    if (!ST.batch) { alert('請填梯次名稱'); return; }
+    saveST();
+    const base = { b: bank.id, nums, k: ST.batch, t: ST.title, sq: ST.sq, so: ST.so };
+    const pre = testURL(Object.assign({}, base, { m: 'pre', r: ST.rpre }));
+    const post = testURL(Object.assign({}, base, { m: 'post', r: ST.rpost }));
+    const prev = testURL(Object.assign({}, base, { m: 'practice', r: true, k: '' }));
+    const hist = LS.get('peds-papers-v1') || [];
+    hist.unshift({ at: new Date().toISOString(), bank: bank.id, code: paperCode(bank.id, nums), batch: ST.batch, title: ST.title, n: nums.length, pre, post });
+    LS.set('peds-papers-v1', hist.slice(0, 30));
+    const L = document.getElementById('links');
+    L.innerHTML = `
+    <h2>連結</h2>
+    ${!API_URL ? '<div class="callout" style="margin-bottom:12px"><b>還沒設定成績上傳。</b>學員可以作答並看到自己的分數，但成績不會集中回來。請先照 README 部署 <code>gas/前後測後端.gs</code>，把網址填進 <code>config.js</code> 的 <code>API_URL</code>。</div>' : ''}
+    <div class="grid2">
+      ${[['前測', pre, 'qr-pre'], ['後測', post, 'qr-post']].map(([lab, url, id]) => `
+      <div class="panel stack">
+        <div class="row"><b style="font-size:18px">${lab}</b><span class="spacer"></span><button class="btn small" data-copy="${esc(url)}">複製連結</button><a class="btn small ghost" href="${esc(url)}" target="_blank" rel="noopener">開啟</a></div>
+        <div class="linkbox mono">${esc(url)}</div>
+        <div id="${id}" class="qr" aria-label="${lab} QR code"></div>
+      </div>`).join('')}
+    </div>
+    <p class="small muted" style="margin-top:12px">先只發前測連結，後測連結等教學結束再發。<a href="${esc(prev)}" target="_blank" rel="noopener">用練習模式預覽這份卷</a>（不會上傳）。</p>
+    <div class="callout info small">連結裡帶有題號，學員看不到正解；但題庫檔案放在公開網站上，有心人可以找得到答案。這是形成性評量工具，不適合當成需要保密的正式考試。</div>`;
+    L.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy, b));
+    const qr = (id, text) => { try { if (window.QRCode) new QRCode(document.getElementById(id), { text, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.L }); else document.getElementById(id).remove(); } catch (e) { document.getElementById(id).remove(); } };
+    qr('qr-pre', pre); qr('qr-post', post);
+    L.scrollIntoView({ behavior: 'smooth' });
+  };
+}
+
+/* ======================= 成績報表 ======================= */
+let REPORT = null;
+async function reportTab() {
+  const key = SS.get('peds-admin-key') || '';
+  app.innerHTML = `
+  <h1>成績報表</h1>
+  ${API_URL ? `
+  <div class="panel stack" style="margin-top:14px">
+    <div class="row">
+      <label class="fld" style="flex:1;min-width:200px"><span>管理密碼（後端 WEB.ADMIN_KEY）</span><input id="r-key" type="password" value="${esc(key)}" autocomplete="current-password"></label>
+      <button class="btn" id="r-load" style="align-self:flex-end">讀取梯次</button>
+    </div>
+    <div id="r-batches"></div>
+  </div>` : `<div class="callout" style="margin-top:14px">尚未設定 <code>config.js</code> 的 <code>API_URL</code>，無法讀取線上成績。可以先載入示範資料，看看報表長什麼樣子。</div>`}
+  <div class="row noprint" style="margin-top:12px"><button class="btn quiet small" id="r-demo">載入示範資料</button></div>
+  <div id="r-out"></div>`;
+  document.getElementById('r-demo').onclick = demoData;
+  if (!API_URL) return;
+  const load = async () => {
+    const k = document.getElementById('r-key').value.trim();
+    SS.set('peds-admin-key', k);
+    const box = document.getElementById('r-batches');
+    box.innerHTML = '<p class="muted small">讀取中…</p>';
+    try {
+      const r = await getJSON(`${API_URL}?action=batches&key=${encodeURIComponent(k)}`);
+      if (!r.ok) throw new Error(r.error === 'auth' ? '密碼不對，或後端還沒改 ADMIN_KEY' : r.error);
+      if (!r.batches.length) { box.innerHTML = '<p class="muted small">還沒有任何作答紀錄。</p>'; return; }
+      box.innerHTML = `<div class="tbl-wrap"><table><thead><tr><th>梯次</th><th>測驗</th><th class="n">前測</th><th class="n">後測</th><th>最後交卷</th><th></th></tr></thead><tbody>
+      ${r.batches.map((b, i) => `<tr><td><b>${esc(b.batch || '（未命名）')}</b>${b.papers.length > 1 ? ' <span class="chip c-due">多份卷</span>' : ''}</td><td>${esc(b.titles.join('、'))}</td><td class="n">${b.pre}</td><td class="n">${b.post}</td><td>${esc(new Date(b.last).toLocaleString('zh-TW'))}</td><td><button class="btn small" data-b="${i}">看報表</button></td></tr>`).join('')}
+      </tbody></table></div>`;
+      box.querySelectorAll('[data-b]').forEach(btn => btn.onclick = async () => {
+        const b = r.batches[+btn.dataset.b];
+        const out = document.getElementById('r-out');
+        out.innerHTML = '<p class="muted">讀取作答…</p>';
+        try {
+          const res = await getJSON(`${API_URL}?action=results&key=${encodeURIComponent(k)}&batch=${encodeURIComponent(b.batch)}`, 30000);
+          if (!res.ok) throw new Error(res.error);
+          await renderReport(b.batch, res.rows);
+        } catch (e) { out.innerHTML = `<div class="callout">${esc(e.message)}</div>`; }
+      });
+    } catch (e) { box.innerHTML = `<div class="callout">讀取失敗：${esc(e.message)}</div>`; }
+  };
+  document.getElementById('r-load').onclick = load;
+  if (key) load();
+}
+
+async function renderReport(batch, rows) {
+  const out = document.getElementById('r-out');
+  const banks = Array.from(new Set(rows.map(r => r.bank)));
+  let bank = null;
+  try { if (banks.length === 1) bank = await loadBank(banks[0]); } catch (e) {}
+  const R = buildReport(rows, bank);
+  REPORT = { batch, rows, R, bank };
+  const ps = R.pairStat;
+  const preCodes = Object.keys(R.papers.pre), postCodes = Object.keys(R.papers.post);
+  const warn = [];
+  if (preCodes.length > 1 || postCodes.length > 1) warn.push('這個梯次裡有不只一份卷（卷別碼不同）。逐題分析仍然正確，但總分不能直接比。');
+  if (preCodes.length && postCodes.length && preCodes.join() !== postCodes.join()) warn.push(`前測卷別 ${preCodes.join('、')} 與後測卷別 ${postCodes.join('、')} 不同，前後測不是同一卷。`);
+  if (R.dupCount.pre || R.dupCount.post) warn.push(`有人重複交卷（前測 ${R.dupCount.pre} 份、後測 ${R.dupCount.post} 份），已以每人第一次交卷為準。`);
+  if (R.onlyPre.length || R.onlyPost.length) warn.push(`只考前測 ${R.onlyPre.length} 人、只考後測 ${R.onlyPost.length} 人。配對比較只納入兩次都考的人，避免出席率變化污染結果。`);
+  const pTxt = isNaN(ps.p) ? '—' : ps.p < 0.001 ? '< .001' : ps.p.toFixed(3).replace(/^0/, '');
+  const sign = x => x == null || isNaN(x) ? '—' : (x > 0 ? '+' : '') + fmt(x, 1);
+  const cls = x => x == null || isNaN(x) ? '' : x > 0 ? 'good' : x < 0 ? 'bad' : '';
+  const L = bank ? bank.letters : 'ABCDE';
+  const qText = no => bank && bank.byNo[no] ? bank.byNo[no] : null;
+
+  out.innerHTML = `
+  <div class="row" style="margin-top:26px"><h2 style="margin:0">${esc(batch || '（未命名梯次）')}</h2><span class="spacer"></span>
+    <button class="btn small quiet noprint" id="x-csv1">匯出個人成績</button>
+    <button class="btn small quiet noprint" id="x-csv2">匯出逐題分析</button>
+    <button class="btn small quiet noprint" id="x-csv3">匯出原始作答</button>
+    <button class="btn small quiet noprint" onclick="print()">列印</button></div>
+  ${warn.map(w => `<div class="callout" style="margin-top:10px">${esc(w)}</div>`).join('')}
+
+  <div class="kpis" style="margin-top:14px">
+    <div class="kpi"><span>前測（${R.count.pre} 人）平均</span><b>${fmt(Peds.mean(R.scores.pre), 1)}</b></div>
+    <div class="kpi"><span>後測（${R.count.post} 人）平均</span><b>${fmt(Peds.mean(R.scores.post), 1)}</b></div>
+    <div class="kpi"><span>配對 ${ps.n} 人・平均進步</span><b class="${cls(ps.mDiff)}">${sign(ps.mDiff)}</b></div>
+    <div class="kpi"><span>配對 t 檢定 p 值</span><b>${pTxt}</b></div>
+  </div>
+
+  <h2>前後測配對比較</h2>
+  <div class="tbl-wrap"><table><tbody>
+    <tr><th>配對人數 n</th><td class="n">${ps.n}</td><th>前測平均</th><td class="n">${fmt(ps.mPre, 1)}</td><th>後測平均</th><td class="n">${fmt(ps.mPost, 1)}</td></tr>
+    <tr><th>平均進步</th><td class="n ${cls(ps.mDiff)}">${sign(ps.mDiff)}</td><th>差值 SD</th><td class="n">${fmt(ps.sd, 1)}</td><th>Cohen's d<sub>z</sub></th><td class="n">${isFinite(ps.dz) ? fmt(ps.dz, 2) : '—'}</td></tr>
+    <tr><th>t</th><td class="n">${fmt(ps.t, 2)}</td><th>df</th><td class="n">${ps.n >= 2 ? ps.df : '—'}</td><th>雙尾 p</th><td class="n">${pTxt}</td></tr>
+  </tbody></table></div>
+  <p class="small muted" style="margin-top:6px">分數以答對率（%）計。${ps.n && ps.n < 10 ? '<b>配對人數少於 10 人時，p 值很不穩定，建議直接看下面每個人的進步幅度。</b>' : ''}</p>
+
+  <h2>個人成績</h2>
+  <div class="tbl-wrap"><table><thead><tr><th>姓名</th><th>Email/員編</th><th>醫院</th><th>職級</th><th class="n">前測</th><th class="n">後測</th><th class="n">進步</th></tr></thead><tbody>
+  ${R.people.map(p => `<tr><td>${esc(p.name)}</td><td class="mono">${esc(p.pid)}</td><td>${esc(p.hospital)}</td><td>${esc(p.level)}</td>
+    <td class="n">${p.pre == null ? '<span class="muted">未考</span>' : fmt(p.pre) + '%<div class="tiny muted">' + p.preRaw + '</div>'}</td>
+    <td class="n">${p.post == null ? '<span class="muted">未考</span>' : fmt(p.post) + '%<div class="tiny muted">' + p.postRaw + '</div>'}</td>
+    <td class="n ${cls(p.diff)}"><b>${p.diff == null ? '—' : sign(p.diff)}</b></td></tr>`).join('')}
+  </tbody></table></div>
+
+  <h2>科別答對率</h2>
+  <div class="tbl-wrap"><table><thead><tr><th>科別</th><th class="n">題數</th><th class="n">前測</th><th class="n">±95%</th><th class="n">後測</th><th class="n">進步</th><th class="n">扣掉整體進步</th></tr></thead><tbody>
+  ${R.cats.map(c => `<tr><td><b>${esc(c.name)}</b></td><td class="n">${c.items}</td>
+    <td class="n">${fmt(c.pre)}%<span class="pct-bar" style="width:${(c.pre || 0) * 0.6}px"></span></td>
+    <td class="n muted">${c.preCI == null ? '—' : '±' + fmt(c.preCI)}</td>
+    <td class="n">${c.post == null ? '—' : fmt(c.post) + '%'}</td>
+    <td class="n ${cls(c.diff)}">${sign(c.diff)}</td><td class="n ${cls(c.net)}"><b>${sign(c.net)}</b></td></tr>`).join('')}
+  <tr><td><b>整體</b></td><td></td><td class="n"><b>${fmt(R.overall.pre)}%</b></td><td></td><td class="n"><b>${R.overall.post == null ? '—' : fmt(R.overall.post) + '%'}</b></td><td class="n ${cls(R.overall.diff)}"><b>${sign(R.overall.diff)}</b></td><td></td></tr>
+  </tbody></table></div>
+  <div class="callout info small" style="margin-top:8px">
+    <b>怎麼讀這張表：</b>用前測最弱的科別決定「教什麼」可以；但<b>不要用最弱科的進步幅度證明教學有效</b>。
+    每科只有兩三題，「±95%」那一欄就是答對率的不確定範圍，常常寬達三十個百分點；前測挑出來的最弱科，就算完全沒教，後測也會因為迴歸平均而看起來進步。
+    要看針對性教學有沒有特別效果，看<b>「扣掉整體進步」</b>（這一科的進步減掉全卷平均進步），或下面的逐題前後對照。跨梯次重複出現的弱科才算數。
+  </div>
+
+  <h2>逐題分析</h2>
+  <p class="small muted">依前測答對率由低到高排列。「主要誤選」是答錯的人最常選的選項 —— 集中選同一個錯誤選項，通常代表某個觀念被混淆，最值得拿來講評。</p>
+  <div class="tbl-wrap"><table><thead><tr><th class="n">題號</th><th>科別</th><th class="n">前測</th><th class="n">後測</th><th class="n">變化</th><th>前測選項分布</th><th class="c">正解</th><th>主要誤選</th><th>題幹</th></tr></thead><tbody>
+  ${R.items.slice().sort((a, b) => (a.preRate == null ? 999 : a.preRate) - (b.preRate == null ? 999 : b.preRate)).map(it => {
+    const q = qText(it.no), ph = it.pre.n ? 'pre' : 'post', d = it.preRate != null && it.postRate != null ? it.postRate - it.preRate : null;
+    const trap = it.pre.n ? it.preTrap : it.postTrap;
+    return `<tr><td class="n">${it.no}</td><td>${esc(it.category)}</td>
+      <td class="n ${it.preRate != null && it.preRate < 50 ? 'bad' : ''}">${it.preRate == null ? '—' : fmt(it.preRate) + '%'}</td>
+      <td class="n">${it.postRate == null ? '—' : fmt(it.postRate) + '%'}</td>
+      <td class="n ${cls(d)}">${sign(d)}</td>
+      <td class="mono" style="white-space:nowrap">${L.split('').map(x => `<span class="${x === it.answer ? 'good' : x === trap.letter ? 'bad' : ''}">${x}${it[ph].c[x] || 0}</span>`).join(' ')}${it[ph].blank ? ` 空${it[ph].blank}` : ''}</td>
+      <td class="c"><b>${esc(it.answer)}</b></td>
+      <td>${trap.n ? `<b class="bad">${trap.letter}</b>（${trap.n} 人）` : '—'}</td>
+      <td>${q ? `<details><summary>${esc(q.stem.slice(0, 40))}…</summary><div class="small" style="margin-top:6px;white-space:pre-wrap">${esc(q.stem)}\n${q.options.map((o, i) => `${L[i]}. ${o}`).map(esc).join('\n')}</div></details>` : ''}</td></tr>`;
+  }).join('')}
+  </tbody></table></div>`;
+
+  const day = new Date().toISOString().slice(0, 10);
+  document.getElementById('x-csv1').onclick = () => download(`個人成績_${batch}_${day}.csv`, toCSV([['姓名', 'Email/員編', '醫院', '職級', '前測%', '前測答對', '後測%', '後測答對', '進步']].concat(
+    R.people.map(p => [p.name, p.pid, p.hospital, p.level, p.pre == null ? '' : fmt(p.pre, 1), p.preRaw, p.post == null ? '' : fmt(p.post, 1), p.postRaw, p.diff == null ? '' : fmt(p.diff, 1)]))));
+  document.getElementById('x-csv2').onclick = () => download(`逐題分析_${batch}_${day}.csv`, toCSV([['題號', '科別', '正解', '前測答對率', '後測答對率'].concat(L.split('').map(x => '前測選' + x), L.split('').map(x => '後測選' + x), ['前測主要誤選', '後測主要誤選', '題幹'])].concat(
+    R.items.map(it => [it.no, it.category, it.answer, it.preRate == null ? '' : fmt(it.preRate, 1), it.postRate == null ? '' : fmt(it.postRate, 1)]
+      .concat(L.split('').map(x => it.pre.c[x] || 0), L.split('').map(x => it.post.c[x] || 0),
+        [it.preTrap.letter || '', it.postTrap.letter || '', qText(it.no) ? qText(it.no).stem : ''])))));
+  document.getElementById('x-csv3').onclick = () => download(`原始作答_${batch}_${day}.csv`, toCSV([['交卷時間', '前後測', '卷別碼', '姓名', 'Email/員編', '醫院', '職級', '分數', '題數', '作答秒數', '作答']].concat(
+    rows.map(r => [r.submittedAt, PHASE[r.phase] || r.phase, r.paperCode, r.name, r.pid, r.hospital, r.level, r.score, r.total, r.durationSec, (r.answers || []).map(a => a.no + ':' + (a.picked || '-')).join(' ')]))));
+  out.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* 示範資料：12 人、30 題，前後測之間整體進步約 10 個百分點 */
+async function demoData() {
+  const banks = await loadBanks();
+  const bank = await loadBank(banks[0].id);
+  const nums = drawPaper(bank.questions, 30, 'propmin', 'demo');
+  const rand = rng('demo-data');
+  const norm = () => { let u = 0, v = 0; while (!u) u = rand(); while (!v) v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const diff = {}; nums.forEach(n => diff[n] = norm() * 1.0);
+  const names = ['王小明', '李宜蓁', '陳柏宇', '林怡君', '張家豪', '黃郁婷', '吳承翰', '劉佩珊', '蔡宗翰', '楊雅筑', '許志豪', '鄭心怡'];
+  const hosp = ['北醫附醫', '雙和醫院', '萬芳醫院'], lv = ['PGY', 'R1', 'R2', 'R3'];
+  const rows = [];
+  const code = paperCode(bank.id, nums);
+  names.forEach((nm, i) => {
+    const ability = 0.5 + norm() * 0.7;
+    [['pre', 0], ['post', 0.55]].forEach(([ph, gain]) => {
+      if ((i === 10 && ph === 'post') || (i === 11 && ph === 'pre')) return;   // 一人缺後測、一人缺前測
+      const answers = nums.map(no => {
+        const q = bank.byNo[no], p = 1 / (1 + Math.exp(-(ability + gain - diff[no])));
+        let picked = q.answer;
+        if (rand() > p) { const wrong = bank.letters.split('').filter(x => x !== q.answer); picked = rand() < 0.5 ? wrong[no % wrong.length] : wrong[Math.floor(rand() * wrong.length)]; }
+        return { no, picked, ans: q.answer, cat: q.category };
+      });
+      const score = answers.filter(a => a.picked === a.ans).length;
+      rows.push({ phase: ph, paperCode: code, bank: bank.id, name: nm, pid: 'demo' + (i + 1) + '@example.org', hospital: hosp[i % 3], level: lv[i % 4],
+        score, total: nums.length, durationSec: 900 + Math.floor(rand() * 900),
+        submittedAt: new Date(Date.UTC(2026, 9, ph === 'pre' ? 1 : 15, 8, i)).toISOString(), answers });
+    });
+  });
+  await renderReport('示範梯次（模擬資料）', rows);
+}
+
+/* ======================= 題庫瀏覽 ======================= */
+async function bankTab() {
+  BANKS = await loadBanks();
+  const bankId = ST.viewBank || BANKS[0].id;
+  const bank = await loadBank(bankId);
+  const cats = Array.from(new Set(bank.questions.map(q => q.category)));
+  app.innerHTML = `
+  <h1>題庫</h1>
+  <p class="muted">${esc(bank.title)}・${esc(bank.source || '')}・${bank.questions.length} 題・${bank.letters.length} 選 1</p>
+  <div class="panel row" style="margin-top:12px">
+    <label class="fld" style="flex:1;min-width:180px"><span>題庫</span><select id="v-bank">${BANKS.map(b => `<option value="${esc(b.id)}" ${b.id === bankId ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select></label>
+    <label class="fld" style="min-width:140px"><span>科別</span><select id="v-cat"><option value="">全部</option>${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
+    <label class="fld" style="flex:1;min-width:180px"><span>搜尋</span><input id="v-q" placeholder="關鍵字"></label>
+    <label class="row small" style="align-self:flex-end;min-height:46px"><input type="checkbox" id="v-ans"> 顯示正解</label>
+  </div>
+  <p class="small muted" id="v-count" style="margin-top:10px"></p>
+  <div class="panel" id="v-list"></div>`;
+  const draw = () => {
+    const c = document.getElementById('v-cat').value, kw = document.getElementById('v-q').value.trim().toLowerCase(), showA = document.getElementById('v-ans').checked;
+    const list = bank.questions.filter(q => (!c || q.category === c) && (!kw || (q.stem + q.options.join('')).toLowerCase().includes(kw)));
+    document.getElementById('v-count').textContent = `共 ${list.length} 題`;
+    document.getElementById('v-list').innerHTML = list.map(q => `<div class="review-q">
+      <div class="row"><b>${q.no}.</b><span class="chip c-idle">${esc(q.category)}</span>${q.topic ? `<span class="chip c-acc">${esc(q.topic)}</span>` : ''}${q.image ? '<span class="chip c-acc">附圖</span>' : ''}</div>
+      <div class="stem" style="font-size:16px;margin-top:4px">${esc(q.stem)}</div>
+      ${q.image ? `<img class="qimg" src="${esc(q.image)}" alt="第 ${q.no} 題附圖" loading="lazy">` : ''}
+      <ol type="A" style="margin:8px 0 0;padding-left:28px">${q.options.map((o, i) => `<li class="${showA && bank.letters[i] === q.answer ? 'good' : ''}">${esc(o)}${showA && bank.letters[i] === q.answer ? '　<b>✓</b>' : ''}</li>`).join('')}</ol>
+    </div>`).join('') || '<p class="muted">沒有符合的題目</p>';
+  };
+  ['v-cat', 'v-q', 'v-ans'].forEach(id => document.getElementById(id).addEventListener('input', draw));
+  document.getElementById('v-bank').onchange = e => { ST.viewBank = e.target.value; saveST(); bankTab(); };
+  draw();
+}
+
+{ const t0 = new URLSearchParams(location.search).get('tab'); show(['paper', 'report', 'bank'].includes(t0) ? t0 : 'paper'); }
+</script>
+</body>
+</html>

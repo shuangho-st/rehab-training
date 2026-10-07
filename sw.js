@@ -1,5 +1,5 @@
 // 更新圖示或其他檔案後，把版本號加 1，手機上的舊快取就會被換掉
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'rehab-demo-' + VERSION;
 const SHELL = [
   './',
@@ -28,6 +28,10 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+
+  // 兒科前後測（peds-exam/）是另一個網頁，不經過這個 service worker，
+  // 否則它的頁面會被存成本 App 的離線 index.html
+  if (url.origin === self.location.origin && url.pathname.includes('/peds-exam/')) return;
 
   // 頁面：先抓網路上的最新版，沒網路時用快取，所以內容一改就會生效
   if (req.mode === 'navigate') {

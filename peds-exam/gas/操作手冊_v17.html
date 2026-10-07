@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<title>兒科題庫系統手冊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --ground:#edf0f4; --panel:#ffffff; --panel-2:#f5f7fa;
+  --ink:#14202e; --ink-2:#46566b; --ink-3:#78889c;
+  --line:#d5dce4; --line-2:#bcc7d3;
+  --navy:#26466d; --navy-soft:#e3eaf3;
+  --red:#b5443a; --red-soft:#fbe9e7;
+  --green:#2f6f4e; --green-soft:#e4f1e9;
+  --amber:#9a6a12; --amber-soft:#f8efdc;
+  --serif:"Noto Serif TC","Songti TC","PMingLiU",Georgia,serif;
+  --sans:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e131a; --panel:#161d27; --panel-2:#1d2530;
+    --ink:#e4eaf1; --ink-2:#a9b6c6; --ink-3:#76849a;
+    --line:#2a3441; --line-2:#3a4756;
+    --navy:#7fa8d8; --navy-soft:#1c2c40;
+    --red:#e8938a; --red-soft:#33191a;
+    --green:#6cc294; --green-soft:#152a20;
+    --amber:#d9a94a; --amber-soft:#2f2716;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e131a; --panel:#161d27; --panel-2:#1d2530;
+  --ink:#e4eaf1; --ink-2:#a9b6c6; --ink-3:#76849a;
+  --line:#2a3441; --line-2:#3a4756;
+  --navy:#7fa8d8; --navy-soft:#1c2c40;
+  --red:#e8938a; --red-soft:#33191a;
+  --green:#6cc294; --green-soft:#152a20;
+  --amber:#d9a94a; --amber-soft:#2f2716;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--sans); background:var(--ground); color:var(--ink);
+  line-height:1.75; font-size:15px; padding:0 0 64px;
+}
+.wrap{max-width:920px;margin:0 auto;padding:0 20px}
+
+/* header */
+.masthead{border-bottom:2px solid var(--navy);background:var(--panel);margin-bottom:28px}
+.masthead .wrap{padding-top:34px;padding-bottom:24px}
+.kicker{
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--navy);margin-bottom:10px;
+}
+h1{font-family:var(--serif);font-weight:700;font-size:1.9rem;line-height:1.35;text-wrap:balance;letter-spacing:-.01em}
+.dek{color:var(--ink-2);font-size:.95rem;margin-top:10px;max-width:60ch}
+
+section{margin-bottom:34px}
+h2{
+  font-family:var(--serif);font-weight:700;font-size:1.22rem;margin-bottom:6px;
+  display:flex;align-items:baseline;gap:11px;
+}
+h2 .num{font-family:var(--mono);font-size:.8rem;color:var(--navy);font-weight:600}
+.sub{color:var(--ink-3);font-size:.87rem;margin-bottom:18px}
+h3{font-size:.95rem;font-weight:700;margin:22px 0 10px}
+
+/* stepper */
+.steps{list-style:none;position:relative;padding-left:0}
+.step{display:grid;grid-template-columns:38px 1fr;gap:16px;position:relative;padding-bottom:14px}
+.step:not(:last-child)::before{
+  content:"";position:absolute;left:18px;top:38px;bottom:0;width:2px;background:var(--line);
+}
+.step .n{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:var(--navy);color:var(--panel);font-family:var(--mono);font-weight:600;font-size:.9rem;
+  position:relative;z-index:1;
+}
+.step.gate .n{background:var(--red)}
+.step .body{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+.step .hd{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-bottom:5px}
+.step .hd b{font-size:1rem}
+.step p{font-size:.88rem;color:var(--ink-2);line-height:1.7}
+.fn{
+  font-family:var(--mono);font-size:.78rem;font-weight:500;padding:2px 8px;border-radius:5px;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap;
+}
+.chip{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.chip.ow{background:var(--red-soft);color:var(--red)}
+.chip.safe{background:var(--green-soft);color:var(--green)}
+
+/* table */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:660px}
+th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{
+  font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);background:var(--panel-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.m{font-family:var(--mono);font-size:.78rem;white-space:nowrap}
+td .w{color:var(--red);font-weight:600}
+td .r{color:var(--ink-3)}
+
+/* rules */
+.rule{
+  background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--red);
+  border-radius:10px;padding:14px 17px;margin-bottom:11px;
+}
+.rule b{display:block;font-size:.95rem;margin-bottom:4px}
+.rule p{font-size:.87rem;color:var(--ink-2)}
+.note{
+  background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px;
+  padding:13px 16px;font-size:.87rem;color:var(--amber);line-height:1.7;margin-top:14px;
+}
+.note b{display:block;margin-bottom:3px}
+.ok{
+  background:var(--green-soft);border:1px solid var(--green);border-radius:10px;
+  padding:13px 16px;font-size:.87rem;color:var(--green);line-height:1.7;margin-top:14px;
+}
+.ok b{display:block;margin-bottom:3px}
+code{font-family:var(--mono);font-size:.82em;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px;color:var(--ink-2)}
+.cfg{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 18px;
+  font-family:var(--mono);font-size:.8rem;line-height:1.9;overflow-x:auto;color:var(--ink-2)}
+.cfg b{color:var(--navy);font-weight:600}
+.cfg .c{color:var(--ink-3)}
+footer{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;
+  font-size:.8rem;color:var(--ink-3);line-height:1.7}
+@media (max-width:600px){
+  .wrap{padding:0 13px}
+  h1{font-size:1.5rem}
+  .step{grid-template-columns:30px 1fr;gap:12px}
+  .step .n{width:30px;height:30px;font-size:.8rem}
+  .step:not(:last-child)::before{left:14px;top:30px}
+}
+
+/* flow */
+.flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.fbox{
+  flex:1 1 120px;min-width:110px;background:var(--panel);border:1px solid var(--line);
+  border-radius:11px;padding:13px 12px;text-align:center;
+}
+.fbox b{display:block;font-size:.94rem;margin-bottom:3px}
+.fbox span{font-size:.76rem;color:var(--ink-3)}
+.fbox.alt{background:var(--navy-soft);border-color:var(--navy)}
+.fbox.alt b{color:var(--navy)}
+.fbox.hi{background:var(--green-soft);border-color:var(--green)}
+.fbox.hi b{color:var(--green)}
+.farr{display:flex;align-items:center;color:var(--ink-3);font-size:1.1rem;flex:0 0 auto}
+@media (max-width:600px){
+  .flow{flex-direction:column}
+  .farr{transform:rotate(90deg);justify-content:center;padding:2px 0}
+}
+
+.sim{background:var(--red-soft);border:1px solid var(--red);border-radius:11px;padding:16px 18px;margin-top:14px}
+.sim b{display:block;color:var(--red);margin-bottom:8px}
+.sim table{min-width:0;font-size:.84rem;background:transparent}
+.sim th,.sim td{border-bottom:1px solid rgba(181,68,58,.25);padding:7px 10px}
+.sim th{background:transparent;color:var(--red)}
+.sim td{color:var(--ink-2)}
+.sim td.big{font-family:var(--mono);font-weight:600;color:var(--red);font-variant-numeric:tabular-nums}
+.sim p{font-size:.85rem;color:var(--ink-2);margin-top:10px;line-height:1.7}
+.lead-q{font-family:var(--serif);font-size:1.05rem;color:var(--ink);margin-bottom:14px;line-height:1.8}
+
+.big-steps{list-style:none;counter-reset:bs}
+.bstep{
+  display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start;
+  padding:12px 0;border-bottom:1px solid var(--line);
+}
+.bstep:last-child{border-bottom:none}
+.bstep .n{
+  width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  background:var(--navy);color:var(--panel);font-family:var(--mono);font-weight:600;font-size:.86rem;
+}
+.bstep.gate .n{background:var(--red)}
+.bstep .t b{font-size:1rem;display:block;margin-bottom:2px}
+.bstep .t span{font-size:.87rem;color:var(--ink-2)}
+.menu{
+  background:var(--panel);border:1px solid var(--line);border-radius:11px;
+  padding:16px 18px;font-size:.9rem;line-height:2.1;
+}
+.menu .mi{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.menu .mi b{flex:0 0 auto;min-width:210px}
+.menu .mi span{color:var(--ink-3);font-size:.84rem}
+.menu hr{border:none;border-top:1px solid var(--line);margin:8px 0}
+.menu .sub2{color:var(--ink-3);font-size:.82rem;padding-left:14px;line-height:1.9}
+.dont{display:grid;gap:10px}
+.dont>div{
+  background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--red);
+  border-radius:10px;padding:12px 16px;
+}
+.dont b{display:block;font-size:.94rem;margin-bottom:3px}
+.dont p{font-size:.86rem;color:var(--ink-2);line-height:1.65}
+</style>
+<header class="masthead">
+  <div class="wrap">
+    <div class="kicker">雙和醫院兒科部 · 醫師國考兒科部分</div>
+    <h1>兒科題庫測驗系統　簡易手冊</h1>
+    <p class="dek">一梯次照這六步跑就對了。題庫 183 題 / 12 科 / 111–114 年 · 程式版本 v17</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <h2><span class="num">01</span>一梯次怎麼跑</h2>
+  <div class="flow" style="margin-bottom:20px">
+    <div class="fbox"><b>抽題</b><span>30 題</span></div>
+    <div class="farr">→</div>
+    <div class="fbox alt"><b>建前後測</b><span>同卷，一次兩份</span></div>
+    <div class="farr">→</div>
+    <div class="fbox"><b>前測</b><span>看最弱三科</span></div>
+    <div class="farr">→</div>
+    <div class="fbox alt"><b>教學</b><span>照弱點排課</span></div>
+    <div class="farr">→</div>
+    <div class="fbox"><b>後測</b><span>順序已打亂</span></div>
+    <div class="farr">→</div>
+    <div class="fbox hi"><b>報表＋講義</b><span>比較與檢討</span></div>
+  </div>
+
+  <ol class="big-steps">
+    <li class="bstep">
+      <div class="n">1</div>
+      <div class="t"><b>② 產生報表　→　③ 封存成績報告</b>
+      <span>把上一梯的成績做完並存檔。第一次使用就跳過。</span></div>
+    </li>
+    <li class="bstep gate">
+      <div class="n">2</div>
+      <div class="t"><b>重新抽題（可設定）</b>
+      <span>題數 30 → 年分留空 → 科別配比按「取消」（依比例＋每科至少 1 題）。<br>
+      成功的訊號：「選出題目」標題列變成深藍灰底白字。</span></div>
+    </li>
+    <li class="bstep">
+      <div class="n">3</div>
+      <div class="t"><b>① 題庫健檢</b>
+      <span>確認 0 問題再往下。有問題要修在「題庫」，不是「選出題目」。</span></div>
+    </li>
+    <li class="bstep gate">
+      <div class="n">4</div>
+      <div class="t"><b>一次產生前測＋後測（同卷）</b>
+      <span>四個連結寫進「表單連結」。發 <b>B1</b>（前測）和 <b>B3</b>（後測）——
+      B2／B4 是編輯連結，發出去等於讓大家改題目看答案。</span></div>
+    </li>
+    <li class="bstep">
+      <div class="n">5</div>
+      <div class="t"><b>前測收完 → ② 產生報表 → 看「梯次弱點」</b>
+      <span>最弱三科就是這一梯該加強的。照著排課。</span></div>
+    </li>
+    <li class="bstep">
+      <div class="n">6</div>
+      <div class="t"><b>後測收完 → ② 產生報表（輸入兩個列號）→ ④ 產生詳解講義</b>
+      <span>兩個列號＝前後測比較。講義依答對率排序，每個選項帶著實際有幾人選。</span></div>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="num">02</span>選單與函式</h2>
+  <p class="sub">選單壞掉時，可從 Apps Script 編輯器上方的函式下拉選單直接執行同一個函式（清單可往下捲）。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>選單項目</th><th>函式</th><th>做什麼</th><th>會覆寫</th></tr></thead>
+      <tbody>
+        <tr><td>重新抽題（可設定）</td><td class="m">drawQuestions</td>
+            <td class="r">題數／年分／科別配比可選</td><td><span class="w">選出題目</span></td></tr>
+        <tr><td>一次產生前測＋後測</td><td class="m">generatePrePostForms</td>
+            <td class="r">同卷兩份，後測順序打亂</td><td><span class="w">表單連結</span></td></tr>
+        <tr><td>① 題庫健檢</td><td class="m">checkQuestionBank</td>
+            <td class="r">抓正解格式錯誤、選項拆不開、重複題</td><td class="r">—</td></tr>
+        <tr><td>② 產生報表</td><td class="m">buildReport</td>
+            <td class="r">一個列號＝單份報表；兩個＝前後測比較</td><td class="r">六張報表</td></tr>
+        <tr><td>③ 封存成績報告</td><td class="m">archiveReports</td>
+            <td class="r">報表複製到獨立試算表</td><td class="r">—</td></tr>
+        <tr><td>④ 產生詳解講義</td><td class="m">buildExplanationHandout</td>
+            <td class="r">Google 文件，詳解取自題庫 E 欄</td><td class="r">—</td></tr>
+        <tr><td>重新整理歷次表單</td><td class="m">refreshFormHistory</td>
+            <td class="r">回應數更新成即時的</td><td class="r">歷次表單</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>進階 ▸</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>選單項目</th><th>函式</th><th>什麼時候用</th></tr></thead>
+      <tbody>
+        <tr><td>⓪ 環境診斷</td><td class="m">checkSetup</td><td class="r">出問題先跑這個；第一行是版本號</td></tr>
+        <tr><td>⓪ 雲端硬碟診斷</td><td class="m">checkDriveAccess</td><td class="r">表單建不出來、資料夾 ID 出錯時</td></tr>
+        <tr><td>產生單份表單</td><td class="m">generateForm</td><td class="r">只要一份、不做前後測時</td></tr>
+        <tr><td>產生後測表單（同卷）</td><td class="m">generatePostTestForm</td><td class="r">前測已發出去，事後才要補後測</td></tr>
+        <tr><td>登記目前表單</td><td class="m">archiveFormLink</td><td class="r">把既有表單補登進歷次表單</td></tr>
+        <tr><td>匯出待補詳解的題目</td><td class="m">exportForExplanationDraft</td><td class="r">要請人撰寫詳解時</td></tr>
+        <tr><td>補寫題目對照表</td><td class="m">writeItemMap</td><td class="r">舊表單要用舊版報告時</td></tr>
+        <tr><td>封存本次考卷</td><td class="m">archiveCurrentPaper</td><td class="r">重抽前想留住這份考卷</td></tr>
+        <tr><td>還原封存的考卷</td><td class="m">restoreArchivedPaper</td><td class="r">要重算某份舊考卷的成績</td></tr>
+        <tr><td>產生報告（舊版）</td><td class="m">buildFullReport</td><td class="r">幾乎用不到，留著備用</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ok">
+    <b>報表產生後會有這六張</b>
+    <b style="font-weight:400;display:inline">個人成績</b>（誰考幾分）·
+    <b style="font-weight:400;display:inline">個人錯題</b>（誰錯在哪）·
+    <b style="font-weight:400;display:inline">逐題分析</b>（哪題最多人錯，紅底「主要誤選」代表觀念被混淆）·
+    <b style="font-weight:400;display:inline">醫院科別</b> ·
+    <b style="font-weight:400;display:inline">梯次弱點</b>（這梯該加強什麼）·
+    <b style="font-weight:400;display:inline">前後測比較</b>（教了有沒有用）
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>三個不要</h2>
+  <div class="dont">
+    <div>
+      <b>不要在沒產生報表前就重抽題或建新表單</b>
+      <p>報表每次產生都被整份覆蓋，「選出題目」和「表單連結」也會被蓋掉。
+         做完報表、封存了再往下。舊表單本身不會消失，連結都在「歷次表單」裡。</p>
+    </div>
+    <div>
+      <b>不要跳過題庫健檢</b>
+      <p>正解欄格式不對的題目做成表單不會報錯，只會變成「這題沒有正解」，全班都算答錯。</p>
+    </div>
+    <div>
+      <b>不要把「最弱科進步了」當成教學有效</b>
+      <p>模擬顯示：12 科能力完全相同、完全沒教學的情況下，前測最弱的那一科在後測
+         平均照樣「進步」16 個百分點（10 人時）—— 這是迴歸平均。<br>
+         要判斷教學效果，看<b>「扣掉整體進步」那一欄</b>或<b>逐題前後對照</b>，
+         不要看單一科別的絕對進步幅度。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>出事時</h2>
+  <div class="tw">
+    <table>
+      <thead><tr><th>症狀</th><th>怎麼辦</th></tr></thead>
+      <tbody>
+        <tr><td>選單不見了 / 是舊的</td><td>檔案沒存檔，或專案裡還有第二個 <span class="m">onOpen</span>。改檔名沒有用，要註解或刪除</td></tr>
+        <tr><td>按了沒反應</td><td>Google 授權沒走完：進階 → 前往（不安全）→ 允許</td></tr>
+        <tr><td>報表是空的</td><td>統計到 0 筆回應的新表單了。用「② 產生報表」從清單挑有回應的那一列</td></tr>
+        <tr><td>回應數看起來不對</td><td>先跑「重新整理歷次表單」——登記時寫的是當下快照</td></tr>
+        <tr><td>找不到舊表單</td><td>看「歷次表單」，每一份發出去過的都在那裡</td></tr>
+        <tr><td>前後測比較說沒人配對到</td><td>配對用姓名／Email，兩次要一致；姓名打錯字就配不到</td></tr>
+        <tr><td>不確定哪一版在跑</td><td>進階 → ⓪ 環境診斷，第一行是版本號</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <b>詳解寫在「題庫」E 欄</b>
+    標題打「詳解」。填了之後那一題以後每次被抽到都自動帶入 —— 183 題慢慢累積，寫一次用一輩子。
+    「進階 → 匯出待補詳解的題目」會把還沒寫的整理成純文字，方便複製出去請人撰寫。
+  </div>
+</section>
+
+<footer>
+  設定在程式檔最上方：<code>DRAW.SHEET_BANK</code>（題庫分頁名稱）、
+  <code>FORMCFG.FOLDER_ID</code>（表單存放資料夾，目前那個已失效但不影響功能）、
+  <code>CFG.BATCH_GAP_DAYS</code>（相隔幾天算不同梯次，預設 14）。<br>
+  題庫欄位：A 題目　B 年分　C 正確答案　D 科別　E 詳解。
+</footer>
+
+</div>
+
+</body>
+</html>

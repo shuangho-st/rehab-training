@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>兒科題庫測驗</title>
+<meta name="theme-color" content="#1D6873" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E181B" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand" id="brand">兒科題庫測驗<small id="brand-sub">前測／後測</small></div>
+    <span id="phase-chip"></span>
+  </div>
+</header>
+<main class="wrap" id="app"><p class="muted" style="margin-top:24px">載入中…</p></main>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+const { CFG, esc, LS, rng, shuffle, paperCode, parsePaper, paperQuery, PHASE, drawPaper, loadBanks, loadBank, fmt } = Peds;
+const API_URL = CFG.API_URL || '';
+const app = document.getElementById('app');
+const P = parsePaper(location.search);
+let BANK = null, CODE = '', ATT = null, QS = [];
+
+/* ---------- 上傳佇列：沒網路時先存在這台裝置，連上後自動補傳 ---------- */
+const OUT = 'peds-outbox-v1';
+let flushing = false;
+function queue(item) { if (!API_URL) return; const q = LS.get(OUT) || []; q.push(item); LS.set(OUT, q); flush(); }
+async function flush() {
+  if (!API_URL || flushing || !navigator.onLine) return; flushing = true;
+  try {
+    let q = LS.get(OUT) || [];
+    while (q.length) {
+      await fetch(API_URL, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(q[0]) });
+      q = LS.get(OUT) || []; q.shift(); LS.set(OUT, q);
+    }
+  } catch (e) {} finally { flushing = false; renderSync(); }
+}
+function renderSync() {
+  const el = document.getElementById('sync'); if (!el) return;
+  if (P.m === 'practice') { el.textContent = '練習模式不上傳成績。'; return; }
+  if (!API_URL) { el.textContent = '這份測驗尚未設定成績上傳，成績只顯示在這台裝置。請截圖給老師。'; return; }
+  const n = (LS.get(OUT) || []).length;
+  el.textContent = n ? `成績上傳中…（有 ${n} 筆待傳，沒網路時會在連上後自動補傳，請勿清除瀏覽器資料）` : '✓ 成績已送出給老師。';
+}
+window.addEventListener('online', flush);
+
+const keyAtt = () => `peds-att-${CODE}-${P.m}-${P.k}`;
+const keyDone = () => `peds-done-${CODE}-${P.m}-${P.k}`;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+function setPhaseChip() {
+  const cls = { pre: 'c-acc', post: 'c-ok', practice: 'c-idle' }[P.m];
+  document.getElementById('phase-chip').innerHTML = `<span class="chip ${cls}">${PHASE[P.m]}</span>`;
+}
+
+/* ---------- 進入點 ---------- */
+async function boot() {
+  try {
+    if (!P.b || !P.nums.length) return landing();
+    BANK = await loadBank(P.b);
+    const missing = P.nums.filter(n => !BANK.byNo[n]);
+    if (missing.length) throw new Error('連結裡的題號 ' + missing.join('、') + ' 在題庫中找不到，請向老師確認連結是否完整。');
+    CODE = paperCode(P.b, P.nums);
+    document.title = (P.t || '兒科題庫測驗') + '｜' + PHASE[P.m];
+    document.getElementById('brand').innerHTML = esc(P.t || '兒科題庫測驗') + `<small>${esc(P.k ? P.k + '・' : '')}${P.nums.length} 題・卷別 ${CODE}</small>`;
+    setPhaseChip();
+    const done = LS.get(keyDone());
+    if (done) return result(done, true);
+    ATT = LS.get(keyAtt());
+    if (ATT && ATT.order && ATT.order.length === P.nums.length) return quiz();
+    register();
+  } catch (e) {
+    app.innerHTML = `<h1>無法開始測驗</h1><div class="panel"><p>${esc(e.message)}</p><p class="muted small">請確認網路連線，或向老師索取新的連結。</p></div>`;
+  }
+}
+
+/* 沒有帶測驗參數：自由練習入口 */
+async function landing() {
+  setPhaseChip();
+  let banks = [];
+  try { banks = await loadBanks(); } catch (e) {}
+  app.innerHTML = `
+  <h1>兒科題庫測驗</h1>
+  <p class="muted">正式的前測／後測請使用老師提供的連結。這裡可以自由練習，作答後立即看到正解，成績不會上傳。</p>
+  <div class="panel stack" style="margin-top:16px">
+    <label class="fld"><span>題庫</span><select id="pb">${banks.map(b => `<option value="${esc(b.id)}">${esc(b.title)}（${b.count} 題）</option>`).join('')}</select></label>
+    <label class="fld"><span>題數</span><select id="pn"><option>10</option><option selected>20</option><option>30</option><option>50</option><option value="999">全部</option></select></label>
+    <button class="btn block" id="pgo" ${banks.length ? '' : 'disabled'}>開始練習</button>
+  </div>
+  <p class="small muted" style="margin-top:18px">老師請到 <a href="admin.html">教師端</a> 出卷與看成績。</p>`;
+  document.getElementById('pgo').onclick = async () => {
+    const b = document.getElementById('pb').value;
+    const bank = await loadBank(b);
+    const n = +document.getElementById('pn').value;
+    const nums = drawPaper(bank.questions, n, 'prop', Date.now());
+    location.search = paperQuery({ b, nums, m: 'practice', t: '自由練習', sq: true, r: true, k: '' });
+  };
+}
+
+/* ---------- 報到 ---------- */
+function register() {
+  const u = LS.get('peds-user-v1') || {};
+  if (P.m === 'practice') return startAttempt({ name: u.name || '練習' });   // 練習不必報到
+  const isTest = P.m !== 'practice';
+  const opt = (arr, v) => '<option value="">請選擇</option>' + arr.map(x => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('');
+  app.innerHTML = `
+  <h1>${esc(P.t || '兒科題庫測驗')}</h1>
+  <p class="muted">${PHASE[P.m]}・共 ${P.nums.length} 題・單選（每題 ${BANK.letters.length} 個選項）${P.k ? '・梯次 ' + esc(P.k) : ''}</p>
+  ${isTest ? `<div class="callout info" style="margin:14px 0">前測與後測請填<b>完全相同</b>的 Email 或員工編號，系統才能把兩次成績配對起來。</div>` : ''}
+  <div class="panel stack">
+    <label class="fld"><span>姓名</span><input id="u-name" autocomplete="name" value="${esc(u.name || '')}"></label>
+    ${isTest ? `
+    <label class="fld"><span>Email 或員工編號</span><input id="u-pid" autocomplete="email" autocapitalize="off" spellcheck="false" value="${esc(u.pid || '')}" placeholder="前後測要填一樣"></label>
+    <div class="grid2">
+      <label class="fld"><span>醫院</span><select id="u-hosp">${opt(CFG.HOSPITALS || [], u.hospital)}</select></label>
+      <label class="fld"><span>職級</span><select id="u-level">${opt(CFG.LEVELS || [], u.level)}</select></label>
+    </div>` : ''}
+  </div>
+  <div class="err" id="u-err" role="alert"></div>
+  <button class="btn block" id="u-go">開始作答</button>
+  <p class="small muted" style="margin-top:14px">作答過程會自動存在這台裝置，不小心關掉頁面再打開同一個連結就能接著寫。${P.m === 'pre' ? '前測結束後不會公布正解。' : ''}</p>`;
+  const err = document.getElementById('u-err');
+  document.getElementById('u-go').onclick = () => {
+    const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const user = { name: v('u-name'), pid: v('u-pid'), hospital: v('u-hosp'), level: v('u-level') };
+    if (!user.name) { err.textContent = '請填姓名'; return; }
+    if (isTest && !user.pid) { err.textContent = '請填 Email 或員工編號（前後測配對用）'; return; }
+    if (isTest && !user.hospital) { err.textContent = '請選擇醫院'; return; }
+    if (isTest && !user.level) { err.textContent = '請選擇職級'; return; }
+    LS.set('peds-user-v1', user);
+    startAttempt(user);
+  };
+}
+function startAttempt(user) {
+    const rand = rng(CODE + '|' + P.m + '|' + (user.pid || user.name) + '|' + Date.now());
+    const order = P.sq ? shuffle(P.nums, rand) : P.nums.slice();
+    const opt = {};
+    order.forEach(n => {
+      const k = BANK.byNo[n].options.length;
+      const idx = Array.from({ length: k }, (_, i) => i);
+      opt[n] = P.so ? shuffle(idx, rand) : idx;
+    });
+    ATT = { user, order, opt, ans: {}, flag: {}, cur: 0, startedAt: new Date().toISOString() };
+    LS.set(keyAtt(), ATT);
+    quiz();
+}
+
+/* ---------- 作答 ---------- */
+function saveAtt() { LS.set(keyAtt(), ATT); }
+function quiz() {
+  const n = ATT.order.length, i = ATT.cur, no = ATT.order[i], q = BANK.byNo[no];
+  const L = BANK.letters, answered = Object.keys(ATT.ans).length;
+  const picked = ATT.ans[no];
+  app.innerHTML = `
+  <div class="qhead">
+    <b>第 ${i + 1} / ${n} 題</b>
+    <span class="chip c-idle">已答 ${answered}</span>
+    <span class="spacer"></span>
+    <button class="btn small quiet" id="flag" aria-pressed="${!!ATT.flag[no]}">${ATT.flag[no] ? '★ 已標記' : '☆ 稍後再看'}</button>
+    <button class="btn small quiet" id="tomap">題目總覽</button>
+  </div>
+  <div class="bar" aria-hidden="true"><i style="width:${answered / n * 100}%"></i></div>
+  <div class="stem">${esc(q.stem)}</div>
+  ${q.image ? `<img class="qimg" src="${esc(q.image)}" alt="第 ${i + 1} 題附圖（點一下放大）" id="qimg">` : ''}
+  <div class="opts" role="radiogroup" aria-label="選項">
+    ${ATT.opt[no].map((oi, pos) => `<button class="opt" role="radio" data-oi="${oi}" aria-checked="${picked === L[oi]}"><span class="L">${L[pos]}</span><span>${esc(q.options[oi])}</span></button>`).join('')}
+  </div>
+  <div class="nav">
+    <button class="btn ghost" id="prev" ${i === 0 ? 'disabled' : ''}>上一題</button>
+    ${i < n - 1 ? '<button class="btn" id="next">下一題</button>' : '<button class="btn" id="finish">交卷</button>'}
+  </div>`;
+  app.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+    const letter = L[+b.dataset.oi];
+    if (ATT.ans[no] === letter) delete ATT.ans[no]; else ATT.ans[no] = letter;
+    saveAtt(); quiz();
+  });
+  const go = d => { ATT.cur = Math.max(0, Math.min(n - 1, ATT.cur + d)); saveAtt(); quiz(); window.scrollTo(0, 0); };
+  document.getElementById('prev').onclick = () => go(-1);
+  const nx = document.getElementById('next'); if (nx) nx.onclick = () => go(1);
+  const fin = document.getElementById('finish'); if (fin) fin.onclick = overview;
+  document.getElementById('tomap').onclick = overview;
+  document.getElementById('flag').onclick = () => { if (ATT.flag[no]) delete ATT.flag[no]; else ATT.flag[no] = 1; saveAtt(); quiz(); };
+  const img = document.getElementById('qimg'); if (img) img.onclick = () => lightbox(q.image);
+}
+document.addEventListener('keydown', e => {
+  if (!ATT || !document.querySelector('.opts') || e.target.closest('input,select,textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toUpperCase();
+  const btns = Array.from(document.querySelectorAll('.opt'));
+  let idx = '12345'.indexOf(k); if (idx < 0) idx = BANK.letters.indexOf(k);
+  if (idx >= 0 && btns[idx]) { btns[idx].click(); e.preventDefault(); return; }
+  if (e.key === 'ArrowRight') { const b = document.getElementById('next'); if (b) b.click(); }
+  if (e.key === 'ArrowLeft') { const b = document.getElementById('prev'); if (b && !b.disabled) b.click(); }
+});
+function lightbox(src) {
+  const d = document.createElement('div'); d.className = 'lightbox'; d.setAttribute('role', 'dialog');
+  d.innerHTML = `<img src="${esc(src)}" alt="附圖放大">`; d.onclick = () => d.remove();
+  document.body.appendChild(d);
+}
+
+function overview() {
+  const n = ATT.order.length, answered = Object.keys(ATT.ans).length, left = n - answered;
+  const flagged = ATT.order.filter(no => ATT.flag[no]).length;
+  app.innerHTML = `
+  <h1>題目總覽</h1>
+  <p class="muted">已答 ${answered} / ${n} 題${left ? `，<b class="bad">還有 ${left} 題沒答</b>` : '，全部作答完畢'}${flagged ? `；標記 ${flagged} 題（黃點）` : ''}。點題號回到該題。</p>
+  <div class="panel"><div class="map">${ATT.order.map((no, i) => `<button data-i="${i}" class="${ATT.ans[no] ? 'done' : ''} ${i === ATT.cur ? 'cur' : ''} ${ATT.flag[no] ? 'flag' : ''}" aria-label="第 ${i + 1} 題${ATT.ans[no] ? '，已答' : '，未答'}">${i + 1}</button>`).join('')}</div></div>
+  <div class="err" id="ov-err" role="alert"></div>
+  <div class="nav">
+    <button class="btn ghost" id="back">繼續作答</button>
+    <button class="btn" id="submit">交卷</button>
+  </div>`;
+  app.querySelectorAll('.map button').forEach(b => b.onclick = () => { ATT.cur = +b.dataset.i; saveAtt(); quiz(); window.scrollTo(0, 0); });
+  document.getElementById('back').onclick = () => { quiz(); };
+  const sb = document.getElementById('submit');
+  sb.onclick = () => {
+    if (left && !sb.dataset.sure) { sb.dataset.sure = 1; sb.textContent = `還有 ${left} 題沒答，確定交卷`; document.getElementById('ov-err').textContent = '沒作答的題目會算答錯。再按一次確認交卷。'; return; }
+    submit();
+  };
+}
+
+function submit() {
+  const now = new Date();
+  const answers = P.nums.map(no => {
+    const q = BANK.byNo[no];
+    return { no, picked: ATT.ans[no] || '', ans: q.answer, cat: q.category };
+  });
+  const score = answers.filter(a => a.picked && a.picked === a.ans).length;
+  const rec = {
+    type: 'submit', id: uid(), bank: P.b, paperCode: CODE, batch: P.k, phase: P.m, title: P.t,
+    name: ATT.user.name, pid: ATT.user.pid || '', hospital: ATT.user.hospital || '', level: ATT.user.level || '',
+    startedAt: ATT.startedAt, submittedAt: now.toISOString(),
+    durationSec: Math.round((now - new Date(ATT.startedAt)) / 1000),
+    score, total: answers.length, answers,
+    order: ATT.order, ua: navigator.userAgent.slice(0, 160)
+  };
+  LS.set(keyDone(), rec);
+  LS.del(keyAtt());
+  if (P.m !== 'practice') queue(rec);
+  result(rec, false);
+}
+
+/* ---------- 成績 ---------- */
+function result(rec, again) {
+  window.scrollTo(0, 0);
+  const pct = rec.total ? rec.score / rec.total * 100 : 0;
+  const reveal = P.m === 'practice' || P.r;
+  const cats = {};
+  rec.answers.forEach(a => {
+    const c = cats[a.cat] || (cats[a.cat] = { n: 0, ok: 0 });
+    c.n++; if (a.picked && a.picked === a.ans) c.ok++;
+  });
+  // 後測時找同一卷、同一梯次的前測成績（在同一台裝置上作答過才找得到）
+  let preCmp = '';
+  if (P.m === 'post') {
+    const pre = LS.get(`peds-done-${CODE}-pre-${P.k}`);
+    if (pre) {
+      const pp = pre.score / pre.total * 100, d = pct - pp;
+      preCmp = `<div class="kpi"><span>前測</span><b>${fmt(pp)}%</b></div><div class="kpi"><span>進步</span><b class="${d > 0 ? 'good' : d < 0 ? 'bad' : ''}">${d > 0 ? '+' : ''}${fmt(d)}</b></div>`;
+    }
+  }
+  const mins = Math.floor(rec.durationSec / 60), secs = rec.durationSec % 60;
+  app.innerHTML = `
+  <h1>${again ? '你已經交過卷了' : '交卷完成'}</h1>
+  <p class="muted">${esc(rec.name)}${rec.hospital ? '・' + esc(rec.hospital) : ''}・${PHASE[P.m]}・${new Date(rec.submittedAt).toLocaleString('zh-TW')}</p>
+  <div class="panel" style="margin-top:14px">
+    <div class="big">${rec.score}<small> / ${rec.total} 題</small></div>
+    <p class="muted" style="margin:6px 0 0">答對率 ${fmt(pct)}%・作答時間 ${mins} 分 ${secs} 秒</p>
+  </div>
+  ${preCmp ? `<div class="kpis" style="margin-top:12px"><div class="kpi"><span>本次（後測）</span><b>${fmt(pct)}%</b></div>${preCmp}</div>` : ''}
+  <p class="small" id="sync" style="margin-top:12px"></p>
+  <h2>各科答對情形</h2>
+  <div class="tbl-wrap"><table><thead><tr><th>科別</th><th class="n">答對</th><th class="n">答對率</th></tr></thead><tbody>
+  ${Object.keys(cats).sort((a, b) => cats[a].ok / cats[a].n - cats[b].ok / cats[b].n).map(c => `<tr><td>${esc(c)}</td><td class="n">${cats[c].ok} / ${cats[c].n}</td><td class="n">${fmt(cats[c].ok / cats[c].n * 100)}%</td></tr>`).join('')}
+  </tbody></table></div>
+  <p class="tiny muted" style="margin-top:6px">每科只有少數幾題，單科答對率起伏很大，請把它當成方向參考，不要當成能力定論。</p>
+  ${reveal ? reviewHTML(rec) : `<div class="callout info" style="margin-top:18px">${P.m === 'pre' ? '前測不公布正解，課程結束後會進行後測與講評。' : '正解會在講評時公布。'}</div>`}
+  <div class="row noprint" style="margin-top:22px">
+    ${P.m === 'practice' ? '<a class="btn" href="./">再練一次</a>' : ''}
+    <button class="btn quiet small" id="next-person">換另一位作答（共用裝置時）</button>
+  </div>`;
+  renderSync();
+  document.getElementById('next-person').onclick = () => {
+    if (!confirm('這台裝置要換另一位作答嗎？\n你的成績已經記錄，不受影響。')) return;
+    LS.del(keyDone()); LS.del('peds-user-v1'); ATT = null; register(); window.scrollTo(0, 0);
+  };
+  app.querySelectorAll('.qimg').forEach(img => img.onclick = () => lightbox(img.getAttribute('src')));
+  flush();
+}
+function reviewHTML(rec) {
+  const L = BANK.letters;
+  const order = rec.order && rec.order.length ? rec.order : rec.answers.map(a => a.no);
+  const byNo = {}; rec.answers.forEach(a => byNo[a.no] = a);
+  const rows = order.map((no, i) => {
+    const a = byNo[no], q = BANK.byNo[no], ok = a.picked && a.picked === a.ans;
+    return `<div class="review-q">
+      <div class="row"><b>第 ${i + 1} 題</b><span class="chip ${ok ? 'c-ok' : 'c-bad'}">${ok ? '答對' : a.picked ? '答錯' : '未作答'}</span><span class="chip c-idle">${esc(q.category)}</span><span class="tiny muted">原題號 ${q.no}</span></div>
+      <div class="stem" style="font-size:16px;margin-top:6px">${esc(q.stem)}</div>
+      ${q.image ? `<img class="qimg" src="${esc(q.image)}" alt="附圖">` : ''}
+      <div class="opts">${q.options.map((o, oi) => {
+        const letter = L[oi], cls = letter === q.answer ? 'right' : (letter === a.picked ? 'wrong' : '');
+        return `<div class="opt ${cls}"><span class="L">${letter}</span><span>${esc(o)}${letter === a.picked ? '　<b>← 你的答案</b>' : ''}</span></div>`;
+      }).join('')}</div>
+      ${q.explain ? `<div class="callout info">${esc(q.explain)}</div>` : ''}
+    </div>`;
+  });
+  return `<h2>逐題檢討</h2><p class="small muted">綠色是正解，紅色是你選的錯誤答案。選項以題庫原始順序顯示。</p><div class="panel">${rows.join('')}</div>`;
+}
+
+boot();
+flush();
+</script>
+</body>
+</html>
