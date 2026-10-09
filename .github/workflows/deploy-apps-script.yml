@@ -1,0 +1,48 @@
+name: Deploy Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps-script/**']
+  workflow_dispatch:
+
+concurrency: apps-script-deploy
+
+env:
+  # 對應 index.html 裡 API_URL 的 /macros/s/<這段>/exec，更新同一個部署網址才不會變
+  DEPLOYMENT_ID: AKfycbwm-SP-h0OvqrvCJsij_xUU88XtdIAiroBroof83-RXOitUX5n1PZW6rFk3Y97WjDh4cQ
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps-script
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check files
+        run: |
+          test -f .clasp.json || { echo "::error::缺少 apps-script/.clasp.json（需要 scriptId）"; exit 1; }
+          test -f appsscript.json || { echo "::error::缺少 apps-script/appsscript.json"; exit 1; }
+          ls *.gs *.js >/dev/null 2>&1 || { echo "::error::apps-script/ 裡沒有程式碼檔"; exit 1; }
+          test -n "$CLASPRC_JSON" || { echo "::error::尚未設定 GitHub Secret CLASPRC_JSON"; exit 1; }
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install -g @google/clasp@2.4.2
+
+      - name: Write credentials
+        run: printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - name: Push code
+        run: clasp push --force
+
+      - name: Update web app deployment
+        run: clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "GitHub ${GITHUB_SHA::7}"
