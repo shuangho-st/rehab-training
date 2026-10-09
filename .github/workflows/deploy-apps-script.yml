@@ -9,9 +9,9 @@ on:
 concurrency: st-portal-deploy
 
 env:
-  # 「語言治療組 工作入口」網頁應用程式網址 /macros/s/<這段>/exec。
+  # 「語言治療組 工作入口」網頁應用程式網址 .../macros/s.tmu.edu.tw/s/<這段>/exec。
   # 更新同一個部署，網址才不會變。尚未填入前不會部署。
-  DEPLOYMENT_ID: ''
+  DEPLOYMENT_ID: AKfycbwp_A-yvS0DYXf02a20ceiqjtJOQveEMi22PrvommX4VBVuemf6dpberFgMakZ42lT5ug
   # clasp push 會整個覆蓋線上專案，這些頁面缺一個都不部署，避免網站被刪壞
   REQUIRED_FILES: Code.gs appsscript.json Index.html Adult.html Daily.html Early.html
 
