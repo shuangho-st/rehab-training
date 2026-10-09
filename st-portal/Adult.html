@@ -279,6 +279,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
   .row{gap:7px}
   .pair3{gap:0 7px}
 }
+/* ---------- 列印：只印報告 ---------- */
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:16mm 15mm}
+  body{background:#fff}
+  .shell,.bar,.sheet,.toast{display:none!important}
+  #printArea{display:block;font-family:var(--sans);font-size:11.5pt;line-height:1.75;color:#000;
+    white-space:pre-wrap;word-break:break-word}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -326,6 +335,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div id="printArea"></div>
 
 <script>
 "use strict";
@@ -899,6 +909,7 @@ out(){
   <textarea id="out" spellcheck="false">${esc(txt)}</textarea>
   <div class="row">
     <button class="btn" id="copy">複製全文</button>
+    <button class="btn ghost" id="print">列印</button>
     <button class="btn ghost" id="regen">重新產生</button>
     <button class="btn ghost" id="reset">清空重填</button>
     ${curDraftId?`<button class="btn ghost" id="doneDel">貼好了，刪除這份草稿</button>`:""}
@@ -1841,6 +1852,13 @@ document.addEventListener("click",e=>{
   if(b.dataset.clear!==undefined){ delete D[b.dataset.clear]; render(); touch(); return; }
   if(b.dataset.mode){ outMode=b.dataset.mode; outEdited=null; render(); return; }
   if(b.id==="regen"){ outEdited=null; render(); toast("已依目前作答重新產生"); return; }
+  if(b.id==="print"){
+    // 貼上版是壓成一行的，列印時改用敘述式；其他版本照畫面上（含手動修改）印
+    const txt = (outMode==="flat" && outEdited===null) ? build("prose") : document.getElementById("out").value;
+    document.getElementById("printArea").textContent = txt;
+    window.print();
+    return;
+  }
   if(b.id==="copy"){
     const ta=document.getElementById("out");
     ta.select(); ta.setSelectionRange(0,999999);
