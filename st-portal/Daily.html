@@ -125,6 +125,14 @@ input:focus,textarea:focus{border-color:var(--pick);box-shadow:0 0 0 3px var(--p
   .head h2{font-size:21px}
   .grid2,.grid3{grid-template-columns:1fr}
 }
+/* ---------- 列印：只印紀錄文字 ---------- */
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:16mm 15mm}
+  body{background:#fff}
+  .shell,.toast{display:none!important}
+  #printArea{display:block;font-size:11.5pt;line-height:1.75;color:#000;white-space:pre-wrap;word-break:break-word}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -142,6 +150,7 @@ input:focus,textarea:focus{border-color:var(--pick);box-shadow:0 0 0 3px var(--p
   <main id="main"></main>
 </div>
 <div class="toast" id="toast"></div>
+<div id="printArea"></div>
 
 <script>
 "use strict";
@@ -404,6 +413,7 @@ function view(){
       <small id="pct">尚未填寫</small></div>
     <div class="row">
       <button class="btn" id="copyall">複製全部</button>
+      <button class="btn ghost" id="print">列印</button>
       <button class="btn ghost" id="save">存入清單，寫下一位</button>
     </div>
     <div id="outs"></div>`;
@@ -587,6 +597,12 @@ document.addEventListener("click",e=>{
     const bs=blocks(), x=bs.find(z=>z.k===b.dataset.copy);
     if(x) copy(outEdited[x.k]!==undefined?outEdited[x.k]:x.t,"已複製「"+x.n+"」");
     return;
+  }
+  if(b.id==="print"){
+    const all=blocks().map(x=>outEdited[x.k]!==undefined?outEdited[x.k]:x.t).join("\n\n");
+    if(!all){ toast("沒有可列印的內容"); return; }
+    document.getElementById("printArea").textContent=all;
+    window.print(); return;
   }
   if(b.id==="copyall"){
     const all=blocks().map(x=>outEdited[x.k]!==undefined?outEdited[x.k]:x.t).join("");
