@@ -129,6 +129,11 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
 .trial{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:18px 18px 6px;margin-bottom:14px}
 .trial-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .trial-hd h4{margin:0;font-size:15px}
+.trial .sub{font-size:12.5px;font-weight:650;color:var(--pick);letter-spacing:.02em;
+  margin:6px 0 12px;padding-top:12px;border-top:1px dashed var(--line)}
+.trial .sub.first{border-top:0;padding-top:0;margin-top:0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.pair3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px}
 .mini{background:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
 .mini:hover{border-color:var(--pick);color:var(--pick)}
 .add{
@@ -272,6 +277,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
   .tabs{flex-wrap:wrap;gap:5px}
   .tab{padding:9px 12px;font-size:13px}
   .row{gap:7px}
+  .pair3{gap:0 7px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -359,6 +365,8 @@ const IDDSI_ALL   = ["口水",
 const TRIAL_FOOD  = ["口水","冰酸刺激（thermal）",
   ...IDDSI_DRINK.map(x=>"飲品 "+x),
   ...IDDSI_FOOD.map(x=>"食物 "+x)];
+/* 需要咀嚼的固體質地：Level 6 以上與過渡期食物 → 才顯示 Mastication 與咀嚼表現 */
+const isSolid = f => /^食物 (Level 6|Level 7|過渡期)/.test(f||"");
 const STRATEGY = ["低頭吞嚥 chin tuck","向左轉頭吞嚥","向右轉頭吞嚥","側躺／側頭吞嚥",
   "用力吞嚥 effortful swallow","每口多次吞嚥","固液交替吞嚥","聲門上吞嚥 supraglottic",
   "超上聲門吞嚥 super-supraglottic","Mendelsohn maneuver","小口進食","放慢進食速度",
@@ -367,6 +375,11 @@ const EXERCISE = ["舌頭阻抗運動","舌頭前伸／後縮運動","舌頭側�
   "Shaker 抬頭運動","下巴阻抗運動 CTAR","用力吞嚥練習","假聲／高音練習","嘴唇閉合運動",
   "鼓頰運動","下顎開合運動","吸氣肌訓練 IMST","吐氣肌訓練 EMST","腹式呼吸練習",
   "咳嗽／哈氣練習","冰酸刺激","口腔按摩"];
+/* Swallow Trial 觀察項目（參考 MASA、TOMASS、Yale、GUSS） */
+const ORAL_OBS = ["流涎／食物自口角漏出","食團形成不佳","口腔通過時間延長","分次吞嚥 piecemeal",
+  "舌面殘留","頰溝殘留","硬顎殘留"];
+const PHAR_OBS = ["吞嚥啟動延遲","呼吸型態改變","SpO₂ 下降 ≥2%"];
+const CTIME    = ["無","吞嚥前","吞嚥中／吞後立即","延遲（吞後 1 分鐘內）"];
 /* GUSS（Gugging Swallowing Screen, Trapl et al. 2007）
    四個子測驗依序進行，每個滿分 5 分，未達 5 分即中止 */
 const GUSS_P1 = [
@@ -396,6 +409,8 @@ const GUSS_SCORE = {};
 
 const NPO = "課程以外時間禁止由口進食（NPO）";
 const NPO_LEVELS = ["可自行由口進食／練習","需照顧者在旁協助","僅可在治療師監督下少量練習",NPO];
+/* 吞嚥策略只在可由口進食（前三項）時出現 */
+const oralAllowed = () => has(D.home_ok) && D.home_ok!==NPO;
 const FOIS = [
  "FOIS 1 完全無法經口進食","FOIS 2 管灌為主、少量經口","FOIS 3 管灌併穩定經口進食",
  "FOIS 4 單一質地經口進食","FOIS 5 多種質地、需特別準備",
@@ -418,6 +433,8 @@ const on = k => (D.modules||[]).includes(MOD_NAME[k]);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const has = v => v!==undefined && v!==null && v!=="" && !(Array.isArray(v)&&!v.length);
 const list = a => (a||[]).join("、");
+/* 只留數字（使用者若自己打了單位，避免報告出現「3次 次/天」） */
+const num = v => { const m=String(v).match(/\d+(?:\.\d+)?(?:\s*[-～~]\s*\d+(?:\.\d+)?)?/); return m?m[0].replace(/\s+/g,""):String(v).trim(); };
 
 function toast(msg){
   const t=document.getElementById("toast");
@@ -537,7 +554,7 @@ basic(){
   </fieldset>
   <fieldset><legend>個案</legend>
     ${text("name","姓名")}
-    ${text("chart","病歷號")}
+    ${text("chart","病歷號/病床號","如 1234567 / 12A-05")}
     ${radio("gender","性別",["男","女"])}
     ${text("birth","出生日期")}
     ${text("age","年齡")}
@@ -603,6 +620,7 @@ sp(){
 sw(){
   const oral = D.feed==="管灌＋口進食" || D.feed==="全口進食";
   const tube = D.feed==="全管灌" || D.feed==="管灌＋口進食";
+  const sys  = D.sw_sys||[];
   return `<div class="head"><h2>Swallowing</h2><p>吞嚥整體狀況與目前進食方式。</p></div>
   <fieldset><legend>評估狀態</legend>
     ${radio("sw_state","狀態",["可評估","無法評估"])}
@@ -613,6 +631,9 @@ sw(){
   </fieldset>
   <fieldset><legend>吞嚥相關因素</legend>
     ${check("sw_sys","目前狀況",["氣切","抽痰","氧氣：鼻導管","氧氣：面罩","肺炎","泌尿道感染"])}
+    ${sys.includes("抽痰")?text("sw_suc","抽痰","如 3","次／天"):""}
+    ${sys.includes("氧氣：鼻導管")?text("sw_o2nc","氧氣：鼻導管","如 2","L/min"):""}
+    ${sys.includes("氧氣：面罩")?text("sw_o2mk","氧氣：面罩","如 6","L/min"):""}
     ${area("sw_sys_note","相關說明","如痰量、氣切型號、聲帶狀況")}
   </fieldset>
   <fieldset><legend>目前進食方式</legend>
@@ -675,6 +696,7 @@ guss(){
         <div style="margin:8px 0 4px;font-weight:650">${v.sev}．${v.risk}</div>
         ${r.stopAt?`<div style="font-size:13px;color:var(--ink-2)">測試於「${r.stopAt}」中止</div>`:""}
         <div style="margin-top:12px;font-size:14px;line-height:1.65">${v.diet}</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--ink-3)">「安排 VFSS／FEES／語言治療師評估」僅供參考，不會帶入報告（報告以結論頁的「建議進一步檢查」為準）。</div>
       </div></fieldset>`;
   } else {
     h+=`<div class="note">尚未填完，填完後會自動計算總分與飲食建議。</div>`;
@@ -684,29 +706,55 @@ guss(){
 
 trial(){
   const cards = TRIALS.map((t,i)=>{
-    const num=String(i+1).padStart(2,"0");
+    const num2=String(i+1).padStart(2,"0");
+    const solid=isSolid(t.food);
     const sel=(k,v)=>t[k]===v?"on":"";
-    const opt=(k,v,type)=>`<label class="opt ${sel(k,v)}"><input type="${type}" ${type==="radio"?`name="t${i}_${k}"`:""} value="${esc(v)}" data-ti="${i}" data-tk="${k}" data-t="${type==="radio"?"tradio":"tcheck"}" ${type==="checkbox"?((t[k]||[]).includes(v)?"checked":""):(sel(k,v)?"checked":"")}><span class="box ${type==="radio"?"r":"c"}"></span>${esc(v)}</label>`;
+    const opt=(k,v)=>`<label class="opt ${sel(k,v)}"><input type="radio" name="t${i}_${k}" value="${esc(v)}" data-ti="${i}" data-tk="${k}" data-t="tradio" ${sel(k,v)?"checked":""}><span class="box r"></span>${esc(v)}</label>`;
     const chk=(k,v)=>`<label class="opt ${(t[k]||[]).includes(v)?"on":""}"><input type="checkbox" value="${esc(v)}" data-ti="${i}" data-tk="${k}" data-t="tcheck" ${(t[k]||[]).includes(v)?"checked":""}><span class="box c"></span>${esc(v)}</label>`;
-    const g=(k,label,opts)=>`<div class="field"><span class="flabel">${label}</span><div class="opts">${opts.map(v=>opt(k,v,"radio")).join("")}</div></div>`;
+    const g=(k,label,opts)=>`<div class="field"><span class="flabel">${label}</span><div class="opts">${opts.map(v=>opt(k,v)).join("")}</div></div>`;
+    const cs=(k,label,opts)=>`<div class="field"><span class="flabel">${label}<span class="hint">可複選</span></span><div class="opts">${opts.map(v=>chk(k,v)).join("")}</div></div>`;
+    const tx=(k,label,ph,hint)=>`<div class="field"><span class="flabel">${label}${hint?`<span class="hint">${hint}</span>`:""}</span>
+        <input type="text" value="${t[k]?esc(t[k]):""}" data-ti="${i}" data-tk="${k}" data-t="ttext" placeholder="${ph||""}"></div>`;
     return `<div class="trial">
-      <div class="trial-hd"><h4>Swallow Trial ${num}</h4>
+      <div class="trial-hd"><h4>Swallow Trial ${num2}</h4>
         ${TRIALS.length>1?`<button class="mini" data-del="${i}">刪除</button>`:""}</div>
+
+      <div class="sub first">測試內容</div>
       ${g("food","測試項目／質地",TRIAL_FOOD)}
-      <div class="field"><span class="flabel">測試量</span>
-        <input type="text" value="${t.amt?esc(t.amt):""}" data-ti="${i}" data-tk="amt" data-t="ttext" placeholder="如 1cc、3cc、5cc"></div>
+      ${tx("amt","每口測試量","如 1cc、3cc、5cc、半茶匙")}
       ${g("uten","使用工具",["湯匙","針筒","吸管","杯子","棉棒"])}
-      ${g("lip","Lip closure",GFP)}
-      ${g("mast","Mastication",GFP)}
-      ${g("sens","Oral sensation",GFP)}
-      ${g("cough","Cough",GFP)}
-      <div class="field"><span class="flabel">Choking signs<span class="hint">可複選</span></span>
-        <div class="opts">${["咳嗽","濕潤音","清喉","口腔殘留","咽部殘留","鼻腔逆流","無法吞嚥","無明顯異常"].map(v=>chk("sign",v)).join("")}</div></div>
+      <div class="pair">
+        ${tx("total_g","共吃","如 30","g")}
+        ${tx("dur","花多久時間","如 5 分鐘")}
+      </div>
+
+      <div class="sub">口腔期</div>
+      ${solid?g("mast","Mastication",GFP):""}
+      ${cs("oral_obs","口腔期觀察",ORAL_OBS)}
+      ${solid?`<div class="field" style="margin-bottom:6px"><span class="flabel">咀嚼表現<span class="hint">參考 TOMASS，整份固體吃完的總次數</span></span></div>
+      <div class="pair3">
+        ${tx("bites","咬口數","","次")}
+        ${tx("chews","咀嚼次數","","次")}
+        ${tx("swn","吞嚥次數","","次")}
+      </div>`:""}
+
+      <div class="sub">咽部期</div>
+      ${g("laryn","喉部上抬（觸診）",["足夠","不足"])}
+      ${solid?"":tx("perswallow","每口吞嚥次數","如 2","次")}
+      ${g("ctime","嗆咳時機",CTIME)}
+      ${cs("phar_obs","咽部期觀察",PHAR_OBS)}
+      ${cs("sign","Choking signs",["咳嗽","濕潤音","清喉","口腔殘留","咽部殘留","鼻腔逆流","無法吞嚥","無明顯異常"])}
+
       <div class="field"><span class="flabel">治療師觀察</span>
-        <textarea data-ti="${i}" data-tk="note" data-t="ttext" placeholder="如喉部上抬程度、blue dye test 結果">${t.note?esc(t.note):""}</textarea></div>
+        <textarea data-ti="${i}" data-tk="note" data-t="ttext" placeholder="如 blue dye test 結果、吞後發 /a/ 音質">${t.note?esc(t.note):""}</textarea></div>
     </div>`;
   }).join("");
-  return `<div class="head"><h2>Swallow Trial</h2><p>做幾次就開幾組，不必受限於固定三組。</p></div>
+  return `<div class="head"><h2>Swallow Trial</h2><p>做幾次就開幾組，不必受限於固定三組。選到需要咀嚼的固體（IDDSI 食物 Level 6 以上、過渡期食物）才會出現 Mastication 與咀嚼表現。</p></div>
+  <fieldset><legend>進食整體觀察</legend>
+    ${radio("tr_self","自我進食能力",["獨立","需部分協助","需完全協助"])}
+    ${text("tr_posture","進食姿勢","如 床頭抬高 60 度、坐姿 90 度")}
+    ${check("tr_obs","其他觀察",["進食後疲勞","注意力不集中影響進食","需口語提示放慢速度"])}
+  </fieldset>
   ${cards}<button class="add" id="addTrial">＋ 新增 Swallow Trial</button>`;
 },
 
@@ -774,14 +822,14 @@ goal(){
   if(on("sw")||on("hnc")){
     h+=`<fieldset><legend>吞嚥結論</legend>
       ${check("c_oral","口腔期問題",["嘴唇閉合能力不佳","舌頭功能受限","食團控制不佳","食團後送不佳","咀嚼功能不佳","口腔感覺功能低下","口腔黏膜乾燥"])}
+      ${text("c_oral_other","口腔期其他問題","自由填寫")}
       ${check("c_phar","咽部期問題",["吞嚥反射延遲","喉部上抬不足","咽部收縮不足","呼吸道閉合不足"])}
+      ${text("c_phar_other","咽部期其他問題","自由填寫")}
       ${radio("c_fois","FOIS Level",FOIS,"col")}
     </fieldset>
     <fieldset><legend>治療項目（治療師執行）</legend>
       ${check("c_train","本次療程使用的治療方式",["Vital stim 吞嚥電刺激","冰酸刺激","口臉部按摩","口腔肌力訓練","咽喉部肌力訓練","進食練習","飲食質地建議","吞嚥策略建議"])}
-    </fieldset>
-    <fieldset><legend>吞嚥策略</legend>
-      ${check("c_strat","建議採用的吞嚥策略",STRATEGY,"col")}
+      ${text("c_train_other","其他治療項目","自由填寫")}
     </fieldset>
     <fieldset><legend>口腔與吞嚥運動</legend>
       ${check("c_exer","建議練習的運動項目",EXERCISE)}
@@ -789,21 +837,22 @@ goal(){
     </fieldset>
     <fieldset><legend>治療以外時間的進食安排（病房與居家）</legend>
       ${radio("home_ok","課程以外時間可否由口進食",NPO_LEVELS,"col")}
-      ${D.home_ok&&D.home_ok!==NPO?`
+      ${oralAllowed()?`
         ${check("home_food","可進食／練習的質地（IDDSI）",IDDSI_ALL)}
         ${text("home_amt","每口量","如 半茶匙、3cc")}
         ${text("home_freq","頻率與總量","如 每日 3 次，每次 5 口")}
-        ${subset("home_strat","照顧者需協助執行的吞嚥策略",D.c_strat||[],"上方尚未勾選吞嚥策略。先在「吞嚥策略」勾選後，這裡就會列出可交給照顧者的項目。")}
+        ${check("c_strat","進食時建議採用的吞嚥策略",STRATEGY,"col")}
+        ${subset("home_strat","照顧者需協助執行的吞嚥策略",D.c_strat||[],"上方尚未勾選吞嚥策略。勾選後，這裡就會列出可交給照顧者的項目。")}
         ${subset("home_exer","照顧者需協助執行的運動",D.c_exer||[],"上方尚未勾選運動項目。先在「口腔與吞嚥運動」勾選後，這裡就會列出可交給照顧者的項目。")}
-      `:`<div class="note">課程以外時間禁止由口進食，質地與練習量欄位不需填寫。</div>`}
+      `:has(D.home_ok)
+        ?`<div class="note">課程以外時間禁止由口進食，質地、練習量與吞嚥策略欄位不需填寫。</div>`
+        :`<div class="note" style="background:var(--pick-bg);border-left-color:var(--pick);color:var(--ink-2)">選擇可由口進食的項目後，才會出現質地、每口量與吞嚥策略。</div>`}
       ${check("oral_care","口腔照護",["加強口腔清潔","每餐後檢查口腔是否淨空","使用海綿棒清潔口腔","假牙每日取下清洗"])}
       ${area("home_note","給病房人員與家屬的提醒","如出現發燒、痰變多、體重下降請回診")}
     </fieldset>
-    <fieldset><legend>已提供的衛教單張</legend>
-      ${check("c_edu","單張名稱",["核心運動／擴胸練習","腹式呼吸／咳嗽練習","吞口水練習（超上聲門吞嚥法）","臉部按摩","口腔動作訓練"],"col")}
-    </fieldset>
     <fieldset><legend>建議進一步檢查</legend>
       ${check("exam","檢查項目",["VFSS 吞嚥攝影檢查","FEES 內視鏡吞嚥檢查","再次床邊吞嚥評估","目前不需進一步檢查"],"col")}
+      ${text("exam_other","其他檢查","自由填寫")}
       ${text("exam_when","建議時間","如 兩週後、出院前")}
       ${text("exam_why","檢查目的","如 確認是否有靜默式吸入、評估質地可否升階")}
     </fieldset>`;
@@ -890,7 +939,7 @@ function docHeader(){
 function secBasic(mode){
   const id=[];
   if(has(D.name))   id.push(`姓名：${D.name}`);
-  if(has(D.chart))  id.push(`病歷號：${D.chart}`);
+  if(has(D.chart))  id.push(`病歷號/病床號：${D.chart}`);
   if(has(D.gender)) id.push(`性別：${D.gender}`);
   if(has(D.age))    id.push(`年齡：${D.age}`);
   if(has(D.birth))  id.push(`出生日期：${D.birth}`);
@@ -1000,34 +1049,74 @@ function secSp(mode){
 
 function trialText(t,i,mode){
   const n=String(i+1).padStart(2,"0");
+  const solid=isSolid(t.food);
+  const foodStr = !has(t.food) ? "" : (/^(口水|冰酸刺激)/.test(t.food)?t.food:`IDDSI ${t.food}`);
   const bits=[];
-  if(has(t.food)) bits.push(/^(口水|冰酸刺激)/.test(t.food)?t.food:`IDDSI ${t.food}`);
-  if(has(t.amt))  bits.push(`量 ${t.amt}`);
+  if(foodStr)     bits.push(foodStr);
+  if(has(t.amt))  bits.push(`每口 ${t.amt}`);
   if(has(t.uten)) bits.push(`以${t.uten}餵食`);
-  const what=[t.food==="口水"?"口水":(has(t.food)?`IDDSI ${t.food}`:""),t.amt].filter(has).join(" ");
-  const abil=[["Lip closure","lip"],["Mastication","mast"],["Oral sensation","sens"],["Cough","cough"]]
+  const qty=[];
+  if(has(t.total_g)) qty.push(`共吃 ${num(t.total_g)} g`);
+  if(has(t.dur))     qty.push(`花費 ${t.dur}`);
+  const abil=(solid?[["Mastication","mast"]]:[])
     .filter(([,k])=>has(t[k])).map(([n2,k])=>`${n2} ${t[k]}`);
+  const oral=(t.oral_obs||[]);
+  const tom=[];
+  if(solid){
+    if(has(t.bites)) tom.push(`咬口 ${num(t.bites)} 次`);
+    if(has(t.chews)) tom.push(`咀嚼 ${num(t.chews)} 次`);
+    if(has(t.swn))   tom.push(`吞嚥 ${num(t.swn)} 次`);
+  }
+  const phar=[];
+  if(has(t.laryn)) phar.push(`喉部上抬${t.laryn}`);
+  if(!solid&&has(t.perswallow)) phar.push(`每口吞嚥 ${num(t.perswallow)} 次`);
+  if(has(t.ctime)&&t.ctime!=="無") phar.push(`嗆咳時機為${t.ctime}`);
+  phar.push(...(t.phar_obs||[]));
+
   if(mode==="list"){
     return [`Swallow Trial ${n}：`,
       bits.length?`  測試：${bits.join("、")}`:"",
+      qty.length?`  進食量：${qty.join("、")}`:"",
       abil.length?`  能力：${abil.join("、")}`:"",
+      oral.length?`  口腔期觀察：${list(oral)}`:"",
+      tom.length?`  咀嚼表現：${tom.join("、")}`:"",
+      phar.length?`  咽部期觀察：${phar.join("、")}`:"",
       has(t.sign)?`  Choking signs：${list(t.sign)}`:"",
       has(t.note)?`  治療師觀察：${t.note}`:""
     ].filter(has).join("\n");
   }
+  const what=[foodStr, has(t.amt)?`每口 ${t.amt}`:""].filter(has).join(" ");
   let s=`測試 ${n}：`;
   if(t.food==="口水") s+="進行吞口水測試";
   else if(t.food==="冰酸刺激（thermal）") s+="進行冰酸刺激（thermal stimulation）";
   else if(what) s+= has(t.uten)?`以${t.uten}餵食 ${what}`:`餵食 ${what}`;
   else if(has(t.uten)) s+=`以${t.uten}進行測試`;
   else s+="進行吞嚥測試";
+  if(qty.length) s+=`，${qty.join("、")}`;
   const sign=(t.sign||[]).filter(v=>v!=="無明顯異常");
   if(sign.length) s+=`，觀察到${sign.join("、")}`;
   else if((t.sign||[]).includes("無明顯異常")) s+=`，未觀察到明顯嗆咳徵象`;
   if(abil.length) s+=`；${abil.join("、")}`;
+  if(oral.length) s+=`；口腔期可見${list(oral)}`;
+  if(tom.length)  s+=`；咀嚼表現為${tom.join("、")}`;
+  if(phar.length) s+=`；咽部期${phar.join("、")}`;
   s+="。";
   if(has(t.note)) s+=t.note.replace(/。?$/,"。");
   return s;
+}
+
+/* 進食整體觀察（Swallow Trial 頁上方） */
+function trialOverall(mode){
+  const o=[];
+  if(has(D.tr_self))    o.push(mode==="list"?`自我進食能力：${D.tr_self}`:`自我進食能力${D.tr_self}`);
+  if(has(D.tr_posture)) o.push(mode==="list"?`進食姿勢：${D.tr_posture}`:`進食姿勢為${D.tr_posture}`);
+  if(has(D.tr_obs))     o.push(mode==="list"?`其他觀察：${list(D.tr_obs)}`:`另可見${list(D.tr_obs)}`);
+  return o;
+}
+
+/* 報告用 GUSS 建議：拿掉「安排 VFSS／FEES／語言治療師評估」那一句，避免和結論頁的進一步檢查重複 */
+function gussDietOut(d){
+  return d.split("。").map(x=>x.trim()).filter(x=>x && !/^安排/.test(x)).map(x=>x+"。").join("");
 }
 
 function gussLine(mode){
@@ -1035,18 +1124,29 @@ function gussLine(mode){
   const r=guss();
   if(!r.complete) return "";
   const v=gussVerdict(r.total);
+  const diet=gussDietOut(v.diet);
   const parts=[`間接吞嚥測驗 ${r.p1.sum}/5`,
     ...r.stages.map(st=>`${st.n} ${st.sum}/5`)];
   if(mode==="list"){
     return [`GUSS 篩檢：總分 ${r.total}/20（${v.sev}，${v.risk}）`,
       `  子測驗：${parts.join("、")}`,
       r.stopAt?`  測試於「${r.stopAt}」中止`:"",
-      `  GUSS 飲食建議：${v.diet}`].filter(has).join("\n");
+      diet?`  GUSS 飲食建議：${diet}`:""].filter(has).join("\n");
   }
   return [`GUSS 吞嚥篩檢：`,
     `  總分 ${r.total}／20，判讀為${v.sev}、${v.risk}`,
     `  子測驗：${parts.join("；")}${r.stopAt?`（於${r.stopAt}階段中止）`:""}`,
-    `  GUSS 建議：${v.diet}`].join("\n");
+    diet?`  GUSS 建議：${diet}`:""].filter(has).join("\n");
+}
+
+/* 吞嚥相關因素：抽痰次數、氧氣流量併入顯示 */
+function sysItems(){
+  return (D.sw_sys||[]).map(v=>{
+    if(v==="抽痰"&&has(D.sw_suc))          return `抽痰（${num(D.sw_suc)} 次/天）`;
+    if(v==="氧氣：鼻導管"&&has(D.sw_o2nc)) return `氧氣：鼻導管（${num(D.sw_o2nc)} L/min）`;
+    if(v==="氧氣：面罩"&&has(D.sw_o2mk))   return `氧氣：面罩（${num(D.sw_o2mk)} L/min）`;
+    return v;
+  });
 }
 
 function secSw(mode){
@@ -1054,10 +1154,12 @@ function secSw(mode){
   if(D.sw_state==="無法評估")
     return blk("吞嚥功能",[`目前無法進行吞嚥評估${has(D.sw_state_why)?`，${D.sw_state_why}`:""}。`]);
   const trials=TRIALS.filter(t=>Object.keys(t).some(k=>has(t[k])));
+  const sys=sysItems();
+  const ov=trialOverall(mode);
   if(mode==="list"){
     return blk("吞嚥功能",[
       has(D.sw_imp)?`Impression：${D.sw_imp}`:"",
-      has(D.sw_sys)?`吞嚥相關因素：${list(D.sw_sys)}`:"",
+      sys.length?`吞嚥相關因素：${list(sys)}`:"",
       has(D.sw_sys_note)?`相關說明：${D.sw_sys_note}`:"",
       has(D.feed)?`進食方式：${D.feed}`:"",
       has(D.sw_tube)||has(D.sw_tube_other)?`管路：${[list(D.sw_tube),D.sw_tube_other].filter(has).join("、")}`:"",
@@ -1067,6 +1169,7 @@ function secSw(mode){
       has(D.mealtime)?`每餐花費時間：${D.mealtime} 分鐘`:"",
       has(D.sw_note)?`其他說明：${D.sw_note}`:"",
       gussLine("list"),
+      ov.length?`進食整體觀察：${ov.join("；")}`:"",
       trials.length?trials.map((t,i)=>trialText(t,i,"list")).join("\n"):""
     ]);
   }
@@ -1076,7 +1179,7 @@ function secSw(mode){
       ? `${P()}吞嚥功能未見明顯異常。`
       : `${P()}目前呈現${D.sw_imp.replace("Dysphagia — ","").replace("Oral phase","口腔期").replace("Pharyngeal phase","咽部期").replace("Oral + Pharyngeal","口咽期")}吞嚥功能障礙。`);
   }
-  if(has(D.sw_sys)) L.push(`吞嚥相關因素包括${list(D.sw_sys)}。`);
+  if(sys.length) L.push(`吞嚥相關因素包括${list(sys)}。`);
   if(has(D.sw_sys_note)) L.push(D.sw_sys_note.replace(/。?$/,"。"));
   if(has(D.feed)){
     let s=`目前進食方式為${D.feed}`;
@@ -1088,6 +1191,7 @@ function secSw(mode){
     if(has(D.mealtime)) s+=`，每餐約需 ${D.mealtime} 分鐘`;
     L.push(s+"。");
   }
+  if(ov.length) L.push(`進食觀察：${ov.join("，")}。`);
   if(trials.length){
     L.push("吞嚥測試：");
     trials.forEach((t,i)=>L.push("  "+trialText(t,i,"prose")));
@@ -1209,8 +1313,18 @@ const SGOALS=[["g_s_therm","冰酸刺激"],["g_s_reflex","提升吞嚥反射"],[
 const LGOALS=[["g_l_oral","完全由口進食"],["g_l_ng","移除鼻胃管"],["g_l_safe","安全吞嚥"],
   ["g_l_intel","提升言語清晰度"],["g_l_func","提升功能性溝通"]];
 
+/* 吞嚥策略只在可由口進食時才算數 */
+const stratOut = () => oralAllowed() ? (D.c_strat||[]) : [];
+/* 建議進一步檢查（含自由填寫） */
+function examItems(){
+  return [...(D.exam||[]), has(D.exam_other)?D.exam_other.trim():""].filter(has);
+}
+
 function secGoal(mode){
-  const oral=(D.c_oral||[]), phar=(D.c_phar||[]);
+  const oral=[...(D.c_oral||[]), has(D.c_oral_other)?D.c_oral_other.trim():""].filter(has);
+  const phar=[...(D.c_phar||[]), has(D.c_phar_other)?D.c_phar_other.trim():""].filter(has);
+  const train=[...(D.c_train||[]), has(D.c_train_other)?D.c_train_other.trim():""].filter(has);
+  const strat=stratOut();
   const sg=SGOALS.filter(([k])=>has(D[k])).map(([k,n])=>`${n}（達成率 ${D[k]}）`);
   if(has(D.g_s_safe)) sg.push(`可安全吞嚥 ${(D.g_s_safe_item||[]).join("／")||""}（達成率 ${D.g_s_safe}）`.replace("可安全吞嚥 （","可安全吞嚥（"));
   GOALS_S.forEach(g=>{ if(has(g.t)&&has(g.p)) sg.push(`${g.t}（達成率 ${g.p}）`); });
@@ -1223,18 +1337,18 @@ function secGoal(mode){
   });
   GOALS_L.forEach(g=>{ if(has(g.t)&&has(g.p)) lg.push(`${g.t}（達成率 ${g.p}）`); });
 
-  const safeS=(D.g_s_safe_item||[]), safeL=(D.g_l_safe_item||[]);
   // 居家項目一律取主清單的交集，避免主清單取消勾選後殘留
-  const hStrat=(D.home_strat||[]).filter(v=>(D.c_strat||[]).includes(v));
+  const hStrat=(D.home_strat||[]).filter(v=>strat.includes(v));
   const hExer =(D.home_exer ||[]).filter(v=>(D.c_exer ||[]).includes(v));
+  const oralOK=oralAllowed();
   const home=[];
   if(has(D.home_ok)) home.push(D.home_ok);
-  if(has(D.home_food)) home.push(`可練習質地：${list(D.home_food)}`);
-  if(has(D.home_amt))  home.push(`每口量 ${D.home_amt}`);
-  if(has(D.home_freq)) home.push(D.home_freq);
-  if(hStrat.length) home.push(`搭配策略：${list(hStrat)}`);
-  if(hExer.length)  home.push(`居家運動：${list(hExer)}`);
-  const exam=(D.exam||[]);
+  if(oralOK&&has(D.home_food)) home.push(`可練習質地：${list(D.home_food)}`);
+  if(oralOK&&has(D.home_amt))  home.push(`每口量 ${D.home_amt}`);
+  if(oralOK&&has(D.home_freq)) home.push(D.home_freq);
+  if(hStrat.length) home.push(`照顧者協助策略：${list(hStrat)}`);
+  if(oralOK&&hExer.length)  home.push(`居家運動：${list(hExer)}`);
+  const exam=examItems();
   const mg=[];
   if(has(D.m_do)) mg.push(list(D.m_do));
   if(has(D.m_course)) mg.push(`治療頻率 ${D.m_course}`);
@@ -1245,15 +1359,14 @@ function secGoal(mode){
       oral.length?`口腔期問題：${oral.join("、")}`:"",
       phar.length?`咽部期問題：${phar.join("、")}`:"",
       has(D.c_fois)?`FOIS Level：${D.c_fois}`:"",
-      has(D.c_train)?`治療方式：${list(D.c_train)}`:"",
-      has(D.c_strat)?`吞嚥策略：${list(D.c_strat)}`:"",
+      train.length?`治療方式：${train.join("、")}`:"",
       has(D.c_exer)?`口腔與吞嚥運動：${list(D.c_exer)}${has(D.c_exer_dose)?`（${D.c_exer_dose}）`:""}`:"",
       home.length?`治療以外時間的進食安排：${home.join("；")}`:"",
+      strat.length?`進食時建議吞嚥策略：${list(strat)}`:"",
       has(D.oral_care)?`口腔照護：${list(D.oral_care)}`:"",
       has(D.home_note)?`提醒事項：${D.home_note}`:"",
       exam.length?`建議進一步檢查：${exam.join("、")}${has(D.exam_when)?`（${D.exam_when}）`:""}`:"",
       has(D.exam_why)?`檢查目的：${D.exam_why}`:"",
-      has(D.c_edu)?`已提供衛教單張：${list(D.c_edu)}`:"",
       sg.length?`短期目標：\n${sg.map(x=>"  ・"+x).join("\n")}`:"",
       lg.length?`長期目標：\n${lg.map(x=>"  ・"+x).join("\n")}`:"",
       mg.length?`Management：${mg.join("；")}`:"",
@@ -1267,8 +1380,7 @@ function secGoal(mode){
   if(prob.length) L.push(`綜合評估，${prob.join("；")}。`);
   if(has(D.c_fois)){const m=D.c_fois.match(/^(FOIS \d+)\s*(.*)$/);
     L.push(m?`目前吞嚥功能為 ${m[1]}${m[2]?`（${m[2]}）`:""}。`:`目前 ${D.c_fois}。`);}
-  if(has(D.c_train)) L.push(`治療方式採用${list(D.c_train)}。`);
-  if(has(D.c_strat)) L.push(`進食時建議採用${list(D.c_strat)}等吞嚥策略。`);
+  if(train.length) L.push(`治療方式採用${train.join("、")}。`);
   if(has(D.c_exer)) L.push(`建議進行${list(D.c_exer)}等口腔與吞嚥運動${has(D.c_exer_dose)?`，${D.c_exer_dose}`:""}。`);
   if(has(D.home_ok)){
     if(D.home_ok===NPO) L.push("治療課程以外的時間禁止由口進食（NPO）。");
@@ -1277,17 +1389,17 @@ function secGoal(mode){
       if(has(D.home_food)) hs+=`，可進食質地為 IDDSI ${list(D.home_food)}`;
       if(has(D.home_amt))  hs+=`，每口量約${D.home_amt}`;
       if(has(D.home_freq)) hs+=`，${D.home_freq}`;
-      if(hStrat.length) hs+=`，並須協助執行${list(hStrat)}`;
-      if(hExer.length)  hs+=`；可自行練習${list(hExer)}`;
       L.push(hs.replace(/，$/,"")+"。");
+      if(strat.length) L.push(`進食時建議採用${list(strat)}等吞嚥策略${hStrat.length?`，其中${list(hStrat)}須由照顧者協助執行`:""}。`);
+      if(hExer.length) L.push(`可自行練習${list(hExer)}。`);
     }
   }
   if(has(D.oral_care)) L.push(`口腔照護方面，${list(D.oral_care)}。`);
   if(has(D.home_note)) L.push(`提醒事項：${D.home_note.replace(/。?$/,"。")}`);
-  if(has(D.c_edu)) L.push(`已提供衛教單張：${list(D.c_edu)}。`);
   if(exam.length){
-    if(exam.length===1&&exam[0]==="目前不需進一步檢查") L.push("目前不需安排進一步吞嚥檢查。");
-    else L.push(`建議安排${exam.filter(x=>x!=="目前不需進一步檢查").join("、")}${has(D.exam_when)?`，時間為${D.exam_when}`:""}${has(D.exam_why)?`，目的為${D.exam_why}`:""}。`);
+    const ex=exam.filter(x=>x!=="目前不需進一步檢查");
+    if(!ex.length) L.push("目前不需安排進一步吞嚥檢查。");
+    else L.push(`建議安排${ex.join("、")}${has(D.exam_when)?`，時間為${D.exam_when}`:""}${has(D.exam_why)?`，目的為${D.exam_why}`:""}。`);
   }
   if(sg.length) L.push(`短期目標：\n${sg.map(x=>"  ・"+x).join("\n")}`);
   if(lg.length) L.push(`長期目標：\n${lg.map(x=>"  ・"+x).join("\n")}`);
@@ -1298,7 +1410,7 @@ function secGoal(mode){
 
 function buildBrief(){
   const L=[];
-  const id=[D.name,D.gender,has(D.age)?`${D.age}歲`:"",has(D.chart)?`病歷號 ${D.chart}`:""].filter(has);
+  const id=[D.name,D.gender,has(D.age)?`${D.age}歲`:"",has(D.chart)?`病歷號/病床號 ${D.chart}`:""].filter(has);
   if(id.length) L.push(id.join("　｜　"));
   if(has(D.dx)) L.push(`診斷：${D.dx}`);
   const imp=[];
@@ -1318,9 +1430,10 @@ function buildBrief(){
   if(sub.length) L.push("",...sub.map(x=>"　"+x));
   const rec=[];
   if(has(D.home_ok)) rec.push(D.home_ok===NPO?"課程外禁止由口進食（NPO）":`課程外：${D.home_ok}`);
-  if(has(D.c_strat)) rec.push(`策略：${list(D.c_strat)}`);
+  const strat=stratOut();
+  if(strat.length) rec.push(`策略：${list(strat)}`);
   if(has(D.c_exer))  rec.push(`運動：${list(D.c_exer)}`);
-  const ex=(D.exam||[]).filter(x=>x!=="目前不需進一步檢查");
+  const ex=examItems().filter(x=>x!=="目前不需進一步檢查");
   if(ex.length) rec.push(`進一步檢查：${ex.join("、")}${has(D.exam_when)?`（${D.exam_when}）`:""}`);
   if(has(D.m_course)) rec.push(`治療頻率：${D.m_course}`);
   if(rec.length) L.push("","【建議】",...rec.map(x=>"　"+x));
@@ -1409,7 +1522,10 @@ function progress(){
   if(on("hnc"))  keys.push("h_imp","h_type","h_site","hs_tg");
   if(on("voice"))keys.push("v_imp","v_g");
   if(on("flu"))  keys.push("fl_imp");
-  if(on("sw")||on("hnc")) keys.push("c_fois","c_train","c_strat","c_exer","home_ok","exam");
+  if(on("sw")||on("hnc")){
+    keys.push("c_fois","c_train","c_exer","home_ok","exam");
+    if(oralAllowed()) keys.push("c_strat");
+  }
   keys.push("m_course");
   let done=keys.filter(k=>has(D[k])).length;
   let total=keys.length;
@@ -1471,7 +1587,11 @@ document.addEventListener("change",e=>{
     D[k]=[...cur]; softRefresh(k,el);
   }
   else if(t==="gpct"){ (el.dataset.gk==="S"?GOALS_S:GOALS_L)[+el.dataset.gi].p=el.value; render(); }
-  else if(t==="tradio"){ TRIALS[+el.dataset.ti][el.dataset.tk]=el.value; mark(el); }
+  else if(t==="tradio"){
+    TRIALS[+el.dataset.ti][el.dataset.tk]=el.value;
+    // 換質地會影響 Mastication／咀嚼表現是否出現，要重繪
+    if(el.dataset.tk==="food") render(); else mark(el);
+  }
   else if(t==="tcheck"){
     const t2=TRIALS[+el.dataset.ti], k=el.dataset.tk, cur=new Set(Array.isArray(t2[k])?t2[k]:[]);
     el.checked?cur.add(el.value):cur.delete(el.value);
@@ -1484,7 +1604,7 @@ document.addEventListener("input",e=>{
   // checkbox / radio 也會發 input 事件，必須排除，否則陣列會被覆寫成字串
   if(el.type==="checkbox"||el.type==="radio") return;
   if(el.dataset.t==="gtext"){ (el.dataset.gk==="S"?GOALS_S:GOALS_L)[+el.dataset.gi].t=el.value; bump(); return; }
-  if(el.dataset.t==="ttext"){ TRIALS[+el.dataset.ti][el.dataset.tk]=el.value; bump(); return; }
+  if(el.dataset.t==="ttext"){ TRIALS[+el.dataset.ti][el.dataset.tk]=el.value; bump(); touch(); return; }
   if(el.id==="out"){ outEdited=el.value; touch(); return; }
   if(el.dataset.k && (el.tagName==="INPUT"||el.tagName==="TEXTAREA")){ D[el.dataset.k]=el.value; bump(); touch(); }
 });
@@ -1505,7 +1625,7 @@ function bump(){
   document.getElementById("pct").textContent=`目前已完成 ${p}%`;
 }
 // 會改變畫面結構的欄位需重繪；其餘只切樣式
-const RERENDER=new Set(["modules","feed","home_ok","guss_do","c_strat","c_exer"]);
+const RERENDER=new Set(["modules","feed","home_ok","guss_do","c_strat","c_exer","sw_sys"]);
 function softRefresh(k,el){
   touch();
   if(RERENDER.has(k)||/^g[1-4]_/.test(k)){ render(); return; }
@@ -1590,7 +1710,7 @@ function restoreFrom(json){
 /* ---- 標題 ---- */
 function draftLabel(){
   if(has(D.name))  return D.name;
-  if(has(D.chart)) return "病歷號 "+D.chart;
+  if(has(D.chart)) return "病歷號/床號 "+D.chart;
   return "未命名個案";
 }
 function hasContent(){
@@ -1654,13 +1774,13 @@ function paintSheet(){
   document.getElementById("sheetNote").textContent=Store.note;
   const box=document.getElementById("draftList");
   if(!draftMeta.length){
-    box.innerHTML=`<div class="dempty">目前沒有草稿。<br>填了姓名或病歷號之後會自動存一份。</div>`;
+    box.innerHTML=`<div class="dempty">目前沒有草稿。<br>填了姓名或病歷號/病床號之後會自動存一份。</div>`;
     return;
   }
   box.innerHTML = draftMeta.map(m=>{
     const cur = m.id===curDraftId;
     const bits=[];
-    if(m.chart) bits.push("病歷號 "+esc(String(m.chart)));
+    if(m.chart) bits.push("病歷號/床號 "+esc(String(m.chart)));
     if(m.pct!==undefined&&m.pct!==null&&m.pct!=="") bits.push("完成 "+m.pct+"%");
     if(m.ts) bits.push(stamp(m.ts));
     return `<div class="dcard ${cur?"cur":""}">
