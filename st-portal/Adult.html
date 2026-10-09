@@ -163,6 +163,11 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
   border-radius:0 var(--r) var(--r) 0;font-size:13px;color:var(--flag);margin-bottom:20px
 }
 
+.emr-steps{margin:14px 0 6px 20px;font-size:14px;line-height:1.8;color:var(--ink-2)}
+.emr-install{margin-top:10px;font-size:14px;line-height:1.7}
+.emr-install summary{cursor:pointer;color:var(--pick);font-weight:600}
+.emr-install a.btn{display:inline-block;text-decoration:none;cursor:grab}
+
 /* ---------- bottom bar ---------- */
 .bar{
   position:fixed;left:232px;right:0;bottom:0;background:var(--surface);
@@ -913,10 +918,444 @@ out(){
     <button class="btn ghost" id="regen">重新產生</button>
     <button class="btn ghost" id="reset">清空重填</button>
     ${curDraftId?`<button class="btn ghost" id="doneDel">貼好了，刪除這份草稿</button>`:""}
-  </div>`;
+  </div>
+  <fieldset style="margin-top:28px"><legend>自動帶入表單系統</legend>
+    <div class="row" style="margin-top:0">
+      <button class="btn" id="emrCopy">複製表單系統代碼</button>
+    </div>
+    <ol class="emr-steps">
+      <li>按上面的「複製表單系統代碼」。</li>
+      <li>到表單系統打開這位個案的「成人評估紀錄」頁面，點書籤列上的「帶入評估」。</li>
+      <li>在跳出的小視窗按 Ctrl+V 貼上，按「帶入」。帶入的欄位會加上橘色框。</li>
+      <li>逐項檢查，並補上 1–5 分等需要手動填的欄位，再自己按「暫存」或「完成」。</li>
+    </ol>
+    <details class="emr-install">
+      <summary>第一次使用：安裝「帶入評估」書籤</summary>
+      <p>先按 Ctrl+Shift+B 打開書籤列，再把下面的按鈕<b>拖曳</b>到書籤列上：</p>
+      <p><a class="btn ghost" data-bm href="${EMR_BOOKMARK}">帶入評估</a></p>
+      <p>如果拖不過去：按「複製書籤程式」，在書籤列按右鍵選「新增網頁」，名稱填「帶入評估」，網址欄貼上剛複製的內容。</p>
+      <div class="row" style="margin-top:0"><button class="btn ghost" id="bmCopy">複製書籤程式</button></div>
+    </details>
+  </fieldset>`;
 }
 };
 function goal_(k,l){return goal(k,l);}
+
+/* =========================================================
+   帶入院內表單系統（FormSys/AdultSpeechRecard.aspx）
+   emrData()：把作答換成表單欄位代碼
+     key   = 欄位 id（勾選框、文字框、下拉選單）或 radio 群組名稱（DATA_xxx）
+     value = true（勾選）、radio 的 value，或要填入的文字
+   emrFill()：書籤小工具本體，在表單系統頁面執行，貼上代碼後逐一勾選／填入。
+     必須自給自足（不可引用本頁其他變數），因為它會被轉成 javascript: 書籤。
+   ========================================================= */
+const EMR_TAG = "ST-EMR1";
+const emrDate = v => {
+  const m=String(v||"").match(/(\d{2,4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if(!m) return "";
+  let y=+m[1]; if(y<1911) y+=1911;             // 民國年 → 西元年
+  return `${y}/${m[2].padStart(2,"0")}/${m[3].padStart(2,"0")}`;
+};
+const emrLv  = s => { const m=String(s||"").match(/Level (\d)/); return m?m[1]:""; };
+const emrPct = v => has(v) ? String(parseInt(v,10)) : "";
+/* IDDSI → 表單上的舊式質地名稱；對不到的回傳 undefined */
+const EMR_IDDSI = {
+  "口水":"saliva",
+  "飲品 Level 0 稀薄":"water","飲品 Level 2 微稠":"nectar","飲品 Level 3 中稠":"honey","飲品 Level 4 高稠":"pudding",
+  "食物 Level 4 細泥":"puree","食物 Level 5 細碎及濕軟":"ground","食物 Level 6 軟質及一口量":"soft",
+  "食物 Level 7 易咀嚼":"soft","食物 Level 7 食物原狀":"full"
+};
+
+function emrData(){
+  const f={}, skip=[];
+  const tick=(...ks)=>ks.forEach(k=>{ f[k]=true; });
+  const set=(k,v)=>{ if(has(v)) f[k]=String(v); };
+  const inn=(k,v)=>(D[k]||[]).includes(v);
+  const goalTo=(radio,pctId,v)=>{ if(has(v)){ f[radio]="1"; if(pctId) f[pctId]=emrPct(v); } };
+  /* 依 IDDSI 勾選一排質地勾選框；map 為 {質地名稱: 欄位 id}，回傳對不到的項目 */
+  const foods=(items,map)=>{
+    const left=[];
+    (items||[]).forEach(x=>{ const k=map[EMR_IDDSI[x]]; if(k) tick(k); else left.push(x); });
+    return left;
+  };
+
+  /* ---- 基本資料 ---- */
+  const NT={Initial:"DATA_001",Progress:"DATA_002",Discharge:"DATA_003"};
+  if(NT[D.note_type]) tick(NT[D.note_type]);
+  if(D.setting==="OPD") tick("DATA_004");
+  if(D.setting==="Inpatient") tick("DATA_005");
+  set("Txt_RecordDate",emrDate(D.rec_date));
+  set("DATA_006",emrDate(D.onset));
+  const MH={"Hypertension":"DATA_007","Diabetes":"DATA_008","Aspiration pneumonia":"DATA_009",
+            "Coronary artery disease":"DATA_010","Tracheostomy":"DATA_011"};
+  const mhOther=[];
+  (D.mh||[]).forEach(x=>{ if(MH[x]) tick(MH[x]); else mhOther.push(x); });
+  if(has(D.mh_other)) mhOther.push(D.mh_other);
+  if(mhOther.length){ tick("DATA_012"); f.DATA_013=mhOther.join(", "); }
+
+  /* ---- Language ---- */
+  if(on("lang")){
+    if(D.lang_state==="無法評估") f.DATA_017="2";
+    else{
+      f.DATA_017="1";
+      const AP={"Aphasia — 全失型 (Global)":"1","Aphasia — 非流暢型 (Broca)":"2","Aphasia — 流暢型 (Wernicke)":"5",
+                "Aphasia — 傳導型 (Conduction)":"7","Aphasia — 命名型 (Anomic)":"8"};
+      const imp=D.lang_imp, oth=[];
+      if(imp==="無明顯問題") tick("DATA_639");
+      else if(AP[imp]){ tick("DATA_019"); f.DATA_020=AP[imp]; }
+      else if(imp==="認知溝通障礙") tick("DATA_021");
+      else if(has(imp)) oth.push(imp);
+      if(has(D.lang_imp_other)) oth.push(D.lang_imp_other);
+      if(oth.length){ tick("DATA_023"); f.DATA_024=oth.join("; "); }
+      goalTo("DATA_093","DATA_104",D.g_s_aud);
+      goalTo("DATA_105","DATA_112",D.g_s_exp);
+      goalTo("DATA_160","DATA_161",D.g_l_func);
+      skip.push("Language 各項目的 1–5 分（Auditory Comprehension、Verbal output、Reading、Writing、Cognition…）");
+    }
+  }
+
+  /* ---- Speech ---- */
+  if(on("sp")){
+    if(D.sp_state==="無法評估") f.DATA_162="2";
+    else{
+      f.DATA_162="1";
+      const SI={"無明顯問題":"DATA_233","Dysarthria":"DATA_164","Apraxia of speech":"DATA_165",
+                "Oral apraxia":"DATA_166","其他":"DATA_234"};
+      (D.sp_imp||[]).forEach(x=>{ if(SI[x]) tick(SI[x]); });
+      f.DATA_167="1";                                     // Oral motor Function
+      set("DATA_176",D.om_amr);
+      set("DATA_177",D.om_smr);
+      if(D.om_palsy==="右側"||D.om_palsy==="雙側") tick("DATA_178");
+      if(D.om_palsy==="左側"||D.om_palsy==="雙側") tick("DATA_179");
+      const ch=D.sp_ch||[];
+      if(ch.length){
+        f.DATA_180="1";                                   // Speech 子項
+        [["Pitch 過高","DATA_182"],["Pitch 過低","DATA_183"],["Pitch 不穩","DATA_184"],
+         ["Hoarseness","DATA_187"],["Breathiness","DATA_188"],["Strain","DATA_191"]]
+          .forEach(([n,k])=>{ if(ch.includes(n)) tick(k); });
+        if(ch.includes("鼻音過重")) f.DATA_194="1"; else if(ch.includes("鼻音不足")) f.DATA_194="2";
+        if(ch.includes("語速過慢")) f.DATA_197="1"; else if(ch.includes("語速過快")) f.DATA_197="2";
+      }
+      if(has(D.g_s_rom)) f.DATA_263="1";
+      if(has(D.g_s_prec)){ f.DATA_265="1"; tick("DATA_266","DATA_267"); }
+      goalTo("DATA_269","DATA_271",D.g_l_intel);
+      skip.push("Oral motor／Speech 各項目的 1–5 分（舌、唇、頰、Loudness、Intelligibility…）");
+    }
+  }
+
+  /* ---- Swallow ---- */
+  if(on("sw")){
+    if(D.sw_state==="無法評估") f.DATA_272="2";
+    else{
+      f.DATA_272="1";
+      const imp=D.sw_imp||"";
+      if(imp==="無明顯異常") f.DATA_243="1";
+      else if(/^Dysphagia/.test(imp)){
+        f.DATA_243="0";
+        if(/Oral/.test(imp)) tick("DATA_244");
+        if(/Pharyngeal/.test(imp)) tick("DATA_340");
+      }
+      const sys=D.sw_sys||[];
+      if(sys.includes("氣切")) tick("DATA_274");
+      if(sys.includes("抽痰")) tick("DATA_275");
+      if(sys.includes("氧氣：鼻導管")) tick("DATA_246","DATA_273");
+      if(sys.includes("氧氣：面罩")) tick("DATA_246","DATA_286");
+      if(sys.includes("肺炎")) tick("DATA_276","DATA_277");
+      if(sys.includes("泌尿道感染")) tick("DATA_276","DATA_278");
+
+      if(D.feed==="全管灌"||D.feed==="管灌＋口進食"){
+        const TB={NG:"0",PEG:"1",NJ:"2"};
+        const t=(D.sw_tube||[]).find(x=>TB[x]);
+        f.DATA_289="0";
+        if(t) f.DATA_290=TB[t];
+      }
+      if(D.feed==="管灌＋口進食"||D.feed==="全口進食"){
+        const lv=(D.meal||[]).map(emrLv).filter(Boolean).sort();
+        if(lv.length) f.DATA_1158=lv[lv.length-1];          // 欄位只收 1 碼，填最高等級
+        if(has(D.meal_other)){ tick("DATA_1179"); f.DATA_1180=D.meal_other; }
+        set("DATA_1181",emrLv(D.liq));
+        if(D.intake==="足夠") f.DATA_293="0";
+        if(D.intake==="不足 / 營養不良") f.DATA_293="1";
+        if(has(D.mealtime)) f.DATA_295=num(D.mealtime);
+      }
+      set("DATA_352",D.sw_note);
+
+      /* Swallow trial：表單只有兩組 */
+      const TID=[
+        {on:"DATA_710",food:["DATA_712","DATA_713","DATA_714","DATA_715","DATA_716","DATA_717","DATA_718","DATA_719","DATA_720","DATA_721","DATA_722"],
+         amt:"DATA_723",uten:["DATA_725","DATA_726","DATA_727","DATA_728","DATA_729"],per:"DATA_731",
+         mast:"DATA_735",sign:["DATA_738","DATA_739","DATA_740","DATA_741","DATA_742","DATA_743","DATA_744"],note:"DATA_745"},
+        {on:"DATA_746",food:["DATA_296","DATA_297","DATA_298","DATA_299","DATA_300","DATA_301","DATA_302","DATA_303","DATA_304","DATA_305","DATA_306"],
+         amt:"DATA_307",uten:["DATA_309","DATA_310","DATA_311","DATA_312","DATA_313"],per:"DATA_315",
+         mast:"DATA_318",sign:["DATA_321","DATA_322","DATA_323","DATA_324","DATA_325","DATA_326","DATA_327"],note:"DATA_328"}
+      ];
+      TRIALS.filter(t=>has(t.food)).slice(0,2).forEach((t,i)=>{
+        const id=TID[i], fd=id.food;
+        f[id.on]="1";
+        const FM={water:fd[0],nectar:fd[1],honey:fd[2],puree:fd[3],pudding:fd[4],ground:fd[6],soft:fd[7],full:fd[8]};
+        if(foods([t.food],FM).length){ tick(fd[9]); f[fd[10]]=t.food; }
+        set(id.amt,t.amt);
+        const UT={"棉棒":0,"針筒":1,"湯匙":2,"吸管":3,"杯子":4};
+        if(UT[t.uten]!==undefined) tick(id.uten[UT[t.uten]]);
+        if(has(t.perswallow)) f[id.per]=num(t.perswallow);
+        const GFP_V={Good:"0",Fair:"1",Poor:"2"};
+        if(GFP_V[t.mast]) f[id.mast]=GFP_V[t.mast];
+        const SG={"咳嗽":2,"清喉":2,"濕潤音":1,"口腔殘留":3,"咽部殘留":4,"鼻腔逆流":5,"無法吞嚥":6};
+        (t.sign||[]).forEach(x=>{ if(SG[x]!==undefined) tick(id.sign[SG[x]]); });
+        if(has(t.ctime)&&t.ctime!=="無") tick(id.sign[0]);
+        const note=[...(t.oral_obs||[]),...(t.phar_obs||[])];
+        if(has(t.laryn)) note.push("喉部上抬"+t.laryn);
+        if(has(t.ctime)&&t.ctime!=="無") note.push("嗆咳時機："+t.ctime);
+        if(has(t.note)) note.push(t.note);
+        if(note.length) f[id.note]=note.join("；");
+      });
+      if(TRIALS.filter(t=>has(t.food)).length>2) skip.push("第 3 組以後的 Swallow trial（表單只有兩組）");
+
+      /* 結論 */
+      const co=D.c_oral||[], cp=D.c_phar||[];
+      const anyProb=co.length||cp.length||has(D.c_oral_other)||has(D.c_phar_other);
+      if(anyProb){
+        f.DATA_329="0";
+        const OM={"口腔感覺功能低下":"DATA_330","口腔黏膜乾燥":"DATA_331","嘴唇閉合能力不佳":"DATA_332",
+                  "食團控制不佳":"DATA_333","食團後送不佳":"DATA_334","咀嚼功能不佳":"DATA_335"};
+        const oo=[];
+        co.forEach(x=>{ if(OM[x]) tick(OM[x]); else oo.push(x); });
+        if(has(D.c_oral_other)) oo.push(D.c_oral_other);
+        if(oo.length){ tick("DATA_336"); f.DATA_337=oo.join("、"); }
+        const PM={"吞嚥反射延遲":"DATA_338","喉部上抬不足":"DATA_339","呼吸道閉合不足":"DATA_341"};
+        const po=[];
+        cp.forEach(x=>{ if(PM[x]) tick(PM[x]); else po.push(x); });
+        if(has(D.c_phar_other)) po.push(D.c_phar_other);
+        if(po.length){ tick("DATA_342"); f.DATA_343=po.join("、"); }
+      } else if(imp==="無明顯異常") f.DATA_329="1";
+
+      /* FOIS 與各等級的建議 */
+      const lvl=+(String(D.c_fois||"").match(/FOIS (\d)/)||[])[1]||0;
+      if(lvl){
+        f.DATA_344=String(lvl);
+        const n3=a=>a.map(x=>"DATA_"+x);
+        const P={
+          1:{vs:"DATA_345",om:"DATA_348",sheet:"DATA_353",oth:["DATA_354","DATA_355"]},
+          2:{vs:"DATA_356",om:"DATA_357",sheet:"DATA_367",oth:["DATA_368","DATA_369"],
+             tryF:n3(["358","359","360","361","362","363","364","365"])},
+          3:{vs:"DATA_530",om:"DATA_531",care:"DATA_550",sheet:"DATA_551",oth:["DATA_552","DATA_553"],
+             eat:n3(["532","533","534","535","536","537","538","539"]),tryF:n3(["542","543","544","545","546","547","548","549"])},
+          4:{vs:"DATA_554",om:"DATA_555",oth:["DATA_638","DATA_018"],
+             eat:n3(["556","557","558","559","624","051","058","065"])},
+          5:{vs:"DATA_082",om:"DATA_087",care:"DATA_653",sheet:"DATA_654",oth:["DATA_657","DATA_658"],
+             eat:n3(["101","102","103","114","647","648","649","650"])},
+          6:{vs:"DATA_659",om:"DATA_661",care:"DATA_662",sheet:"DATA_673",oth:["DATA_680","DATA_681"]}
+        }[lvl];
+        if(P){
+          const tr=D.c_train||[];
+          if(tr.includes("Vital stim 吞嚥電刺激")) tick(P.vs);
+          if(tr.includes("口腔肌力訓練")) tick(P.om);
+          if(lvl===1){
+            if(tr.includes("冰酸刺激")) tick("DATA_346");
+            if(tr.includes("口臉部按摩")) tick("DATA_347");
+          }
+          if(P.care&&has(D.oral_care)) tick(P.care);
+          if(P.sheet&&inn("m_do","提供衛教單張")&&has(D.c_exer)) tick(P.sheet);
+          /* 質地順序：花蜜狀、稠狀物、布丁狀、粥、剁碎餐、軟質餐、正常餐、水 */
+          const supervised = lvl===2 || (lvl===3 && D.home_ok==="僅可在治療師監督下少量練習");
+          const row = supervised ? P.tryF : P.eat;
+          let left=[];
+          if(row && oralAllowed()){
+            const r=row;
+            left=foods(D.home_food,{nectar:r[0],honey:r[1],pudding:r[2],puree:r[2],ground:r[4],soft:r[5],full:r[6],water:r[7]});
+          }
+          if(lvl===6 && stratOut().length){ tick("DATA_678"); f.DATA_679=stratOut().join("、"); }
+          if(left.length){ tick(P.oth[0]); f[P.oth[1]]="另可："+left.join("、"); }
+        }
+      }
+
+      /* 吞嚥目標 */
+      goalTo("DATA_1184","DATA_682",D.g_s_therm);
+      goalTo("DATA_901","DATA_683",D.g_s_reflex);
+      goalTo("DATA_902","DATA_684",D.g_s_cough);
+      goalTo("DATA_903","DATA_694",D.g_s_intake);
+      goalTo("DATA_905","DATA_695",D.g_s_om);
+      const SAFE=(ids)=>({saliva:ids[0],nectar:ids[1],puree:ids[2],pudding:ids[3],ground:ids[4],soft:ids[5],full:ids[6],water:ids[7]});
+      if(has(D.g_s_safe_item)){
+        f.DATA_904="1";
+        foods(D.g_s_safe_item,SAFE(["DATA_685","DATA_686","DATA_687","DATA_688","DATA_689","DATA_690","DATA_691","DATA_692"]));
+      }
+      const sg=GOALS_S.find(g=>has(g.t)&&has(g.p));
+      if(sg){ f.DATA_906="1"; f.DATA_696=sg.t; f.DATA_697=emrPct(sg.p); }
+
+      const fl=(String(D.g_l_fois||"").match(/[1-7]/)||[])[0];
+      if(fl){ f.DATA_907="1"; f.DATA_698=fl; }
+      goalTo("DATA_750","DATA_751",D.g_l_oral);
+      goalTo("DATA_752","DATA_753",D.g_l_ng);
+      if(has(D.g_l_safe_item)){
+        f.DATA_703="1";
+        foods(D.g_l_safe_item,SAFE(["DATA_704","DATA_705","DATA_706","DATA_707","DATA_708","DATA_709","DATA_747","DATA_748"]));
+      } else goalTo("DATA_701","DATA_702",D.g_l_safe);
+      const lg=GOALS_L.find(g=>has(g.t)&&has(g.p));
+      if(lg){ f.DATA_756="1"; f.DATA_757=lg.t; f.DATA_758=emrPct(lg.p); }
+    }
+  }
+
+  /* ---- Head & Neck Cancer ---- */
+  if(on("hnc")){
+    f.DATA_759="1";
+    const HI={"無明顯問題":"DATA_760","吶吃":"DATA_761","構音障礙":"DATA_762","吞嚥障礙":"DATA_763","嗓音障礙":"DATA_764"};
+    (D.h_imp||[]).forEach(x=>{ if(HI[x]) tick(HI[x]); });
+    if(D.h_type==="治療前評估") f.DATA_767="0";
+    if(D.h_type==="治療後評估") f.DATA_767="1";
+    if(has(D.h_op)){ tick("DATA_769"); f.DATA_770=D.h_op; }
+    if(has(D.h_chemo)&&D.h_chemo!=="未執行") tick("DATA_771");
+    if(has(D.h_rt)&&D.h_rt!=="未執行") tick("DATA_773");
+    if(has(D.h_tx_other)){ tick("DATA_775"); f.DATA_776=D.h_tx_other; }
+    if(has(D.h_wound)){ tick("DATA_777"); f.DATA_778=D.h_wound; }
+    const sg=String(D.h_soma||"").match(/Grade (\d)/);
+    if(sg){ tick("DATA_779"); f.DATA_780=String(+sg[1]-1); }
+    if(has(D.h_muco)&&D.h_muco!=="無") tick("DATA_781");
+    if(has(D.h_pain)){ tick("DATA_782"); f.DATA_783=D.h_pain; }
+    set("DATA_813",D.h_open_lip);
+    set("DATA_814",D.h_open_teeth);
+    if(D.h_vc==="無明顯異常") f.DATA_861="0";
+    else if(has(D.h_vc)){
+      f.DATA_861="1";
+      if(/左|雙/.test(D.h_vc)) tick("DATA_862");
+      if(/右|雙/.test(D.h_vc)) tick("DATA_863");
+    }
+    const HV={"氣息聲":"DATA_865","沙啞":"DATA_866","緊困":"DATA_867","複聲":"DATA_868"};
+    (D.h_voice||[]).forEach(x=>{ if(HV[x]) tick(HV[x]); });
+    if(D.h_cough==="無明顯異常") f.DATA_871="0";
+    if(D.h_cough==="無力") f.DATA_871="1";
+    set("DATA_883",D.h_weight&&num(D.h_weight));
+    if(D.h_nutri==="良好") f.DATA_884="0";
+    if(D.h_nutri==="半年內體重下滑"){ f.DATA_884="1"; set("DATA_885",D.h_loss&&num(D.h_loss)); }
+    const edu=(v,grp,consc,oth)=>{
+      if(v==="已給") f[grp]="1";
+      else if(v==="未給：病人意識不清"){ f[grp]="2"; tick(consc); }
+      else if(v==="未給：其他"){ f[grp]="2"; tick(oth); }
+      else if(v==="不適用") f[grp]="0";
+    };
+    edu(D.h_pre,"DATA_915","DATA_1072","DATA_1073");
+    edu(D.h_post,"DATA_1076","DATA_1077","DATA_1078");
+    skip.push("頭頸癌：口腔構造各項評分、頭頸癌專屬的吞嚥測試與目標");
+  }
+
+  /* ---- Voice ---- */
+  if(on("voice")){
+    f.DATA_370="1";
+    const vi=D.v_imp||[];
+    if(vi.includes("無明顯問題")) tick("DATA_640");
+    if(vi.some(x=>x!=="無明顯問題")) tick("DATA_372");
+    const g=String(D.v_g||"").match(/G(\d)/);
+    if(g){ tick("DATA_375"); f.DATA_376=g[1]; }
+    if(has(D.v_mpt)) f.DATA_454=num(D.v_mpt);
+  }
+
+  /* ---- Fluency ---- */
+  if(on("flu")){
+    f.DATA_482="1";
+    const fi=D.fl_imp||[];
+    if(fi.includes("無明顯問題")) tick("DATA_632");
+    if(fi.some(x=>/stuttering/.test(x))) tick("DATA_483");
+    if(fi.includes("Cluttering")) tick("DATA_484");
+    if(fi.includes("找詞困難造成的不流暢")){ tick("DATA_485"); f.DATA_486="找詞困難造成的不流暢"; }
+  }
+
+  /* ---- Management and Suggestion ---- */
+  const MD={"提供衛教單張":"DATA_614","照顧者衛教":"DATA_615","無需進一步治療":"DATA_616"};
+  (D.m_do||[]).forEach(x=>{ if(MD[x]) tick(MD[x]); });
+  const mo=[];
+  const fu=String(D.m_fu||"").match(/(\d+) 月/);
+  if(fu){ tick("DATA_618"); f.DATA_619=fu[1]; }
+  else if(has(D.m_fu)) mo.push("Follow up after "+D.m_fu);
+  const cw=String(D.m_course||"").match(/每週 (\d) 次/);
+  if(cw){ tick("DATA_620"); f.DATA_621=cw[1]; }
+  else if(has(D.m_course)) mo.push(D.m_course);
+  if(has(D.m_other)) mo.push(D.m_other);
+  if(mo.length){ tick("DATA_622"); f.DATA_623=mo.join("；"); }
+
+  return {f, skip};
+}
+
+function emrCode(){
+  return EMR_TAG+JSON.stringify(emrData());
+}
+function copyText(txt,msg){
+  const done=()=>toast(msg);
+  const fallback=()=>{
+    const ta=document.createElement("textarea");
+    ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); done();
+  };
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(done).catch(fallback);
+  else fallback();
+}
+/* 書籤按鈕是拿來拖曳的，在這頁點下去不執行 */
+document.addEventListener("click",e=>{
+  if(e.target.closest("a[data-bm]")){ e.preventDefault(); toast("請把這個按鈕拖曳到書籤列，不是點它"); }
+});
+
+/* ---- 書籤小工具本體（會被轉成 javascript: 書籤，請保持自給自足） ---- */
+function emrFill(){
+  var d=document, TAG="ST-EMR1";
+  if(!d.getElementById("DATA_001")||!d.getElementById("Txt_RecordDate")){
+    alert("請在表單系統的「成人評估紀錄」頁面使用這個書籤。"); return;
+  }
+  var old=d.getElementById("st-emr"); if(old) old.remove();
+  var box=d.createElement("div"); box.id="st-emr";
+  box.style.cssText="position:fixed;top:70px;right:16px;z-index:2147483647;width:380px;background:#fff;color:#222;"+
+    "border:2px solid #2f6f9f;border-radius:10px;padding:14px;font:14px/1.6 sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.28)";
+  box.innerHTML='<div style="font-weight:700;margin-bottom:4px">帶入語言治療評估</div>'+
+    '<div style="color:#555;font-size:13px">在 st-portal 按「複製表單系統代碼」，再貼到下面（Ctrl+V）：</div>'+
+    '<textarea style="width:100%;height:80px;margin-top:6px;font:12px monospace"></textarea>'+
+    '<div style="text-align:right;margin-top:8px"><button type="button" data-x="0">關閉</button> '+
+    '<button type="button" data-x="1" style="font-weight:700">帶入</button></div>'+
+    '<div data-r style="margin-top:8px;max-height:300px;overflow:auto;font-size:13px"></div>';
+  d.body.appendChild(box);
+  var ta=box.querySelector("textarea"), res=box.querySelector("[data-r]");
+  ta.focus();
+  box.querySelector('[data-x="0"]').onclick=function(){ box.remove(); };
+  box.querySelector('[data-x="1"]').onclick=function(){
+    var raw=ta.value.trim(), o;
+    if(raw.indexOf(TAG)!==0){ alert("這不是 st-portal 產生的代碼，請回 st-portal 重新複製。"); return; }
+    try{ o=JSON.parse(raw.slice(TAG.length)); }catch(e){ alert("代碼不完整，請回 st-portal 重新複製。"); return; }
+    var f=o.f||{}, items=[], miss=[], cut=[], fail=[], done=0;
+    Object.keys(f).forEach(function(k){
+      var v=f[k], el=d.getElementById(k);
+      if(!el) el=d.querySelector('input[type="radio"][name$="$'+k+'"][value="'+String(v).replace(/"/g,"")+'"]');
+      if(el) items.push([el,v,k]); else miss.push(k);
+    });
+    /* 依畫面順序處理：先打開大項／勾選上層，下層欄位才會解除停用 */
+    items.sort(function(a,b){ return a[0].compareDocumentPosition(b[0])&4?-1:1; });
+    function fire(el,t){ el.dispatchEvent(new Event(t,{bubbles:true})); }
+    function apply(it){
+      var el=it[0], v=it[1];
+      if(el.disabled) return false;
+      if(el.type==="checkbox"||el.type==="radio"){ if(!el.checked) el.click(); }
+      else if(el.tagName==="SELECT"){
+        var s=String(v), hit=null;
+        for(var i=0;i<el.options.length;i++){ var op=el.options[i]; if(op.value===s||op.text.trim()===s){ hit=op; break; } }
+        if(!hit) return false;
+        el.value=hit.value; fire(el,"change");
+      } else {
+        var s2=String(v);
+        if(el.maxLength>0&&s2.length>el.maxLength){ cut.push(it[2]+"（上限 "+el.maxLength+" 字）"); s2=s2.slice(0,el.maxLength); }
+        el.value=s2; fire(el,"input"); fire(el,"change");
+      }
+      el.style.outline="3px solid #f0a020"; el.style.outlineOffset="1px";
+      done++; return true;
+    }
+    var later=items.filter(function(it){ return !apply(it); });
+    later.forEach(function(it){ if(!apply(it)) fail.push(it[2]); });
+    function ul(t,a){ return a.length?'<div style="margin-top:6px"><b>'+t+'</b><br>'+a.join("<br>")+'</div>':""; }
+    function esc(s){ return String(s).replace(/[&<>]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); }
+    res.innerHTML='<div style="color:#1b6b3a;font-weight:700">已帶入 '+done+' 個欄位（橘色框）</div>'+
+      ul("內容太長被截斷，請手動補：",cut.map(esc))+
+      ul("無法填入（欄位停用或選項不存在）：",fail.map(esc))+
+      ul("表單上找不到：",miss.map(esc))+
+      ul("仍需手動填寫：",(o.skip||[]).map(esc))+
+      '<div style="margin-top:8px;color:#a33">請逐項檢查後，再自己按「暫存」或「完成」。</div>';
+  };
+}
+const EMR_BOOKMARK = "javascript:"+encodeURIComponent("("+emrFill.toString()+")();void 0");
 
 /* =========================================================
    報告產生
@@ -1867,6 +2306,9 @@ document.addEventListener("click",e=>{
       .catch(()=>{ document.execCommand("copy"); toast("已複製全文"); });
     return;
   }
+
+  if(b.id==="emrCopy"){ copyText(emrCode(),"已複製代碼，到表單系統點「帶入評估」書籤"); return; }
+  if(b.id==="bmCopy"){ copyText(EMR_BOOKMARK,"已複製書籤程式"); return; }
 
   if(b.id==="reset"){
     if(!confirm("確定要清空所有內容重新填寫嗎？（已儲存的草稿不會被刪除）")) return;
