@@ -1,0 +1,53 @@
+name: Deploy ST Portal (Apps Script)
+
+on:
+  push:
+    branches: [main]
+    paths: ['st-portal/**']
+  workflow_dispatch:
+
+concurrency: st-portal-deploy
+
+env:
+  # 「語言治療組 工作入口」網頁應用程式網址 .../macros/s.tmu.edu.tw/s/<這段>/exec。
+  # 更新同一個部署，網址才不會變。尚未填入前不會部署。
+  DEPLOYMENT_ID: AKfycbwp_A-yvS0DYXf02a20ceiqjtJOQveEMi22PrvommX4VBVuemf6dpberFgMakZ42lT5ug
+  # clasp push 會整個覆蓋線上專案，這些頁面缺一個都不部署，避免網站被刪壞
+  REQUIRED_FILES: Code.gs appsscript.json Index.html Adult.html Daily.html Early.html
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: st-portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check files
+        run: |
+          test -f .clasp.json || { echo "::error::缺少 st-portal/.clasp.json（需要 scriptId）"; exit 1; }
+          for f in $REQUIRED_FILES; do
+            test -s "$f" || { echo "::error::缺少 st-portal/$f"; exit 1; }
+          done
+          test -n "$DEPLOYMENT_ID" || { echo "::error::workflow 裡的 DEPLOYMENT_ID 還沒填"; exit 1; }
+          test -n "$CLASPRC_JSON" || { echo "::error::尚未設定 GitHub Secret CLASPRC_JSON"; exit 1; }
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install -g @google/clasp@2.4.2
+
+      - name: Write credentials
+        run: printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - name: Push code
+        run: clasp push --force
+
+      - name: Update web app deployment
+        run: clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "GitHub ${GITHUB_SHA::7}"

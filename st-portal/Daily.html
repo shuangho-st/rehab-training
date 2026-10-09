@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="每日紀錄">
+<meta name="theme-color" content="#0E7C86">
+<title>語言治療每日紀錄</title>
+<style>
+:root{
+  --ink:#26312F; --ink-2:#5C6B69; --ink-3:#95A09D;
+  --paper:#F2EEE7; --surface:#FFFFFF; --surface-2:#FAF8F4;
+  --line:#DDD6CA; --line-2:#EBE6DC;
+  --pick:#7A9BA1; --pick-deep:#5C8188; --pick-bg:#E7EEED; --pick-line:#A9C2C6;
+  --flag:#B0763C; --flag-bg:#F7EFE3;
+  --r:4px;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --serif:Georgia,"Times New Roman","Songti TC","Noto Serif TC",serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"PingFang TC","Microsoft JhengHei",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);background:var(--paper);font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+
+.shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);padding:22px 0 40px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{padding:0 20px 14px;border-bottom:1px solid var(--line-2);margin-bottom:12px}
+.brand h1{font-size:15px;margin:0 0 3px;letter-spacing:.04em}
+.brand p{margin:0;font-size:12px;color:var(--ink-3)}
+.railhd{padding:0 20px;font-size:12px;font-weight:650;color:var(--pick);margin:14px 0 7px}
+.jump{list-style:none;margin:0;padding:0 10px}
+.jump button{width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:13.5px;color:var(--ink-2)}
+.jump button:hover{background:var(--paper)}
+.jump button.has{color:var(--ink);font-weight:600}
+.jump button.has::before{content:"●";color:var(--pick-deep);font-size:9px;margin-right:7px;vertical-align:2px}
+.jump button:not(.has)::before{content:"○";color:var(--line);font-size:9px;margin-right:7px;vertical-align:2px}
+.reclist{list-style:none;margin:0 0 10px;padding:0 10px}
+.reclist button{width:100%;text-align:left;background:none;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;font-size:13px;line-height:1.35}
+.reclist button:hover{border-color:var(--pick);background:var(--pick-bg)}
+.reclist small{display:block;color:var(--ink-3);font-size:11.5px}
+.railempty{padding:0 20px;font-size:12px;color:var(--ink-3);line-height:1.5}
+.railbtns{padding:10px 14px 0}
+
+main{padding:28px 38px 60px;max-width:960px}
+.head{margin-bottom:20px}
+.head h2{font-size:24px;margin:0 0 5px;font-weight:600;letter-spacing:.03em}
+.head p{margin:0;color:var(--ink-2);font-size:14px}
+
+fieldset{border:0;margin:0 0 26px;padding:0}
+legend{font-size:12px;font-weight:650;color:var(--pick-deep);letter-spacing:.1em;padding:0 0 8px;width:100%;border-bottom:1px solid var(--line);margin-bottom:12px}
+.field{margin-bottom:15px}
+.field>label,.flabel{display:block;font-size:13.5px;font-weight:600;margin-bottom:7px}
+.hint{font-size:12px;color:var(--ink-3);font-weight:400;margin-left:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 14px}
+
+input[type=text],textarea{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);outline:none}
+textarea{min-height:60px;resize:vertical;line-height:1.55}
+input:focus,textarea:focus{border-color:var(--pick);box-shadow:0 0 0 3px var(--pick-bg)}
+.inl{width:74px;display:inline-block;padding:5px 8px;text-align:center}
+
+/* 治療項目列 */
+.item{border:1px solid var(--line-2);border-radius:12px;padding:11px 13px;margin-bottom:8px;background:var(--surface)}
+.item.on{border-color:var(--pick-line);background:var(--pick-bg)}
+.item-t{font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;letter-spacing:.02em}
+.item-t .na{float:right;font-size:11.5px;font-weight:400;color:var(--ink-3)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.chip{padding:5px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface);cursor:pointer;font-size:12.5px;user-select:none}
+.chip input{position:absolute;opacity:0;width:0;height:0}
+.chip.on{background:var(--pick);color:#fff;border-color:var(--pick)}
+.chip:hover:not(.on){border-color:var(--pick-line)}
+
+.opts{display:flex;flex-wrap:wrap;gap:7px}
+.opts.col{flex-direction:column;gap:5px}
+.opt{display:flex;align-items:center;gap:8px;padding:8px 13px 8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);cursor:pointer;font-size:14px;user-select:none;line-height:1.35}
+.opts.col .opt{width:100%}
+.opt:hover{border-color:var(--pick-line);background:var(--paper)}
+.opt input{position:absolute;opacity:0;width:0;height:0}
+.box{width:17px;height:17px;flex:0 0 auto;border:1.5px solid var(--ink-3);background:var(--surface);display:grid;place-items:center;font-size:11px;color:#fff;line-height:1}
+.box.r{border-radius:50%} .box.c{border-radius:4px}
+.opt.on{border-color:var(--pick);background:var(--pick-bg)}
+.opt.on .box{border-color:var(--pick);background:var(--pick)}
+.opt.on .box.c::after{content:"✓"}
+.opt.on .box.r::after{content:"";width:7px;height:7px;border-radius:50%;background:#fff}
+
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.seg label{padding:5px 9px;cursor:pointer;font-size:12.5px;border-right:1px solid var(--line-2);white-space:nowrap}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;width:0;height:0}
+.seg label.on{background:var(--pick);color:#fff}
+.seg label:hover:not(.on){background:var(--pick-bg)}
+.perf{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.perf .lbl{font-size:12px;color:var(--ink-3)}
+
+.note{background:var(--flag-bg);border-left:3px solid var(--flag);padding:10px 13px;border-radius:0 var(--r) var(--r) 0;font-size:13px;color:var(--flag);margin-bottom:14px}
+.note.calm{background:var(--pick-bg);border-left-color:var(--pick);color:var(--ink)}
+
+.outcard{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px 16px;margin-bottom:10px}
+.outcard-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.outcard-hd h4{margin:0;font-size:12px;color:var(--pick-deep);letter-spacing:.1em;font-weight:650}
+.outcard pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
+.mini{background:none;border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
+.mini:hover{border-color:var(--pick);color:var(--pick)}
+.btn{padding:10px 18px;border-radius:var(--r);border:1px solid var(--pick);background:var(--pick);color:#fff;font-weight:600;cursor:pointer;font-size:14px}
+.btn.ghost{background:var(--surface);color:var(--pick)}
+.row{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.meter .track{height:5px;background:var(--line-2);border-radius:99px;overflow:hidden}
+.meter .fill{height:100%;background:var(--pick);width:0;transition:width .28s}
+.meter small{font-size:11.5px;color:var(--ink-3);display:block;margin-top:4px}
+
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:99px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:880px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static;height:auto;padding:14px 0;border-right:0;border-bottom:1px solid var(--line)}
+  .brand{padding:0 16px 10px}
+  .jump{display:flex;overflow-x:auto;gap:4px;padding:0 10px}
+  .jump button{white-space:nowrap;width:auto}
+  main{padding:20px 15px 40px}
+  .head h2{font-size:21px}
+  .grid2,.grid3{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail">
+    <div class="brand"><h1>語言治療每日紀錄</h1><p>復健醫學部 語言治療組　成人</p></div>
+    <div class="railhd">項目</div>
+    <ul class="jump" id="jump"></ul>
+    <div class="railhd">本次開啟已存</div>
+    <ul class="reclist" id="reclist"></ul>
+    <div class="railempty" id="railempty">填完按「存入清單」可接著寫下一位，也能載回已存紀錄沿用內容。</div>
+    <div class="railbtns"><button class="mini" id="newrec" style="width:100%">＋ 清空，寫下一位</button></div>
+  </nav>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+const D={};          // 一般欄位
+const V={};          // 治療項目：{itemKey:{sub:[],n:"",p:""}}
+let RECORDS=[];
+let outEdited={};
+
+const PCTS=["100%","90%","80%","70%","60%","50%","40%","30%","20%","10%","0%"];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const has=v=>v!==undefined&&v!==null&&v!==""&&!(Array.isArray(v)&&!v.length);
+const list=(a,s="、")=>(a||[]).join(s);
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),1900);}
+function today(){const d=new Date();return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");}
+const it=k=>(V[k]=V[k]||{sub:[],n:"",p:""});
+const done=k=>{const o=V[k];return o&&(has(o.p)||has(o.n)||has(o.sub));};
+
+/* =========================================================
+   依院內「語言治療每日紀錄（成人）」欄位建置
+   每列＝不適用 ／ 內容 ／ 表現
+   ========================================================= */
+const SECTIONS=[
+ {k:"lang",n:"語言：聽覺理解／口語表達",items:[
+   {k:"l1",t:"可以遵照｛　｝步驟指令",num:{ph:"步驟"},p:"%"},
+   {k:"l2",t:"可以指認",sub:["常見物品","身體部位","圖片"],p:"%"},
+   {k:"l3",t:"可以理解簡單問句",p:"%"},
+   {k:"l4",t:"可以理解",sub:["片語","簡單句","複雜句","短文"],p:"%"},
+   {k:"l5",t:"能模仿手勢",p:"%"},
+   {k:"l6",t:"能用手勢表達自己的需求",p:"%"},
+   {k:"l7",t:"能仿說｛　｝個字",num:{ph:"字數"},sub:["音節","詞彙","片語","簡單句","複雜句"],p:"%"},
+   {k:"l8",t:"可以說出常見物品的名稱",p:"%"},
+   {k:"l9",t:"自發的口語表達",sub:["音節","詞彙","片語","簡單句","複雜句","短文","對話"],p:"%"}
+ ],other:"lang_o"},
+
+ {k:"rw",n:"閱讀／書寫",items:[
+   {k:"r1",t:"可以閱讀",sub:["數字","詞彙","片語","句子","短文"],p:"%"},
+   {k:"r2",t:"可以書寫",sub:["數字","單詞","片語","句子","段落"],p:"%"}
+ ],other:"rw_o"},
+
+ {k:"om",n:"口腔動作",items:[
+   {k:"o1",t:"舌頭運動範圍和肌力訓練",p:"%"},
+   {k:"o2",t:"嘴唇運動範圍和肌力訓練",p:"%"},
+   {k:"o3",t:"下顎運動範圍和肌力訓練",p:"%"},
+   {k:"o4",t:"輪替動作訓練",sub:["輪替運動速率（AMR）","連續性動作速率（SMR）"],p:"sec/10times"}
+ ],other:"om_o"},
+
+ {k:"sw",n:"吞嚥",special:"swallow",other:"sw_o"},
+
+ {k:"sp",n:"言語",items:[
+   {k:"s1",t:"呼吸訓練（氣流控制）",p:"%"},
+   {k:"s2",t:"發聲訓練（最長發聲時長）",p:"sec"},
+   {k:"s3",t:"發聲訓練（音量）",p:"%"},
+   {k:"s4",t:"控制語速",p:"%"},
+   {k:"s5",t:"共鳴訓練",p:"%"},
+   {k:"s6",t:"可以仿說",sub:["音素","音節","單詞","句子"],p:"%"},
+   {k:"s7",t:"可以自發說出",sub:["音素","音節","單詞","句子"],p:"%"},
+   {k:"s8",t:"語音清晰度訓練",sub:["音素","音節","詞彙","片語","句子"],p:"%"}
+ ],other:"sp_o"},
+
+ {k:"voice",n:"嗓音",items:[
+   {k:"v1",t:"維持良好嗓音保健",p:"%"},
+   {k:"v2",t:"放鬆運動",p:"%"},
+   {k:"v3",t:"呼吸訓練（氣流控制）",p:"%"},
+   {k:"v4",t:"發聲訓練（最長發聲時長）",p:"sec"},
+   {k:"v5",t:"共鳴嗓音治療",p:"%"},
+   {k:"v6",t:"發聲功能訓練（vocal function exercise）",p:"%"},
+   {k:"v7",t:"使用良好的發聲方法在",sub:["詞彙","句子","短文敘述","會話"],p:"%"}
+ ],other:"voice_o"},
+
+ {k:"flu",n:"流暢度",items:[
+   {k:"f1",t:"放鬆運動",p:"%"},
+   {k:"f2",t:"跟著節拍器大聲朗讀",p:"%"},
+   {k:"f3",t:"減少不流暢在｛階段｝，重複次數（RU）",sub:["詞彙","句子","大聲朗讀","短文敘述","會話"],num:{ph:"RU"},p:"%"}
+ ],other:"flu_o"},
+
+ {k:"beh",n:"行為",items:[
+   {k:"b1",t:"注意力",p:"%"},
+   {k:"b2",t:"動機",p:"%"},
+   {k:"b3",t:"情緒",p:"%"},
+   {k:"b4",t:"持續眼神接觸",p:"%"}
+ ],other:"beh_o"},
+
+ {k:"couns",n:"諮詢（衛教指示）",special:"couns"}
+];
+
+const TEX=["水","花蜜狀","稠狀物","布丁狀","粥","細碎飲食","軟質飲食","正常飲食"];
+const RESIDUE=["前溝","外側溝","口底","嘴巴右側","嘴巴左側","舌","硬顎"];
+const POSTURE=["下巴上抬","低頭","頭轉向右邊","頭轉向左邊","頭向右傾斜","頭向左傾斜"];
+const MANEUVER=["用力吞嚥法","上聲門吞嚥法","超上聲門吞嚥法","孟德森吞嚥法"];
+const MEALTYPE=["全流餐","半流餐","剁碎餐","軟質餐","正常餐"];
+
+/* ---------------- 元件 ---------------- */
+function text(k,label,ph,cls){
+  return `<div class="field"><label for="f_${k}">${label}</label>
+  <input type="text" id="f_${k}" data-k="${k}" value="${D[k]?esc(D[k]):""}" placeholder="${ph||""}" class="${cls||""}"></div>`;
+}
+function area(k,label,ph){
+  return `<div class="field"><label for="f_${k}">${label}</label>
+  <textarea id="f_${k}" data-k="${k}" placeholder="${ph||""}">${D[k]?esc(D[k]):""}</textarea></div>`;
+}
+function radio(k,label,opts,cls){
+  const o=opts.map(v=>{const s=D[k]===v?"on":"";
+    return `<label class="opt ${s}"><input type="radio" name="${k}" value="${esc(v)}" data-k="${k}" data-t="radio" ${s?"checked":""}><span class="box r"></span>${esc(v)}</label>`;}).join("");
+  return `<div class="field"><span class="flabel">${label}</span><div class="opts ${cls||""}">${o}</div></div>`;
+}
+function check(k,label,opts,cls){
+  const cur=D[k]||[];
+  const o=opts.map(v=>{const s=cur.includes(v)?"on":"";
+    return `<label class="opt ${s}"><input type="checkbox" value="${esc(v)}" data-k="${k}" data-t="check" ${s?"checked":""}><span class="box c"></span>${esc(v)}</label>`;}).join("");
+  return `<div class="field"><span class="flabel">${label}<span class="hint">可複選</span></span><div class="opts ${cls||""}">${o}</div></div>`;
+}
+function num(k,ph,w){
+  return `<input type="text" class="inl" data-k="${k}" value="${D[k]?esc(D[k]):""}" placeholder="${ph||""}" style="${w?`width:${w}px`:""}">`;
+}
+
+function itemRow(i){
+  const o=it(i.k), act=done(i.k);
+  let h=`<div class="item ${act?"on":""}">
+    <div class="item-t">${esc(i.t)}<span class="na">${act?"":"未填＝不適用"}</span></div>`;
+  if(i.sub){
+    h+=`<div class="chips">`+i.sub.map(v=>{
+      const s=(o.sub||[]).includes(v)?"on":"";
+      return `<label class="chip ${s}"><input type="checkbox" value="${esc(v)}" data-ik="${i.k}" data-t="isub" ${s?"checked":""}>${esc(v)}</label>`;
+    }).join("")+`</div>`;
+  }
+  h+=`<div class="perf">`;
+  if(i.num) h+=`<span class="lbl">${esc(i.num.ph)}</span>
+    <input type="text" class="inl" data-ik="${i.k}" data-t="inum" value="${o.n?esc(o.n):""}" placeholder="">`;
+  if(i.p==="%"){
+    h+=`<div class="seg">`+PCTS.map(v=>{
+      const s=o.p===v?"on":"";
+      return `<label class="${s}"><input type="radio" name="p_${i.k}" value="${v}" data-ik="${i.k}" data-t="ipct" ${s?"checked":""}>${v}</label>`;
+    }).join("")+`</div>`;
+  }else if(i.p){
+    h+=`<span class="lbl">表現</span><input type="text" class="inl" data-ik="${i.k}" data-t="iperf" value="${o.p?esc(o.p):""}" placeholder=""><span class="lbl">${esc(i.p)}</span>`;
+  }
+  h+=`</div>`;
+  if(act) h+=`<div style="margin-top:2px"><button class="mini" data-clearitem="${i.k}">清除此列</button></div>`;
+  return h+`</div>`;
+}
+
+function swallowBlock(){
+  let h="";
+  [{k:"w1",t:"改善吞嚥反射",p:"%"},
+   {k:"w2",t:"冰刺激後吞嚥（＜　秒）",p:"sec"},
+   {k:"w3",t:"自發吞口水",p:"%"}].forEach(i=>h+=itemRow(i));
+
+  [1,2].forEach(n=>{
+    const pre="t"+n;
+    const o=it("w_tex"+n);
+    h+=`<div class="item ${done("w_tex"+n)||has(D[pre+"_rec"])?"on":""}">
+      <div class="item-t">由口進食質地${n==1?"一":"二"}</div>
+      <div class="chips">`+TEX.map(v=>{
+        const s=(o.sub||[]).includes(v)?"on":"";
+        return `<label class="chip ${s}"><input type="checkbox" value="${esc(v)}" data-ik="w_tex${n}" data-t="isub" ${s?"checked":""}>${esc(v)}</label>`;
+      }).join("")+`</div>
+      <div class="perf" style="margin-bottom:8px">
+        <span class="lbl">每食團吞</span>${num(pre+"_sw","次",60)}<span class="lbl">次</span>
+        <span class="lbl">共花</span>${num(pre+"_min","分",60)}<span class="lbl">分鐘</span>
+        <span class="lbl">吞了</span>${num(pre+"_g","克",60)}<span class="lbl">公克</span>
+      </div>
+      <div class="perf" style="margin-bottom:8px">
+        <span class="lbl">嗆到</span>${num(pre+"_choke","次",60)}<span class="lbl">次</span>
+        <span class="lbl">濕濡聲</span>${num(pre+"_wet","次",60)}<span class="lbl">次</span>
+      </div>
+      <div class="field" style="margin-bottom:8px">
+        <textarea data-k="${pre}_rec" placeholder="吞嚥紀錄：如「以小藥杯喝水30ml，共3杯，吞後無嗆咳，無濕濡聲，習慣一口全喝完」">${D[pre+"_rec"]?esc(D[pre+"_rec"]):""}</textarea></div>
+      <div class="perf"><div class="seg">`+PCTS.map(v=>{
+        const s=o.p===v?"on":"";
+        return `<label class="${s}"><input type="radio" name="p_w_tex${n}" value="${v}" data-ik="w_tex${n}" data-t="ipct" ${s?"checked":""}>${v}</label>`;
+      }).join("")+`</div></div></div>`;
+  });
+
+  h+=check("w_residue","食物殘留於",RESIDUE)
+   + text("w_residue_o","食物殘留　其他")
+   + check("w_posture","姿勢",POSTURE)
+   + check("w_maneuver","吞嚥手法",MANEUVER)
+   + text("w_maneuver_o","吞嚥手法　其他")
+   + text("w_vfss","吞嚥攝影時間","如 2026/09/20")
+   + `<div class="field"><span class="flabel">個案改餐</span>
+      <div class="grid2">
+        <input type="text" data-k="w_diet_date" value="${D.w_diet_date?esc(D.w_diet_date):""}" placeholder="改餐日期 如 2026/09/18">
+        <input type="text" data-k="w_diet_iddsi" value="${D.w_diet_iddsi?esc(D.w_diet_iddsi):""}" placeholder="建議質地 IDDSI 如 Level 5">
+      </div></div>`
+   + check("w_diet_type","改餐餐型",MEALTYPE)
+   + text("w_ng","個案移除鼻胃管日期","如 2026/09/25");
+  return h;
+}
+
+function counsBlock(){
+  const oral=(D.c_mode||"").startsWith("練習由口進食");
+  let h=radio("c_mode","進食指示",
+    ["不可由口進食（僅可鼻胃管灌食，請勿由口餵食任何食物與水）","練習由口進食（進食時照顧者務必在旁監督或協助）"],"col");
+  if(oral){
+    h+=check("c_tex","質地",["正常餐","軟質食物（魚肉、菜葉）","粥／半流餐","剁碎餐","蒸蛋、布丁"])
+     + check("c_liq","液體",["清澈","增加稠度"])
+     + text("c_liq_o","液體　其他")
+     + `<div class="field"><span class="flabel">建議由口進食次數／時間／量</span>
+        <div class="perf">
+          <span class="lbl">每天</span>${num("c_times","次",60)}<span class="lbl">次</span>
+          <span class="lbl">每次練習</span>${num("c_min","分",60)}<span class="lbl">分鐘以內</span>
+          <span class="lbl">每口量</span>${num("c_amt","如 3cc",100)}
+        </div></div>`
+     + check("c_uten","用具（每口少量餵食，慢慢小口吞）",["小茶匙","中型湯匙","吸管","杯子","滴管"])
+     + check("c_pos","進食姿勢",["坐直","低頭吞嚥","仰頭吞嚥","頭傾右側","頭傾左側"])
+     + text("c_pos_o","進食姿勢　其他")
+     + `<div class="field"><span class="flabel">其他策略及注意事項<span class="hint">可複選</span></span>
+        <div class="opts col">`+[
+          "每口吞完後，清喉嚨再吞一次",
+          "吞完發ㄚ檢查是否有濁水聲",
+          "記錄三餐喝水及進食量",
+          "進食完後至少坐著超過 30 分鐘"
+        ].map(v=>{const s=(D.c_strat||[]).includes(v)?"on":"";
+          return `<label class="opt ${s}"><input type="checkbox" value="${esc(v)}" data-k="c_strat" data-t="check" ${s?"checked":""}><span class="box c"></span>${esc(v)}</label>`;
+        }).join("")+`</div>
+        <div class="perf" style="margin-top:8px">
+          <span class="lbl">每口需吞</span>${num("c_swn","次",60)}<span class="lbl">次吞乾淨</span>
+          <span class="lbl">如有嗆咳</span>${num("c_choken","次",60)}<span class="lbl">次即停止餵食並告知護理師</span>
+        </div></div>`;
+  }
+  h+=check("c_train","其他吞嚥相關訓練",
+    ["每天刷牙及舌頭，保持口腔潔淨與口唇濕潤","口腔動作練習（嘴唇、舌頭）","咽部肌肉訓練","口面部按摩","練習戴假牙"],"col")
+   + text("c_train_o","其他吞嚥相關訓練　其他");
+  return h;
+}
+
+/* ---------------- 主畫面 ---------------- */
+function secHas(s){
+  if(s.special==="swallow")
+    return ["w1","w2","w3","w_tex1","w_tex2"].some(done)||
+      ["w_residue","w_posture","w_maneuver","w_vfss","w_diet_date","w_ng","t1_rec","t2_rec","sw_o"].some(k=>has(D[k]));
+  if(s.special==="couns")
+    return ["c_mode","c_tex","c_uten","c_pos","c_strat","c_train","c_train_o"].some(k=>has(D[k]));
+  return (s.items||[]).some(i=>done(i.k))||has(D[s.other]);
+}
+
+function view(){
+  let h=`<div class="head"><h2>語言治療每日紀錄</h2>
+    <p>依院內表單欄位建置。每列留空即為「不適用」，填了表現才會進紀錄。</p></div>`;
+
+  h+=`<fieldset><legend>基本資料</legend>
+    <div class="grid2">${text("date","治療日期")}${text("material","治療教材")}</div>
+    <div class="grid2">${text("name","病人姓名")}${text("chart","病歷號")}</div>
+    <div class="grid2">${text("birth","出生日期","如 0741219")}${text("sex","性別")}</div>
+    ${radio("setting","門診／住院",["住院","門診"])}
+  </fieldset>`;
+
+  SECTIONS.forEach(s=>{
+    h+=`<fieldset id="sec_${s.k}"><legend>${esc(s.n)}</legend>`;
+    if(s.special==="swallow") h+=swallowBlock();
+    else if(s.special==="couns") h+=counsBlock();
+    else h+=(s.items||[]).map(itemRow).join("");
+    if(s.other) h+=area(s.other,"其他","可直接寫治療師觀察，如「給予臉部按摩，左臉下垂幅度稍改善」");
+    h+=`</fieldset>`;
+  });
+
+  h+=`<div class="meter"><div class="track"><div class="fill" id="fill"></div></div>
+      <small id="pct">尚未填寫</small></div>
+    <div class="row">
+      <button class="btn" id="copyall">複製全部</button>
+      <button class="btn ghost" id="save">存入清單，寫下一位</button>
+    </div>
+    <div id="outs"></div>`;
+  return h;
+}
+
+/* ---------------- 產文 ---------------- */
+function itemText(i){
+  const o=V[i.k]; if(!o||!done(i.k)) return "";
+  let t=i.t.replace("｛　｝",has(o.n)?` ${o.n} `:"　").replace("｛階段｝","");
+  if(has(o.sub)) t+=`（${list(o.sub,"／")}）`;
+  if(i.num&&has(o.n)&&!i.t.includes("｛")) t+=` ${o.n}`;
+  if(has(o.p)) t+=`　${o.p}${i.p&&i.p!=="%"?" "+i.p:""}`;
+  return t.replace(/\s+/g," ").trim();
+}
+function swText(){
+  const L=[];
+  [{k:"w1",t:"改善吞嚥反射",p:"%"},{k:"w2",t:"冰刺激後吞嚥",p:"sec"},
+   {k:"w3",t:"自發吞口水",p:"%"}].forEach(i=>{
+    const o=V[i.k]; if(!o||!done(i.k)) return;
+    if(i.k==="w2") L.push(`冰刺激後吞嚥＜${o.p} 秒`);
+    else L.push(itemText(i));
+  });
+  [1,2].forEach(n=>{
+    const o=V["w_tex"+n], pre="t"+n;
+    const nums=[];
+    if(has(D[pre+"_sw"]))   nums.push(`每食團吞 ${D[pre+"_sw"]} 次`);
+    if(has(D[pre+"_min"]))  nums.push(`共 ${D[pre+"_min"]} 分鐘`);
+    if(has(D[pre+"_g"]))    nums.push(`${D[pre+"_g"]} 公克`);
+    if(has(D[pre+"_choke"]))nums.push(`嗆到 ${D[pre+"_choke"]} 次`);
+    if(has(D[pre+"_wet"]))  nums.push(`濕濡聲 ${D[pre+"_wet"]} 次`);
+    if(!(o&&(has(o.sub)||has(o.p)))&&!nums.length&&!has(D[pre+"_rec"])) return;
+    let t=`由口進食質地${n==1?"一":"二"}`;
+    if(o&&has(o.sub)) t+=`（${list(o.sub,"／")}）`;
+    if(nums.length) t+=`：${nums.join("，")}`;
+    if(o&&has(o.p)) t+=`，達成 ${o.p}`;
+    if(has(D[pre+"_rec"])) t+=`。吞嚥紀錄：${D[pre+"_rec"]}`;
+    L.push(t);
+  });
+  if(has(D.w_residue)||has(D.w_residue_o))
+    L.push(`食物殘留於${[list(D.w_residue),D.w_residue_o].filter(has).join("、")}`);
+  if(has(D.w_posture))  L.push(`姿勢：${list(D.w_posture)}`);
+  if(has(D.w_maneuver)||has(D.w_maneuver_o))
+    L.push(`吞嚥手法：${[list(D.w_maneuver),D.w_maneuver_o].filter(has).join("、")}`);
+  if(has(D.w_vfss))     L.push(`吞嚥攝影時間：${D.w_vfss}`);
+  if(has(D.w_diet_date)||has(D.w_diet_iddsi)||has(D.w_diet_type)){
+    const b=[];
+    if(has(D.w_diet_date)) b.push(`自 ${D.w_diet_date}`);
+    if(has(D.w_diet_iddsi))b.push(`建議質地 IDDSI ${D.w_diet_iddsi}`);
+    if(has(D.w_diet_type)) b.push(list(D.w_diet_type));
+    L.push(`個案改餐：${b.join("，")}`);
+  }
+  if(has(D.w_ng)) L.push(`個案移除鼻胃管：自 ${D.w_ng}`);
+  if(has(D.sw_o)) L.push(`其他：${D.sw_o}`);
+  return L;
+}
+function counsText(){
+  const L=[];
+  if(has(D.c_mode)) L.push(D.c_mode);
+  if((D.c_mode||"").startsWith("練習由口進食")){
+    if(has(D.c_tex)) L.push(`質地：${list(D.c_tex)}`);
+    if(has(D.c_liq)||has(D.c_liq_o)) L.push(`液體：${[list(D.c_liq),D.c_liq_o].filter(has).join("、")}`);
+    const f=[];
+    if(has(D.c_times))f.push(`每天 ${D.c_times} 次`);
+    if(has(D.c_min))  f.push(`每次練習 ${D.c_min} 分鐘以內`);
+    if(has(D.c_amt))  f.push(`每口量 ${D.c_amt}`);
+    if(f.length) L.push(f.join("，"));
+    if(has(D.c_uten)) L.push(`用具：每口以${list(D.c_uten,"／")}少量餵食，並慢慢地小口吞`);
+    if(has(D.c_pos)||has(D.c_pos_o)) L.push(`進食姿勢：${[list(D.c_pos),D.c_pos_o].filter(has).join("、")}`);
+    const st=[...(D.c_strat||[])];
+    if(has(D.c_swn))   st.unshift(`每口需吞 ${D.c_swn} 次吞乾淨`);
+    if(has(D.c_choken))st.push(`如有嗆咳 ${D.c_choken} 次，停止餵食並告知護理師`);
+    if(st.length) L.push(`注意事項：${st.join("；")}`);
+  }
+  if(has(D.c_train)||has(D.c_train_o))
+    L.push(`其他吞嚥相關訓練：${[list(D.c_train),D.c_train_o].filter(has).join("、")}`);
+  return L;
+}
+function secText(s){
+  let L=[];
+  if(s.special==="swallow") L=swText();
+  else if(s.special==="couns") L=counsText();
+  else{
+    L=(s.items||[]).map(itemText).filter(has);
+    if(has(D[s.other])) L.push(`其他：${D[s.other]}`);
+  }
+  if(s.special!=="swallow"&&s.special!=="couns"&&!L.length) return "";
+  if(!L.length) return "";
+  return L.join("；").replace(/[；。]+$/,"")+"。";
+}
+function headerText(){
+  const a=[D.name,has(D.chart)?`病歷號 ${D.chart}`:"",D.sex,has(D.birth)?`生日 ${D.birth}`:""].filter(has);
+  const b=[D.date,D.setting,has(D.material)?`治療教材：${D.material}`:""].filter(has);
+  if(!a.length&&!b.length) return "";
+  return `【語言治療每日紀錄】${[a.join("｜"),b.join("｜")].filter(has).join("｜")}`;
+}
+function blocks(){
+  const out=[];
+  const h=headerText(); if(h) out.push({k:"head",n:"基本資料",t:h});
+  SECTIONS.forEach(s=>{const t=secText(s); if(t) out.push({k:s.k,n:s.n,t:`【${s.n}】${t}`});});
+  return out;
+}
+
+function renderOuts(){
+  const bs=blocks();
+  const el=document.getElementById("outs");
+  if(!el) return;
+  el.innerHTML=bs.length?bs.map(b=>`<div class="outcard">
+      <div class="outcard-hd"><h4>${esc(b.n)}</h4>
+        <button class="mini" data-copy="${b.k}">複製這段</button></div>
+      <pre>${esc(outEdited[b.k]!==undefined?outEdited[b.k]:b.t)}</pre></div>`).join("")
+    : `<div class="note calm">尚未填寫任何項目。填了表現（％／秒／次）或其他欄位後，這裡會依院內表單分區塊產生文字。</div>`;
+}
+
+/* ---------------- 進度／導覽 ---------------- */
+function renderJump(){
+  const ul=document.getElementById("jump");
+  ul.innerHTML=SECTIONS.map(s=>
+    `<li><button data-jump="${s.k}" class="${secHas(s)?"has":""}">${esc(s.n)}</button></li>`).join("");
+  const n=SECTIONS.filter(secHas).length;
+  const f=document.getElementById("fill"), t=document.getElementById("pct");
+  if(f) f.style.width=Math.round(n/SECTIONS.length*100)+"%";
+  if(t) t.textContent=n?`已填 ${n} 個項目區塊`:"尚未填寫";
+}
+function renderRail(){
+  const ul=document.getElementById("reclist"), em=document.getElementById("railempty");
+  ul.innerHTML=RECORDS.map((r,i)=>`<li><button data-load="${i}">${esc(r.label)}<small>${esc(r.sub)}</small></button></li>`).join("");
+  em.style.display=RECORDS.length?"none":"block";
+}
+function render(keep){
+  const y=keep?(window.scrollY||0):0;
+  document.getElementById("main").innerHTML=view();
+  renderOuts(); renderJump(); renderRail();
+  window.scrollTo(0,y);
+}
+function light(){ renderOuts(); renderJump(); }
+
+/* ---------------- 事件 ---------------- */
+document.addEventListener("change",e=>{
+  const el=e.target,t=el.dataset.t;
+  if(t==="radio"){ D[el.dataset.k]=el.value; outEdited={};
+    if(el.dataset.k==="c_mode") return render(true);
+    return mark(el); }
+  if(t==="check"){
+    const k=el.dataset.k,cur=new Set(Array.isArray(D[k])?D[k]:[]);
+    el.checked?cur.add(el.value):cur.delete(el.value);
+    D[k]=[...cur]; outEdited={}; return mark(el);
+  }
+  if(t==="isub"){
+    const o=it(el.dataset.ik),cur=new Set(Array.isArray(o.sub)?o.sub:[]);
+    el.checked?cur.add(el.value):cur.delete(el.value);
+    o.sub=[...cur]; outEdited={}; return render(true);
+  }
+  if(t==="ipct"){ it(el.dataset.ik).p=el.value; outEdited={}; return render(true); }
+});
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.type==="checkbox"||el.type==="radio") return;
+  const t=el.dataset.t;
+  if(t==="inum"){ it(el.dataset.ik).n=el.value; outEdited={}; return light(); }
+  if(t==="iperf"){ it(el.dataset.ik).p=el.value; outEdited={}; return light(); }
+  if(el.dataset.k){ D[el.dataset.k]=el.value; outEdited={}; return light(); }
+});
+function mark(el){
+  const w=el.closest(".opt")||el.closest(".chip");
+  if(w){
+    if(el.type==="radio")
+      document.querySelectorAll(`[name="${CSS.escape(el.name)}"]`).forEach(x=>{
+        const ww=x.closest(".opt")||x.closest(".chip"); if(ww) ww.classList.remove("on");});
+    w.classList.toggle("on",el.checked);
+  }
+  light();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");
+  if(!b) return;
+  if(b.dataset.jump){ const t=document.getElementById("sec_"+b.dataset.jump);
+    if(t) t.scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  if(b.dataset.clearitem){ delete V[b.dataset.clearitem]; outEdited={}; return render(true); }
+  if(b.dataset.copy){
+    const bs=blocks(), x=bs.find(z=>z.k===b.dataset.copy);
+    if(x) copy(outEdited[x.k]!==undefined?outEdited[x.k]:x.t,"已複製「"+x.n+"」");
+    return;
+  }
+  if(b.id==="copyall"){
+    const all=blocks().map(x=>outEdited[x.k]!==undefined?outEdited[x.k]:x.t).join("");
+    copy(all,"已複製全部"); return;
+  }
+  if(b.id==="save"){ saveRecord(); return; }
+  if(b.id==="newrec"){ clearForm(true); return; }
+  if(b.dataset.load!==undefined){ loadRecord(+b.dataset.load); return; }
+});
+function copy(txt,msg){
+  if(!txt) { toast("沒有可複製的內容"); return; }
+  navigator.clipboard.writeText(txt).then(()=>toast(msg)).catch(()=>{
+    const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove(); toast(msg);
+  });
+}
+function saveRecord(){
+  if(!has(D.name)&&!has(D.chart)){ toast("請先填姓名或病歷號"); return; }
+  RECORDS.unshift({
+    d:JSON.parse(JSON.stringify(D)), v:JSON.parse(JSON.stringify(V)),
+    label:[D.name,D.chart].filter(has).join("　"),
+    sub:[D.date,D.setting,SECTIONS.filter(secHas).map(s=>s.n.split("：")[0]).join("、")].filter(has).join("｜")
+  });
+  clearForm(false); toast("已存入清單，可接著寫下一位");
+}
+function loadRecord(i){
+  const r=RECORDS[i];
+  Object.keys(D).forEach(k=>delete D[k]); Object.assign(D,JSON.parse(JSON.stringify(r.d)));
+  Object.keys(V).forEach(k=>delete V[k]); Object.assign(V,JSON.parse(JSON.stringify(r.v)));
+  outEdited={}; render(false); toast("已載入，可修改後另存為新紀錄");
+}
+function clearForm(ask){
+  if(ask&&!confirm("確定清空目前內容？未存入清單的資料會消失。")) return;
+  const keep={date:D.date,setting:D.setting};
+  Object.keys(D).forEach(k=>delete D[k]); Object.assign(D,keep);
+  Object.keys(V).forEach(k=>delete V[k]);
+  outEdited={}; render(false);
+}
+
+D.date=today();
+render(false);
+</script>
+</body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ST 工作台">
+<meta name="theme-color" content="#0E7C86">
+<title>語言治療組 工作入口</title>
+<style>
+:root{
+  --paper:#F2EEE7; --surface:#FFFFFF; --surface-2:#FAF8F4;
+  --ink:#26312F; --ink-2:#5C6B69; --ink-3:#95A09D;
+  --line:#DDD6CA; --line-2:#EBE6DC;
+  --pick:#7A9BA1; --pick-deep:#5C8188; --pick-bg:#E7EEED;
+  --due:#B0763C; --due-bg:#F7EFE3; --due-line:#E3CDAC;
+  --r:3px;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --serif:Georgia,"Times New Roman","Songti TC","Noto Serif TC",serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);background:var(--paper);font-size:15px;line-height:1.65;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1060px;margin:0 auto;padding:44px 34px 90px}
+
+/* ── 標題：細框偏移motif ── */
+header{margin-bottom:34px;position:relative}
+.htop{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.clock{text-align:right;padding-top:14px;flex:0 0 auto}
+.clock .t{font-family:var(--serif);font-size:42px;line-height:1;color:var(--ink);
+  letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.clock .t i{font-style:normal;color:var(--pick);animation:blink 2s steps(1,end) infinite;padding:0 2px}
+.clock .d{font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-top:9px;
+  font-family:var(--serif);border-top:1px solid var(--line);padding-top:8px;display:inline-block}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:.25}}
+.hl{position:relative;display:inline-block;padding:16px 26px 14px 0}
+.hl::before{content:"";position:absolute;left:-16px;top:0;width:150px;height:100%;
+  border:1px solid var(--ink);pointer-events:none}
+.hl h1{font-size:25px;margin:0 0 4px;font-weight:600;letter-spacing:.04em;position:relative}
+.hl p{margin:0;color:var(--ink-3);font-size:12.5px;letter-spacing:.06em;font-family:var(--serif);position:relative}
+.hr{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:20px}
+.search{position:relative;flex:1;min-width:200px}
+.search input{width:100%;padding:11px 15px 11px 36px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);outline:none;font-size:14px}
+.search input:focus{border-color:var(--pick);box-shadow:0 0 0 3px var(--pick-bg)}
+.search::before{content:"⌕";position:absolute;left:13px;top:50%;transform:translateY(-52%);color:var(--ink-3);font-size:17px}
+.tb{padding:10px 18px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);cursor:pointer;font-size:13px;white-space:nowrap;letter-spacing:.05em}
+.tb:hover{border-color:var(--pick);color:var(--pick-deep)}
+.tb.on{background:var(--pick);color:#fff;border-color:var(--pick)}
+
+/* ── 今日個案 ── */
+.board3{margin-bottom:14px}
+.slot{display:flex;align-items:flex-start;gap:14px;padding:11px 0;font-size:14px;line-height:1.5}
+.slot+.slot{border-top:1px solid var(--line-2)}
+.slot .tm{font-family:var(--serif);font-size:13px;color:var(--pick-deep);white-space:nowrap;padding-top:2px;min-width:88px;letter-spacing:.03em}
+.slot .bd{flex:1;min-width:0}
+.slot .ty{display:inline-block;font-size:10.5px;padding:2px 9px;border:1px solid var(--line);color:var(--ink-2);margin-bottom:3px;letter-spacing:.05em}
+.slot .nm{display:block;word-break:break-word}
+.slot.ok{opacity:.42}
+.slot.ok .nm{text-decoration:line-through}
+.slot .ck{font-size:13px;color:var(--pick);white-space:nowrap;padding-top:3px}
+.stats{display:flex;flex-wrap:wrap;gap:0;margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
+.stat{flex:1;min-width:104px;padding:2px 14px;font-size:10.5px;color:var(--ink-3);letter-spacing:.07em;border-left:1px solid var(--line-2)}
+.stat:first-child{border-left:0;padding-left:0}
+.stat b{display:block;font-family:var(--serif);font-size:29px;color:var(--pick-deep);font-weight:400;line-height:1.15;margin-top:3px}
+
+/* ── 面板 ── */
+.today{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:34px}
+.pane{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:20px 22px}
+.pane.alert{border-color:var(--due-line);background:var(--due-bg)}
+.pane h3{margin:0 0 14px;font-size:11.5px;font-weight:600;letter-spacing:.12em;color:var(--ink-2);
+  display:flex;align-items:center;gap:9px;padding-bottom:9px;border-bottom:1px solid var(--line-2)}
+.pane h3 .sp{flex:1}
+.pane h3 button,.pane h3 select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:4px 10px;font-size:11px;cursor:pointer;color:var(--ink-2);letter-spacing:.04em}
+.pane h3 button:hover{border-color:var(--pick);color:var(--pick-deep)}
+.pane.alert h3{color:var(--due);border-bottom-color:var(--due-line)}
+.pane.alert h3 button{border-color:var(--due-line);color:var(--due);background:transparent}
+
+.line{display:flex;align-items:flex-start;gap:11px;padding:8px 0;font-size:14px;line-height:1.5}
+.line+.line{border-top:1px solid var(--line-2)}
+.tick{width:16px;height:16px;flex:0 0 auto;margin-top:3px;border:1px solid var(--ink-3);
+  background:var(--surface);cursor:pointer;display:grid;place-items:center;font-size:10px;color:#fff}
+.tick.on{background:var(--pick);border-color:var(--pick)}
+.tick.on::after{content:"✓"}
+.line .tx{flex:1;min-width:0}
+.line.done .tx{text-decoration:line-through;color:var(--ink-3)}
+.line .when{font-size:11px;color:var(--ink-3);white-space:nowrap;letter-spacing:.04em;font-family:var(--serif)}
+.line .when.now{color:var(--due);font-weight:600}
+.line .del{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:15px;line-height:1;padding:2px 5px}
+.line .del:hover{color:#A8342A}
+.blank{font-size:12.5px;color:var(--ink-3);padding:9px 0;letter-spacing:.03em}
+.addrow{display:flex;gap:8px;margin-top:13px}
+.addrow input{flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r);outline:none;background:var(--surface-2);font-size:13.5px}
+.addrow input:focus{border-color:var(--pick);background:var(--surface);box-shadow:0 0 0 3px var(--pick-bg)}
+.addrow button{padding:9px 16px;border:1px solid var(--pick);background:var(--pick);color:#fff;border-radius:var(--r);cursor:pointer;font-size:13px;letter-spacing:.05em}
+
+/* ── 情境 ── */
+.scen{display:flex;gap:0;flex-wrap:wrap;margin-bottom:30px;border-bottom:1px solid var(--line)}
+.sc{padding:11px 20px;border:0;border-bottom:2px solid transparent;background:none;cursor:pointer;
+  font-size:13.5px;color:var(--ink-2);letter-spacing:.05em;margin-bottom:-1px}
+.sc:hover{color:var(--pick-deep)}
+.sc.on{color:var(--ink);border-bottom-color:var(--pick);font-weight:600}
+
+/* ── 分組與磚塊 ── */
+.group{margin-bottom:36px}
+.ghd{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.ghd h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.14em;display:flex;align-items:center;gap:9px}
+.ghd h2::before{content:"";width:9px;height:9px;background:currentColor;display:inline-block}
+.ghd .cnt{font-size:11px;color:var(--ink-3);font-family:var(--serif)}
+.ghd .sp{flex:1;border-top:1px solid var(--line-2);height:1px}
+.ghd button{background:none;border:1px solid var(--line);border-radius:var(--r);padding:5px 12px;font-size:11px;cursor:pointer;color:var(--ink-2);letter-spacing:.04em}
+.ghd button:hover{border-color:var(--pick);color:var(--pick-deep)}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:12px}
+.tile{display:flex;align-items:flex-start;gap:13px;padding:16px 17px;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--surface);cursor:pointer;position:relative;
+  transition:border-color .12s,background .12s}
+.tile::after{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--pick);transition:width .12s}
+.tile:hover{border-color:var(--pick)}
+.tile:hover::after{width:3px}
+.tile.dim{opacity:.4}
+.mono{width:36px;height:36px;flex:0 0 auto;border:1px solid var(--line);display:grid;place-items:center;
+  font-family:var(--serif);font-size:15px;font-weight:400;color:var(--pick-deep);background:var(--surface-2);letter-spacing:.02em}
+.tile:hover .mono{background:var(--pick-bg)}
+.tt{min-width:0;flex:1}
+.tt b{display:block;font-size:14px;font-weight:600;line-height:1.4;margin-bottom:3px;letter-spacing:.02em}
+.tt small{display:block;font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
+.tt .warn{color:var(--due)}
+.edits{position:absolute;top:8px;right:8px;display:none}
+.tile.editing .edits{display:flex}
+.edits button{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:2px 8px;font-size:10.5px;cursor:pointer;color:var(--ink-2)}
+.addtile{border:1px dashed var(--line);background:none;color:var(--ink-3);display:grid;place-items:center;
+  min-height:70px;border-radius:var(--r);cursor:pointer;font-size:13px;letter-spacing:.05em}
+.addtile:hover{border-color:var(--pick);color:var(--pick-deep);background:var(--surface-2)}
+.empty{padding:34px;text-align:center;color:var(--ink-3);font-size:13px;border:1px dashed var(--line);border-radius:var(--r);letter-spacing:.04em}
+
+/* ── 對話框 ── */
+dialog{border:0;border-radius:var(--r);padding:0;max-width:480px;width:92vw;box-shadow:0 24px 60px rgba(38,49,47,.20)}
+dialog::backdrop{background:rgba(38,49,47,.34)}
+.dlg{padding:28px;max-height:80vh;overflow-y:auto;background:var(--surface)}
+.dlg h3{margin:0 0 18px;font-size:16px;letter-spacing:.06em;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.dlg label{display:block;font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--ink-2);margin:16px 0 6px}
+.dlg input,.dlg select,.dlg textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);outline:none;background:var(--surface-2)}
+.dlg textarea{min-height:100px;font-family:var(--mono);font-size:12px;resize:vertical}
+.dlg input:focus,.dlg select:focus,.dlg textarea:focus{border-color:var(--pick);background:var(--surface);box-shadow:0 0 0 3px var(--pick-bg)}
+.dlg .row{display:flex;gap:9px;justify-content:flex-end;margin-top:24px;flex-wrap:wrap}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:7px 14px;border:1px solid var(--line);border-radius:var(--r);cursor:pointer;font-size:13px;background:var(--surface);user-select:none;letter-spacing:.04em}
+.chip input{position:absolute;opacity:0;width:0;height:0}
+.chip.on{background:var(--pick);color:#fff;border-color:var(--pick)}
+.btn{padding:10px 22px;border-radius:var(--r);border:1px solid var(--pick);background:var(--pick);color:#fff;font-weight:500;cursor:pointer;font-size:13.5px;letter-spacing:.06em}
+.btn.ghost{background:var(--surface);color:var(--pick-deep)}
+.btn.danger{background:var(--surface);color:#A8342A;border-color:#DFC3BE}
+.hint{font-size:11.5px;color:var(--ink-3);margin-top:7px;line-height:1.6;letter-spacing:.02em}
+.rlist{border:1px solid var(--line-2);border-radius:var(--r);padding:4px 14px;margin-top:7px;background:var(--surface-2)}
+.note{background:var(--due-bg);border-left:2px solid var(--due);padding:13px 16px;font-size:13px;color:var(--due);margin-bottom:24px;letter-spacing:.02em}
+.toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%) translateY(12px);background:var(--ink);
+  color:#fff;padding:12px 24px;border-radius:var(--r);font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:80;letter-spacing:.05em}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:760px){ .today{grid-template-columns:1fr} }
+@media (max-width:620px){
+  .wrap{padding:26px 17px 70px}
+  .htop{gap:10px}
+  .clock{padding-top:2px;text-align:left}
+  .clock .t{font-size:30px}
+  .clock .d{margin-top:5px;padding-top:5px}
+  .tiles{grid-template-columns:1fr}
+  .hl::before{width:112px;left:-10px}
+  .hl h1{font-size:21px}
+  .scen{overflow-x:auto;flex-wrap:nowrap}
+  .stat{min-width:88px;padding:2px 10px}
+  .stat b{font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="errbar" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:90;
+  background:#7B2D26;color:#fff;padding:13px 18px;font-size:13px;line-height:1.7;
+  white-space:pre-wrap;max-height:40vh;overflow:auto"></div>
+<script>
+window.__PORTAL_BOOT="html";
+setTimeout(function(){
+  if(window.__PORTAL_BOOT==="js") return;
+  var b=document.getElementById("errbar");
+  if(!b) return;
+  var TAG="scr"+"ipt";
+  var sc=document.scripts, n=sc.length;
+  var last=n?String(sc[n-1].textContent||""):"";
+  var hasHead=last.indexOf("use strict")>=0;
+  var hasTail=last.indexOf("__PORTAL_BOOT="js"")>=0;
+  var verdict;
+  if(n<2)            verdict="→ 判定：主程式區塊完全不存在。貼進 Apps Script 時只貼到一部分。";
+  else if(!hasHead)  verdict="→ 判定：最後一個 "+TAG+" 區塊不是主程式，內容順序可能錯亂。";
+  else if(!hasTail)  verdict="→ 判定：主程式被截斷（開頭有、結尾不見了）。貼上時後半段遺失。";
+  else               verdict="→ 判定：主程式內容完整，但有語法錯誤。請按 F12 開 Console 截圖紅色訊息。";
+  var prev = (b.style.display==="block" && b.textContent) ? (b.textContent+"\n\n———\n\n") : "";
+  b.style.display="block";
+  b.textContent= prev+
+    "主程式沒有執行。\n\n"+verdict+"\n\n"+
+    "診斷資訊（請連同上面一起截圖）\n"+
+    "  "+TAG+" 區塊數："+n+"（正常為 2）\n"+
+    "  主程式長度："+last.length+" 字（正常約 18500）\n"+
+    "  有開頭標記："+hasHead+"\n"+
+    "  有結尾標記："+hasTail+"\n"+
+    "  頁面總長度："+document.documentElement.innerHTML.length+" 字\n\n"+
+    "處理方式：把 Index.html 用記事本開啟，Ctrl+A 全選、Ctrl+C 複製，"+
+    "到 Apps Script 的 Index 檔案 Ctrl+A 全選刪除後貼上，存檔，"+
+    "再到「部署 → 管理部署作業 → 鉛筆 → 版本選新版本 → 更新」。";
+},2500);
+</script>
+<div class="wrap">
+  <header>
+    <div class="htop">
+      <div class="hl"><h1>語言治療組　工作入口</h1><p id="sub">Index v3 · 程式尚未執行</p></div>
+      <div class="clock">
+        <div class="t"><span id="clkH">--</span><i id="clkC">:</i><span id="clkM">--</span></div>
+        <div class="d" id="clkD"></div>
+      </div>
+    </div>
+    <div class="hr">
+      <div class="search"><input id="q" type="text" placeholder="搜尋系統名稱…" autocomplete="off"></div>
+      <button class="tb" id="edit">編輯</button>
+      <button class="tb" id="cfg">設定</button>
+    </div>
+  </header>
+
+  <div class="board3">
+    <div class="pane" id="paneCase">
+      <h3>今日個案<span class="sp"></span>
+        <select id="tabSel" style="border:1px solid var(--line);border-radius:7px;padding:2px 6px;font-size:11.5px"></select>
+        <button id="caseReload">重新整理</button></h3>
+      <div id="caseList"><div class="blank">讀取中…</div></div>
+      <div id="caseStats"></div>
+    </div>
+  </div>
+
+  <div class="today">
+    <div class="pane" id="paneTodo">
+      <h3>今日待辦<span class="sp"></span><span style="font-size:11.5px;font-weight:400;color:var(--ink-3)">每天自動清空</span></h3>
+      <div id="todoList"></div>
+      <div class="addrow">
+        <input id="todoIn" type="text" placeholder="加一件今天要做的事，按 Enter">
+        <button id="todoAdd">加入</button>
+      </div>
+    </div>
+    <div class="pane" id="paneRem">
+      <h3 id="remTitle">週期提醒<span class="sp"></span><button id="remEdit">管理</button></h3>
+      <div id="remList"></div>
+    </div>
+  </div>
+
+  <div class="note" id="firstrun" style="display:none">
+    連結尚未設定。點右上角「編輯」再點各磚塊填入實際網址；院內系統只有在醫院網路內才連得上。
+  </div>
+
+  <div class="scen" id="scen"></div>
+  <div id="board"></div>
+</div>
+
+<dialog id="dlgTile"><div class="dlg">
+  <h3 id="dtTitle">編輯連結</h3>
+  <label>名稱</label><input id="dtName" type="text" placeholder="如 OnePage 病歷查詢">
+  <label>網址</label><input id="dtUrl" type="text" placeholder="https://… 或 http://10.125.…">
+  <div class="hint">院內系統常是 http 開頭的內網位址，直接從瀏覽器網址列複製貼上即可。</div>
+  <label>分組</label><select id="dtGroup"></select>
+  <label>使用情境<span style="font-weight:400;color:var(--ink-3)">　可複選，用來篩選</span></label>
+  <div class="chips" id="dtScen"></div>
+  <label>備註（選填）</label><input id="dtNote" type="text" placeholder="如 需連院內網路">
+  <div class="row">
+    <button class="btn danger" id="dtDel" type="button">刪除</button>
+    <button class="btn ghost" id="dtCancel" type="button">取消</button>
+    <button class="btn" id="dtSave" type="button">儲存</button>
+  </div>
+</div></dialog>
+
+<dialog id="dlgRem"><div class="dlg">
+  <h3>週期提醒</h3>
+  <div id="remManage" class="rlist"></div>
+  <label>新增提醒</label>
+  <input id="rmT" type="text" placeholder="如 送出本週治療量統計">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:9px">
+    <div><label style="margin-top:0">頻率</label>
+      <select id="rmType"><option value="weekly">每週</option><option value="monthly">每月</option></select></div>
+    <div><label style="margin-top:0">日子</label><select id="rmDay"></select></div>
+  </div>
+  <div class="row">
+    <button class="btn ghost" id="rmClose" type="button">關閉</button>
+    <button class="btn" id="rmAdd" type="button">新增</button>
+  </div>
+</div></dialog>
+
+<dialog id="dlgCfg"><div class="dlg">
+  <h3>設定</h3>
+  <div class="hint" id="cfgState"></div>
+  <label>匯出／匯入（連結與提醒）</label>
+  <textarea id="cfgJson" spellcheck="false"></textarea>
+  <div class="hint">換一台電腦時，把上面整段複製過去貼上再按「匯入」即可一起帶走。</div>
+  <div class="row">
+    <button class="btn danger" id="cfgReset" type="button">還原預設</button>
+    <button class="btn ghost" id="cfgCopy" type="button">複製</button>
+    <button class="btn ghost" id="cfgImport" type="button">匯入</button>
+    <button class="btn" id="cfgClose" type="button">關閉</button>
+  </div>
+</div></dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+var __errN=0;
+function showErr(e){
+  var b=document.getElementById("errbar");
+  if(!b) return;
+  __errN++;
+  var msg=(e&&e.stack)?e.stack:((e&&e.message)?e.message:String(e));
+  b.style.display="block";
+  b.textContent=(b.textContent?b.textContent+"\n\n":"")+
+    "【錯誤 "+__errN+"】\n"+msg;
+}
+window.addEventListener("error",ev=>showErr(ev.error||ev.message));
+window.addEventListener("unhandledrejection",function(ev){showErr(ev.reason);});
+
+const GROUPS=[
+  {k:"mine", n:"自製表單工具",   c:"5C8188"},
+  {k:"hosp", n:"院內系統",       c:"7A8B9B"},
+  {k:"cloud",n:"雲端表單與報表", c:"9A8E7E"},
+  {k:"other",n:"其他",           c:"87958A"}
+];
+const SCEN=[
+  {k:"start",n:"到班"},
+  {k:"pt",   n:"看病人"},
+  {k:"eval", n:"寫評估"},
+  {k:"admin",n:"行政"}
+];
+const DEFAULTS=[
+  {g:"mine", n:"成人評估紀錄",        u:"", note:"分步驟表單", s:["eval"]},
+  {g:"mine", n:"語言治療每日紀錄",    u:"", note:"每日治療日誌", s:["pt"]},
+  {g:"mine", n:"早療評估報告",        u:"", note:"兒童早期療育", s:["eval"]},
+  {g:"hosp", n:"表單系統",            u:"http://10.125.254.244:9001", note:"需連院內網路", s:["start","pt","eval"]},
+  {g:"hosp", n:"OnePage 病歷查詢",    u:"", note:"需連院內網路", s:["start","pt"]},
+  {g:"hosp", n:"OneTeam",             u:"", note:"", s:["admin"]},
+  {g:"hosp", n:"雙和醫院行政網路",    u:"", note:"", s:["admin"]},
+  {g:"hosp", n:"雙和通訊錄",          u:"", note:"", s:["admin"]},
+  {g:"hosp", n:"臨床教育 e-Portfolio",u:"", note:"", s:["admin"]},
+  {g:"cloud",n:"住院復健療程登錄",    u:"", note:"Google 試算表", s:["start","pt"]},
+  {g:"cloud",n:"復健療程雲端",        u:"", note:"Google 試算表", s:["pt"]},
+  {g:"cloud",n:"ST 雲端白板",         u:"", note:"", s:["start","pt"]},
+  {g:"cloud",n:"ST 助理工作表",       u:"", note:"", s:["admin"]},
+  {g:"cloud",n:"復健醫學部門診報表",  u:"", note:"", s:["admin"]}
+];
+const WD=["日","一","二","三","四","五","六"];
+const HAS_GAS = !!(typeof google!=="undefined" && google.script && google.script.run);
+
+/* ---------------- 儲存：存在使用者的 Google 帳號 ---------------- */
+let LINKS, REMIND, TODO, RDONE, ready=false;
+function bootData(s){
+  LINKS  = (s&&Array.isArray(s.links))  ? s.links  : DEFAULTS.map(x=>({...x, s:[...(x.s||[])]}));
+  REMIND = (s&&Array.isArray(s.remind)) ? s.remind : [];
+  RDONE  = (s&&s.rdone&&typeof s.rdone==="object") ? s.rdone : {};
+  TODO   = (s&&s.todo&&s.todo.d===dstr()) ? s.todo : {d:dstr(), items:[]};
+}
+let saveTimer=null;
+function save(){
+  const ks=Object.keys(RDONE).sort().slice(-7);
+  const nd={}; ks.forEach(k=>nd[k]=RDONE[k]); RDONE=nd;
+  if(!ready) return;
+  const payload=JSON.stringify({links:LINKS, remind:REMIND, todo:TODO, rdone:RDONE, tab:CURTAB});
+  if(!HAS_GAS){
+    try{ window.localStorage.setItem("st-portal-local", payload); }catch(e){}
+    return;
+  }
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    google.script.run
+      .withFailureHandler(()=>toast("設定儲存失敗，請重新整理再試"))
+      .saveSettings(payload);
+  },500);
+}
+
+/* ---------------- 工具 ---------------- */
+const esc=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function dstr(d){ d=d||new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2100);}
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function initials(n){
+  const s=String(n||"").replace(/[（(].*$/,"").trim();
+  const m=s.match(/^[A-Za-z]{1,2}/);
+  return m?m[0].toUpperCase():s.slice(0,2);
+}
+function host(u){
+  if(!u) return "";
+  if(/^\?/.test(u)) return "站內頁面";
+  if(/^file:/i.test(u)) return "本機檔案（入口頁無法開啟）";
+  try{ return new URL(u, location.href).host; }catch(e){ return u.slice(0,32); }
+}
+const grpOf=k=>GROUPS.find(x=>x.k===k)||GROUPS[GROUPS.length-1];
+
+let editing=false, filter="", scen="", curIdx=-1;
+
+/* ---------------- 提醒到期計算 ---------------- */
+function daysUntil(r,from){
+  const base=from||new Date(); base.setHours(0,0,0,0);
+  for(let i=0;i<=13;i++){
+    const d=new Date(base); d.setDate(base.getDate()+i);
+    if(r.type==="weekly"){ if(d.getDay()===+r.day) return i; }
+    else{
+      const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+      const target=Math.min(+r.day,last);
+      if(d.getDate()===target) return i;
+    }
+  }
+  return 99;
+}
+function whenText(r){
+  const n=daysUntil(r);
+  if(n===0) return {t:"今天", now:true};
+  if(n===1) return {t:"明天", now:false};
+  if(n<=6)  return {t:`${n} 天後`, now:false};
+  return {t: r.type==="weekly"?`每週${WD[+r.day]}`:`每月 ${r.day} 日`, now:false};
+}
+function isDone(r){ return (RDONE[dstr()]||[]).includes(r.id); }
+function toggleDone(r){
+  const k=dstr(); RDONE[k]=RDONE[k]||[];
+  const i=RDONE[k].indexOf(r.id);
+  if(i>=0) RDONE[k].splice(i,1); else RDONE[k].push(r.id);
+  save(); renderToday();
+}
+
+/* ---------------- 今日面板 ---------------- */
+function renderToday(){
+  if(TODO.d!==dstr()) { TODO={d:dstr(), items:[]}; save(); }
+
+  const tl=document.getElementById("todoList");
+  tl.innerHTML = TODO.items.length
+    ? TODO.items.map((x,i)=>`<div class="line ${x.d?"done":""}">
+        <span class="tick ${x.d?"on":""}" data-todo="${i}"></span>
+        <span class="tx">${esc(x.t)}</span>
+        <button class="del" data-tododel="${i}" title="刪除">×</button></div>`).join("")
+    : `<div class="blank">今天還沒有待辦。</div>`;
+
+  const due=REMIND.map(r=>({r, n:daysUntil(r)})).filter(o=>o.n<=6).sort((a,b)=>a.n-b.n);
+  const todayN=due.filter(o=>o.n===0&&!isDone(o.r)).length;
+  document.getElementById("paneRem").classList.toggle("alert", todayN>0);
+  document.getElementById("remTitle").firstChild.textContent =
+    todayN?`週期提醒　今天有 ${todayN} 件`:"週期提醒";
+
+  const rl=document.getElementById("remList");
+  rl.innerHTML = REMIND.length
+    ? (due.length
+       ? due.map(o=>{const w=whenText(o.r), dn=isDone(o.r);
+          return `<div class="line ${dn?"done":""}">
+            <span class="tick ${dn?"on":""}" data-rem="${o.r.id}"></span>
+            <span class="tx">${esc(o.r.t)}</span>
+            <span class="when ${w.now&&!dn?"now":""}">${w.t}</span></div>`;}).join("")
+       : `<div class="blank">最近一週沒有到期的提醒。</div>`)
+    : `<div class="blank">尚未設定提醒。點右上「管理」新增，例如「每週五　送出治療量統計」。</div>`;
+}
+
+/* ---------------- 主畫面 ---------------- */
+function sub(){
+  const n=LINKS.filter(x=>x.u).length;
+  return `復健醫學部　·　已設定 ${n} / ${LINKS.length} 個連結`;
+}
+function render(){
+  document.getElementById("sub").textContent=sub();
+  document.getElementById("firstrun").style.display=LINKS.some(x=>x.u)?"none":"block";
+  const eb=document.getElementById("edit");
+  eb.classList.toggle("on",editing); eb.textContent=editing?"完成編輯":"編輯";
+
+  document.getElementById("scen").innerHTML=
+    `<button class="sc ${scen?"":"on"}" data-sc="">全部</button>`+
+    SCEN.map(s=>{
+      const c=LINKS.filter(x=>(x.s||[]).includes(s.k)).length;
+      return `<button class="sc ${scen===s.k?"on":""}" data-sc="${s.k}">${esc(s.n)}<span style="opacity:.6;font-size:12px">　${c}</span></button>`;
+    }).join("");
+
+  const q=filter.trim().toLowerCase();
+  let html="";
+  GROUPS.forEach(grp=>{
+    const items=LINKS.map((x,i)=>({x,i})).filter(o=>o.x.g===grp.k);
+    if(!items.length&&!editing) return;
+    const vis=items.filter(o=>
+      (!q||(o.x.n+" "+(o.x.note||"")).toLowerCase().includes(q)) &&
+      (!scen||(o.x.s||[]).includes(scen)));
+    if(!vis.length&&(q||scen)) return;
+    const ready=vis.filter(o=>o.x.u).length;
+    html+=`<section class="group"><div class="ghd">
+      <h2 style="color:#${grp.c}">${esc(grp.n)}</h2>
+      <span class="cnt">${ready}／${vis.length}</span><span class="sp"></span>
+      ${ready>1?`<button data-openall="${grp.k}">開啟本組全部</button>`:""}
+      </div><div class="tiles">`;
+    vis.forEach(({x,i})=>{
+      const ok=!!x.u;
+      html+=`<div class="tile ${editing?"editing":""} ${ok?"":"dim"}" data-i="${i}">
+        <span class="mono" style="border-color:#${grp.c};color:#${grp.c}">${esc(initials(x.n))}</span>
+        <span class="tt"><b>${esc(x.n)}</b>
+          <small class="${ok?"":"warn"}">${ok?esc(host(x.u)):"尚未設定網址"}${x.note?"　·　"+esc(x.note):""}</small></span>
+        <span class="edits"><button data-ed="${i}">改</button></span></div>`;
+    });
+    if(editing) html+=`<button class="addtile" data-add="${grp.k}">＋ 新增連結</button>`;
+    html+=`</div></section>`;
+  });
+  document.getElementById("board").innerHTML = html ||
+    `<div class="empty">沒有符合條件的項目。</div>`;
+  renderToday();
+}
+
+/* ---------------- 事件 ---------------- */
+document.getElementById("q").addEventListener("input",e=>{filter=e.target.value;render();});
+document.getElementById("edit").addEventListener("click",()=>{editing=!editing;render();});
+document.getElementById("todoAdd").addEventListener("click",addTodo);
+document.getElementById("todoIn").addEventListener("keydown",e=>{ if(e.key==="Enter") addTodo(); });
+function addTodo(){
+  const el=document.getElementById("todoIn"), t=el.value.trim();
+  if(!t) return;
+  TODO.items.push({t,d:false}); el.value=""; save(); renderToday(); el.focus();
+}
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button, .tile, .tick");
+  if(!b) return;
+  if(b.dataset.todo!==undefined){ const i=+b.dataset.todo; TODO.items[i].d=!TODO.items[i].d; save(); return renderToday(); }
+  if(b.dataset.tododel!==undefined){ TODO.items.splice(+b.dataset.tododel,1); save(); return renderToday(); }
+  if(b.dataset.rem){ const r=REMIND.find(x=>x.id===b.dataset.rem); if(r) toggleDone(r); return; }
+  if(b.dataset.sc!==undefined){ scen=b.dataset.sc; return render(); }
+  if(b.dataset.ed){ return openTile(+b.dataset.ed); }
+  if(b.dataset.add){ return openTile(-1,b.dataset.add); }
+  if(b.dataset.openall){ return openAll(b.dataset.openall); }
+  if(b.classList&&b.classList.contains("tile")){
+    const i=+b.dataset.i, x=LINKS[i];
+    if(editing) return openTile(i);
+    if(!x.u){ openTile(i); return toast("這個連結還沒設定網址"); }
+    if(/^file:/i.test(x.u)){
+      openTile(i);
+      return toast("瀏覽器禁止網頁開啟本機檔案，請改用 ?p=adult 這類站內網址");
+    }
+    window.open(resolveUrl(x.u),"_blank","noopener");
+  }
+});
+function resolveUrl(u){
+  if(!/^\?/.test(u)) return u;
+  if(!APP_URL){ toast("尚未取得站內網址，請重新整理後再試"); return u; }
+  return APP_URL + u;
+}
+function openAll(gk){
+  const us=LINKS.filter(x=>x.g===gk&&x.u&&!/^file:/i.test(x.u)&&(!scen||(x.s||[]).includes(scen)));
+  if(!us.length) return;
+  us.forEach((x,n)=>setTimeout(()=>window.open(resolveUrl(x.u),"_blank","noopener"),n*260));
+  toast(`開啟 ${us.length} 個分頁。若只開了一個，請允許此網站的彈出視窗`);
+}
+
+/* ---------------- 連結對話框 ---------------- */
+const dlg=document.getElementById("dlgTile");
+function openTile(i,gk){
+  curIdx=i;
+  const x = i>=0 ? LINKS[i] : {n:"",u:"",g:gk||"other",note:"",s:[]};
+  document.getElementById("dtTitle").textContent=i>=0?"編輯連結":"新增連結";
+  document.getElementById("dtName").value=x.n;
+  document.getElementById("dtUrl").value=x.u;
+  document.getElementById("dtNote").value=x.note||"";
+  document.getElementById("dtGroup").innerHTML=
+    GROUPS.map(g2=>`<option value="${g2.k}" ${g2.k===x.g?"selected":""}>${esc(g2.n)}</option>`).join("");
+  document.getElementById("dtScen").innerHTML=
+    SCEN.map(s=>{const on=(x.s||[]).includes(s.k);
+      return `<label class="chip ${on?"on":""}"><input type="checkbox" value="${s.k}" ${on?"checked":""}>${esc(s.n)}</label>`;}).join("");
+  document.getElementById("dtDel").style.display=i>=0?"":"none";
+  dlg.showModal();
+  setTimeout(()=>document.getElementById(x.n?"dtUrl":"dtName").focus(),40);
+}
+document.getElementById("dtScen").addEventListener("change",e=>{
+  const l=e.target.closest(".chip"); if(l) l.classList.toggle("on",e.target.checked);
+});
+document.getElementById("dtCancel").onclick=()=>dlg.close();
+document.getElementById("dtSave").onclick=()=>{
+  const n=document.getElementById("dtName").value.trim();
+  if(!n) return toast("請填名稱");
+  let u=document.getElementById("dtUrl").value.trim();
+  if(u&&/^file:/i.test(u)){
+    toast("本機檔案無法從入口頁開啟，請改用 ?p=adult 這類站內網址");
+  }else if(u&&!/^(https?:\/\/|\?|\/|mailto:)/i.test(u)){
+    u="http://"+u;
+  }
+  const s=[...document.querySelectorAll('#dtScen input:checked')].map(x=>x.value);
+  const rec={n,u,g:document.getElementById("dtGroup").value,
+             note:document.getElementById("dtNote").value.trim(), s};
+  if(curIdx>=0) LINKS[curIdx]=rec; else LINKS.push(rec);
+  save(); dlg.close(); render();
+};
+document.getElementById("dtDel").onclick=()=>{
+  if(curIdx<0) return;
+  if(!confirm("確定刪除這個連結？")) return;
+  LINKS.splice(curIdx,1); save(); dlg.close(); render();
+};
+
+/* ---------------- 提醒管理 ---------------- */
+const rdlg=document.getElementById("dlgRem");
+function fillDays(){
+  const ty=document.getElementById("rmType").value, sel=document.getElementById("rmDay");
+  sel.innerHTML = ty==="weekly"
+    ? WD.map((w,i)=>`<option value="${i}" ${i===5?"selected":""}>星期${w}</option>`).join("")
+    : Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1} 日</option>`).join("");
+}
+function renderRemManage(){
+  document.getElementById("remManage").innerHTML = REMIND.length
+    ? REMIND.map(r=>`<div class="line">
+        <span class="tx">${esc(r.t)}</span>
+        <span class="when">${r.type==="weekly"?"每週"+WD[+r.day]:"每月 "+r.day+" 日"}</span>
+        <button class="del" data-remdel="${r.id}">×</button></div>`).join("")
+    : `<div class="blank">尚無提醒。</div>`;
+}
+document.getElementById("remEdit").onclick=()=>{ fillDays(); renderRemManage(); rdlg.showModal(); };
+document.getElementById("rmType").onchange=fillDays;
+document.getElementById("rmClose").onclick=()=>rdlg.close();
+document.getElementById("rmAdd").onclick=()=>{
+  const t=document.getElementById("rmT").value.trim();
+  if(!t) return toast("請填提醒內容");
+  REMIND.push({id:uid(), t, type:document.getElementById("rmType").value,
+               day:+document.getElementById("rmDay").value});
+  document.getElementById("rmT").value="";
+  save(); renderRemManage(); renderToday();
+};
+rdlg.addEventListener("click",e=>{
+  const d=e.target.closest("[data-remdel]");
+  if(!d) return;
+  REMIND=REMIND.filter(r=>r.id!==d.dataset.remdel);
+  save(); renderRemManage(); renderToday();
+});
+
+/* ---------------- 設定 ---------------- */
+const cdlg=document.getElementById("dlgCfg");
+document.getElementById("cfg").onclick=()=>{
+  document.getElementById("cfgJson").value=JSON.stringify({links:LINKS, remind:REMIND, tab:CURTAB},null,1);
+  document.getElementById("cfgState").textContent = HAS_GAS
+    ? "設定存在你的 Google 帳號下，換電腦、換瀏覽器都會自動帶著走。下方的匯出僅供備份或分享給同事。"
+    : "目前是以本機檔案開啟，設定只存在這台電腦的瀏覽器。改用 Apps Script 網址開啟，設定才會跟著 Google 帳號走。";
+  cdlg.showModal();
+};
+document.getElementById("cfgClose").onclick=()=>cdlg.close();
+document.getElementById("cfgCopy").onclick=()=>{
+  const t=document.getElementById("cfgJson"); t.select();
+  navigator.clipboard.writeText(t.value).then(()=>toast("已複製設定"))
+    .catch(()=>{document.execCommand("copy");toast("已複製設定");});
+};
+document.getElementById("cfgImport").onclick=()=>{
+  try{
+    const v=JSON.parse(document.getElementById("cfgJson").value);
+    const arr=Array.isArray(v)?v:v.links;
+    if(!Array.isArray(arr)) throw 0;
+    LINKS=arr.map(x=>{
+      let u=x.u||"";
+      u=u.replace(/^https?:\/\/file:\/\/\//i,"file:///");   // 修正誤加的前綴
+      return {n:x.n||"",u:u,g:x.g||"other",note:x.note||"",s:x.s||[]};
+    });
+    if(v&&Array.isArray(v.remind)) REMIND=v.remind.map(r=>({...r, id:r.id||uid()}));
+    save(); cdlg.close(); render(); toast("已匯入設定");
+  }catch(e){ toast("格式不正確，請確認貼上的是完整內容"); }
+};
+document.getElementById("cfgReset").onclick=()=>{
+  if(!confirm("還原成預設清單？自行填的網址與提醒會全部清掉。")) return;
+  LINKS=DEFAULTS.map(x=>({...x, s:[...(x.s||[])]})); REMIND=[]; RDONE={};
+  save(); cdlg.close(); render(); toast("已還原預設");
+};
+
+/* ---------------- 今日個案 ---------------- */
+let CURTAB = "";
+let APP_URL = "";   // 本網頁應用程式的 /exec 網址，由伺服器提供
+function loadTabs(){
+  if(!HAS_GAS){ loadBoard(); return; }
+  google.script.run.withFailureHandler(e=>{
+    document.getElementById("caseList").innerHTML=
+      `<div class="blank">無法讀取白板：${esc(String(e&&e.message||e))}</div>`;
+  }).withSuccessHandler(r=>{
+    if(!r||!r.ok) return;
+    const sel=document.getElementById("tabSel");
+    sel.innerHTML=r.tabs.map(t=>`<option value="${esc(t)}" ${t===CURTAB?"selected":""}>${esc(t)}</option>`).join("");
+    if(!CURTAB && r.tabs.length){ CURTAB=r.tabs[0]; sel.value=CURTAB; }
+    loadBoard();
+  }).listTabs();
+}
+function loadBoard(){
+  if(!HAS_GAS){
+    document.getElementById("caseList").innerHTML=
+      `<div class="blank">目前是以本機檔案開啟，無法讀取雲端白板。<br>`+
+      `請改用 Apps Script 部署後的網址（script.google.com/…/exec）開啟。</div>`;
+    document.getElementById("caseStats").innerHTML="";
+    return;
+  }
+  document.getElementById("caseList").innerHTML=`<div class="blank">讀取中…</div>`;
+  document.getElementById("caseStats").innerHTML="";
+  google.script.run.withSuccessHandler(renderBoard)
+    .withFailureHandler(e=>{
+      document.getElementById("caseList").innerHTML=
+        `<div class="blank">讀取失敗：${esc(String(e&&e.message||e))}</div>`;
+    }).getBoard(CURTAB, 0);
+}
+function renderBoard(r){
+  const cl=document.getElementById("caseList"), cs=document.getElementById("caseStats");
+  if(!r||!r.ok){ cl.innerHTML=`<div class="blank">${esc(r&&r.error||"讀取失敗")}</div>`; return; }
+  if(!r.found){ cl.innerHTML=`<div class="blank">${esc(r.msg||"白板上找不到今天的欄位")}（${esc(r.date)}）</div>`; return; }
+  document.getElementById("paneCase").querySelector("h3").firstChild.textContent =
+    `今日個案　${r.date}（${r.weekday}）　${r.doneCount}／${r.total}`;
+  cl.innerHTML = r.slots.length
+    ? r.slots.map(s=>`<div class="slot ${s.done?"ok":""}">
+        <span class="tm">${esc(s.time)}</span>
+        <span class="bd">${s.type?`<span class="ty">${esc(s.type)}</span>`:""}
+          <span class="nm">${esc(s.who||"—")}</span></span>
+        ${s.done?`<span class="ck">✓</span>`:""}</div>`).join("")
+    : `<div class="blank">今天白板上沒有排入個案。</div>`;
+  cs.innerHTML = (r.stats&&r.stats.length)
+    ? `<div class="stats">`+r.stats.map(x=>
+        `<div class="stat">${esc(x.n)}<b>${esc(String(x.v))}</b></div>`).join("")+`</div>`
+    : "";
+}
+document.getElementById("caseReload").onclick=loadBoard;
+document.getElementById("tabSel").onchange=e=>{
+  CURTAB=e.target.value; save(); loadBoard();
+};
+
+/* ---------------- 時鐘 ---------------- */
+let lastDay=dstr();
+function tick(){
+  const d=new Date();
+  const h=document.getElementById("clkH"), m=document.getElementById("clkM");
+  if(h) h.textContent=String(d.getHours()).padStart(2,"0");
+  if(m) m.textContent=String(d.getMinutes()).padStart(2,"0");
+  const dd=document.getElementById("clkD");
+  if(dd) dd.textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}　星期${WD[d.getDay()]}`;
+  // 跨日：待辦清空、提醒重算、白板重讀
+  if(dstr()!==lastDay){
+    lastDay=dstr();
+    if(ready){ TODO={d:dstr(), items:[]}; save(); render(); loadBoard(); }
+  }
+}
+try{ tick(); }catch(e){ showErr(e); }
+setInterval(()=>{ try{ tick(); }catch(e){} },1000);
+
+/* ---------------- 啟動 ---------------- */
+// 先用預設值把畫面畫出來，伺服器回應再覆蓋。
+// 這樣即使 getSettings 失敗或逾時，連結、情境、待辦仍可使用。
+try{
+  bootData(null);
+  render();
+}catch(e){ showErr(e); }
+
+if(!HAS_GAS){
+  try{
+    const raw=window.localStorage.getItem("st-portal-local");
+    if(raw) bootData(JSON.parse(raw));
+  }catch(e){}
+  ready=true; render(); loadBoard();
+}else{
+  let settled=false;
+  const timer=setTimeout(()=>{
+    if(!settled){ ready=true; toast("讀取設定逾時，先以預設內容顯示"); loadTabs(); }
+  },8000);
+  google.script.run
+    .withSuccessHandler(res=>{
+      settled=true; clearTimeout(timer);
+      try{
+        const s=(res&&res.ok&&res.data)?res.data:null;
+        if(s){ bootData(s); CURTAB=s.tab||""; }
+        ready=true; render(); loadTabs();
+      }catch(e){ showErr(e); }
+    })
+    .withFailureHandler(err=>{
+      settled=true; clearTimeout(timer);
+      ready=true; render(); loadTabs();
+      showErr(err);
+    })
+    .getSettings();
+  google.script.run.withSuccessHandler(function(r){
+    if(r&&r.ok&&r.url) APP_URL=r.url;
+  }).getAppUrl();
+}
+window.__PORTAL_BOOT="js";
+</script>
+</body>
+</html>

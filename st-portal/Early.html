@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>早療語言治療評估紀錄</title>
+<style>
+:root{
+  --ink:#1A2327; --ink-2:#5A676C; --ink-3:#8B979B;
+  --paper:#FBFAF8; --card:#FFFFFF;
+  --line:#E2E6E4; --line-2:#CDD4D1;
+  --pine:#0F6E56; --pine-2:#15876A; --pine-wash:#E7F2EE;
+  --amber:#9A6F12; --amber-wash:#FBF3E0;
+  --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:var(--paper); color:var(--ink); font-size:15px; line-height:1.65;
+}
+button{font:inherit;color:inherit}
+
+/* ── shell ── */
+.shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+@media(max-width:860px){.shell{grid-template-columns:1fr}}
+
+/* ── nav ── */
+nav{
+  border-right:1px solid var(--line); background:var(--card);
+  position:sticky; top:0; height:100vh; overflow-y:auto; padding:22px 0;
+}
+@media(max-width:860px){
+  nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:14px 0}
+}
+.brand{padding:0 20px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.brand h1{font-size:15px;font-weight:600;letter-spacing:.01em}
+.brand p{font-size:12px;color:var(--ink-3);margin-top:2px}
+.navlist{display:flex;flex-direction:column}
+@media(max-width:860px){.navlist{flex-direction:row;overflow-x:auto;gap:2px;padding:0 12px}}
+.navitem{
+  display:flex;align-items:center;gap:9px;padding:9px 20px;border:0;background:none;
+  cursor:pointer;text-align:left;width:100%;font-size:14px;color:var(--ink-2);
+  border-left:2px solid transparent;white-space:nowrap;
+}
+@media(max-width:860px){.navitem{width:auto;border-left:0;border-bottom:2px solid transparent;padding:8px 12px}}
+.navitem:hover{background:var(--pine-wash);color:var(--pine)}
+.navitem.on{border-left-color:var(--pine);color:var(--pine);font-weight:600;background:var(--pine-wash)}
+@media(max-width:860px){.navitem.on{border-left-color:transparent;border-bottom-color:var(--pine)}}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--line-2);flex:none}
+.navitem.filled .dot{background:var(--pine)}
+
+/* ── main ── */
+main{padding:34px 40px 90px;max-width:940px}
+@media(max-width:860px){main{padding:22px 18px 80px}}
+.step{display:none}
+.step.on{display:block}
+.step > h2{font-size:21px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px}
+.step > .lede{color:var(--ink-2);font-size:14px;margin-bottom:26px}
+
+fieldset{border:0;margin-bottom:26px}
+legend{
+  font-size:13px;font-weight:600;color:var(--pine);
+  padding-bottom:7px;margin-bottom:13px;border-bottom:1px solid var(--line);width:100%;
+}
+.hint{font-size:12.5px;color:var(--ink-3);margin:-7px 0 11px}
+
+.row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:15px}
+.f{flex:1 1 190px;min-width:0}
+.f.wide{flex-basis:100%}
+label.lb{display:block;font-size:13px;color:var(--ink-2);margin-bottom:5px}
+input[type=text],input[type=date],textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--line-2);border-radius:var(--r);
+  background:var(--card);font:inherit;font-size:14px;color:var(--ink);
+}
+textarea{min-height:78px;resize:vertical;line-height:1.6}
+input:focus,textarea:focus{outline:2px solid var(--pine);outline-offset:-1px;border-color:var(--pine)}
+
+/* ── chips ── */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  padding:7px 14px;border:1px solid var(--line-2);border-radius:20px;background:var(--card);
+  cursor:pointer;font-size:13.5px;color:var(--ink-2);transition:.12s;
+}
+.chip:hover{border-color:var(--pine);color:var(--pine)}
+.chip[aria-pressed=true]{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:500}
+.chip:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+
+/* ── ability grid (3-state) ── */
+.abil{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--card)}
+.abil .hd,.abil .rw{display:grid;grid-template-columns:1fr 62px 62px 62px 62px;align-items:center}
+.abil .hd{background:#F3F6F5;font-size:12px;color:var(--ink-2);padding:7px 0}
+.abil .hd span{text-align:center}
+.abil .hd span:first-child{text-align:left;padding-left:13px}
+.rw{border-top:1px solid var(--line)}
+.rw > .nm{padding:8px 13px;font-size:13.5px}
+.rw button{
+  border:0;background:none;cursor:pointer;padding:9px 0;font-size:12.5px;color:var(--ink-3);
+  border-left:1px solid var(--line);height:100%;
+}
+.rw button:hover{background:#F3F6F5}
+.rw button[aria-pressed=true]{font-weight:600}
+.rw button.y[aria-pressed=true]{background:var(--pine-wash);color:var(--pine)}
+.rw button.m[aria-pressed=true]{background:var(--amber-wash);color:var(--amber)}
+.rw button.n[aria-pressed=true]{background:#FBEDEA;color:#A5432C}
+.rw button.na[aria-pressed=true]{background:#EFF1F0;color:var(--ink-2)}
+
+/* ── conditional block ── */
+.cond{display:none}
+.cond.on{display:block}
+.sub{border-left:2px solid var(--pine-wash);padding-left:16px;margin-top:6px}
+
+/* ── footer bar ── */
+.bar{
+  position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+  padding:11px 40px;display:flex;gap:12px;align-items:center;justify-content:flex-end;z-index:20;
+}
+@media(max-width:860px){.bar{padding:10px 16px}}
+.bar .status{margin-right:auto;font-size:13px;color:var(--ink-3)}
+.btn{padding:9px 18px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--card);cursor:pointer;font-size:14px}
+.btn:hover{border-color:var(--pine);color:var(--pine)}
+.btn.ghost{border-color:transparent;color:var(--ink-3)}
+.btn.ghost:hover{border-color:#E0B4A8;color:#A5432C;background:#FCF1EE}
+.btn.solid{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:500}
+.btn.solid:hover{background:var(--pine-2)}
+
+/* ── output ── */
+.out{position:fixed;inset:0;background:rgba(20,30,33,.45);display:none;z-index:40;padding:26px}
+.out.on{display:block}
+.outbox{
+  background:var(--paper);max-width:880px;margin:0 auto;height:100%;border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.outhd{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;background:var(--card)}
+.outhd h2{font-size:17px;font-weight:600;flex:1}
+.outbody{overflow-y:auto;padding:18px 22px 30px}
+.blk{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.blkhd{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#F3F6F5;border-bottom:1px solid var(--line)}
+.blkhd .where{flex:1;min-width:0}
+.blkhd b{display:block;font-size:13.5px;font-weight:600}
+.blkhd small{display:block;font-size:12px;color:var(--ink-3);line-height:1.45}
+.cp{padding:5px 13px;border-radius:6px;border:1px solid var(--line-2);background:var(--card);cursor:pointer;font-size:12.5px;flex:none}
+.cp:hover{border-color:var(--pine);color:var(--pine)}
+.cp.done{background:var(--pine);border-color:var(--pine);color:#fff}
+.blk pre{
+  padding:13px 15px;font-family:inherit;font-size:13.5px;line-height:1.75;
+  white-space:pre-wrap;word-break:break-word;
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<div class="shell">
+<nav>
+  <div class="brand">
+    <h1>早療語言治療評估紀錄</h1>
+    <p>雙和醫院 · 語言治療組</p>
+  </div>
+  <div class="navlist" id="navlist"></div>
+</nav>
+
+<main id="main"></main>
+</div>
+
+<div class="bar">
+  <span class="status" id="status">尚未填寫</span>
+  <button class="btn ghost" id="reset">清空重填</button>
+  <button class="btn" id="prev">上一步</button>
+  <button class="btn" id="next">下一步</button>
+  <button class="btn solid" id="gen">產生報告文字</button>
+</div>
+
+<div class="out" id="out" role="dialog" aria-modal="true" aria-label="報告文字">
+  <div class="outbox">
+    <div class="outhd">
+      <h2>報告文字</h2>
+      <button class="btn" id="copyall">全部複製</button>
+      <button class="btn" id="close">關閉</button>
+    </div>
+    <div class="outbody" id="outbody"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ state ═══════════ */
+const S = { abil:{}, chip:{}, txt:{} };
+const $ = s => document.querySelector(s);
+
+/* ═══════════ option data ═══════════ */
+const COMP_ITEMS = [
+  '理解否定詞（不可以／不行）','理解基本動作指令（單一步驟）','可指認身體部位',
+  '理解是非／封閉式問句','理解疑問詞問句（誰／哪裡／怎麼了／為什麼）',
+  '理解連續兩個步驟指令','理解連續三個步驟指令','理解顏色／形狀概念',
+  '理解方位詞（上／下／裡／外）','理解集合名詞（蔬菜／水果等）',
+  '理解形容詞／抽象詞彙','理解時態用詞（快要／已經）','理解數量／比較概念',
+  '理解複雜句型（因為／如果／雖然）','理解排他句（…以外）'
+];
+const EXPR_ITEMS = [
+  '穩定命名圖片物品','使用雙詞組合溝通','使用三詞以上簡單句','使用完整複雜句',
+  '使用因果／假設／讓步句','詞彙涵蓋名詞、動詞、形容詞','主動溝通意圖明顯','能描述圖片情境'
+];
+const NARR_ITEMS = [
+  '看圖：描述人事時地物','看圖：說出引發事件','看圖：說出結局','看圖：描述內在感受',
+  '重述：描述故事背景','重述：描述事件經過','重述：描述結局','重述：描述內在感受',
+  '自發描述生活事件','故事架構完整'
+];
+const PRAG = ['主動開啟話題','表達需求','分享生活經驗','主動提問','澄清想法','修補話題','回應問題','拒絕'];
+const ORAL_FEAT = ['過度敏感','反應遲鈍','動作不靈活','動作不協調','流口水','張力過低','張力過高'];
+
+/* ═══════════ page definitions ═══════════ */
+const PAGES = [
+{ id:'basic', title:'基本資料', lede:'個案基本資訊與本次評估背景。',
+  html:`
+  <fieldset><legend>個案</legend>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_name">姓名</label><input type="text" id="t_name" data-t="name"></div>
+      <div class="f"><label class="lb" for="t_chart">病歷號碼</label><input type="text" id="t_chart" data-t="chart"></div>
+      <div class="f"><label class="lb" for="t_id">身分證字號</label><input type="text" id="t_id" data-t="pid"></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_birth">生日</label><input type="text" id="t_birth" data-t="birth" placeholder="2021年2月3日"></div>
+      <div class="f"><label class="lb" for="t_ageY">年齡（歲）</label><input type="text" id="t_ageY" data-t="ageY" placeholder="5"></div>
+      <div class="f"><label class="lb" for="t_ageM">年齡（月）</label><input type="text" id="t_ageM" data-t="ageM" placeholder="7"></div>
+    </div>
+    <div class="row">
+      <div class="f wide"><label class="lb">性別</label><div class="chips" data-c="gender" data-single="1">
+        <button class="chip" type="button">男</button><button class="chip" type="button">女</button></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_date">報告日</label><input type="text" id="t_date" data-t="date" placeholder="2026年9月8日"></div>
+      <div class="f"><label class="lb" for="t_er">評估者</label><input type="text" id="t_er" data-t="er" value="江慈芯"></div>
+      <div class="f"><label class="lb" for="t_school">就讀／就托機構</label><input type="text" id="t_school" data-t="school" placeholder="幼兒園大班"></div>
+    </div>
+  </fieldset>
+  <fieldset><legend>轉介與療育背景</legend>
+    <div class="row"><div class="f wide"><label class="lb" for="t_dx">主訴／轉介原因</label>
+      <input type="text" id="t_dx" data-t="dx" placeholder="語言表達較弱、專注力不佳，入小學前評估"></div></div>
+    <div class="row"><div class="f wide"><label class="lb">本次評估性質</label>
+      <div class="chips" data-c="evaltype" data-single="1">
+        <button class="chip" type="button">初次評估</button><button class="chip" type="button">追蹤評估</button><button class="chip" type="button">入學前評估</button>
+      </div></div></div>
+    <div class="row"><div class="f wide"><label class="lb" for="t_hist">療育史</label>
+      <textarea id="t_hist" data-t="hist" placeholder="持續於診所接受職能治療及語言治療。無則填「無」"></textarea></div></div>
+  </fieldset>`},
+
+{ id:'tool', title:'評估工具與分數', lede:'勾選本次使用的工具，並填入對應分數。',
+  html:`
+  <fieldset><legend>評估工具</legend>
+    <div class="chips" data-c="tools">
+      <button class="chip" type="button">臨床觀察</button>
+      <button class="chip" type="button">臨床晤談</button>
+      <button class="chip" type="button">修訂學前兒童語言障礙評量表</button>
+      <button class="chip" type="button">修訂學齡兒童語言障礙評量表</button>
+      <button class="chip" type="button">零至三歲華語嬰幼兒溝通及語言篩檢測驗</button>
+      <button class="chip" type="button">修訂畢保德圖畫詞彙測驗</button>
+      <button class="chip" type="button">華語兒童理解與表達詞彙測驗</button>
+      <button class="chip" type="button">嬰幼兒綜合發展測驗</button>
+      <button class="chip" type="button">學前幼兒與國小低年級兒童口語語法診斷測驗</button>
+      <button class="chip" type="button">幼兒詞彙調查表</button>
+    </div>
+  </fieldset>
+  <fieldset><legend>語言障礙評量表分數</legend>
+    <p class="hint">未施測可整區留空。低於量表下限可寫 &lt;13。</p>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_cT">理解 T 分數</label><input type="text" id="t_cT" data-t="cT"></div>
+      <div class="f"><label class="lb" for="t_cP">理解百分等級</label><input type="text" id="t_cP" data-t="cP" placeholder="33%"></div>
+      <div class="f"><label class="lb">理解結果</label><div class="chips" data-c="cR" data-single="1">
+        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
+        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_eT">表達 T 分數</label><input type="text" id="t_eT" data-t="eT"></div>
+      <div class="f"><label class="lb" for="t_eP">表達百分等級</label><input type="text" id="t_eP" data-t="eP"></div>
+      <div class="f"><label class="lb">表達結果</label><div class="chips" data-c="eR" data-single="1">
+        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
+        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_tT">整體 T 分數</label><input type="text" id="t_tT" data-t="tT"></div>
+      <div class="f"><label class="lb" for="t_tP">整體百分等級</label><input type="text" id="t_tP" data-t="tP"></div>
+      <div class="f"><label class="lb">整體結果</label><div class="chips" data-c="tR" data-single="1">
+        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
+        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div>
+    </div>
+  </fieldset>
+  <fieldset><legend>零至三歲篩檢測驗與詞彙調查表</legend>
+    <p class="hint">語言能力較弱、改用 0-3 歲工具施測時填寫。</p>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_clstRaw">篩檢原始分數</label><input type="text" id="t_clstRaw" data-t="clstRaw"></div>
+      <div class="f"><label class="lb" for="t_clstAge">對應發展月齡</label><input type="text" id="t_clstAge" data-t="clstAge" placeholder="17-20 個月"></div>
+      <div class="f"><label class="lb">篩檢結果</label><div class="chips" data-c="clstR" data-single="1">
+        <button class="chip" type="button">通過</button><button class="chip" type="button">未通過</button></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_vC">理解詞彙量（個）</label><input type="text" id="t_vC" data-t="vC"></div>
+      <div class="f"><label class="lb" for="t_vE">表達詞彙量（個）</label><input type="text" id="t_vE" data-t="vE"></div>
+    </div>
+    <div class="row"><div class="f wide"><label class="lb" for="t_vNote">詞彙調查表補充觀察</label>
+      <textarea id="t_vNote" data-t="vNote" placeholder="例：具體詞彙理解表現佳，方位詞及代詞尚未發展；動作詞理解 44 個但僅能說出 4 個。"></textarea></div></div>
+  </fieldset>`},
+
+{ id:'oral', title:'進食、吞嚥與口腔動作', lede:'口腔動作或吞嚥任一項非「無異常」時，報告才會生成此段落。',
+  html:`
+  <fieldset><legend>整體判斷</legend>
+    <div class="row">
+      <div class="f"><label class="lb">口腔動作</label><div class="chips" data-c="oralStat" data-single="1">
+        <button class="chip" type="button">無異常</button><button class="chip" type="button">臨界</button><button class="chip" type="button">異常</button></div></div>
+      <div class="f"><label class="lb">吞嚥功能</label><div class="chips" data-c="swStat" data-single="1">
+        <button class="chip" type="button">無異常</button><button class="chip" type="button">臨界</button><button class="chip" type="button">異常</button></div></div>
+      <div class="f"><label class="lb">吞嚥反射</label><div class="chips" data-c="swRef" data-single="1">
+        <button class="chip" type="button">無異常</button><button class="chip" type="button">異常</button></div></div>
+    </div>
+  </fieldset>
+
+  <div class="cond" data-cond="oralAny">
+  <fieldset><legend>進食與吞嚥</legend>
+    <div class="row"><div class="f wide"><label class="lb">嗆食情形</label>
+      <div class="chips" data-c="choke"><button class="chip" type="button">液體</button><button class="chip" type="button">半固體</button><button class="chip" type="button">固體</button></div></div></div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_foodOk">可安全咀嚼吞嚥之食材</label><input type="text" id="t_foodOk" data-t="foodOk" placeholder="澱粉類、少部分塊狀水果"></div>
+      <div class="f"><label class="lb" for="t_foodNo">較難或拒絕進食之食材</label><input type="text" id="t_foodNo" data-t="foodNo" placeholder="多數水果、蔬菜、肉類"></div>
+    </div>
+    <div class="row"><div class="f wide"><label class="lb" for="t_feed">進食行為補充</label>
+      <textarea id="t_feed" data-t="feed" placeholder="例：因咀嚼費力，會咬一咬後吐出；仍仰賴牛奶，一天三次各 240cc。"></textarea></div></div>
+    <div class="row"><div class="f wide"><label class="lb">吞嚥訓練方向</label>
+      <div class="chips" data-c="swTrain">
+        <button class="chip" type="button">改變姿勢</button><button class="chip" type="button">控制量</button>
+        <button class="chip" type="button">食物材質的選擇</button><button class="chip" type="button">食器的選擇</button>
+        <button class="chip" type="button">咀嚼功能訓練</button></div></div></div>
+  </fieldset>
+
+  <fieldset><legend>口腔動作觀察</legend>
+    <div class="row"><div class="f wide"><label class="lb">整體特徵</label>
+      <div class="chips" data-c="oralFeat">${ORAL_FEAT.map(o=>`<button class="chip" type="button">${o}</button>`).join('')}</div></div></div>
+    <div class="sub">
+      <div class="row">
+        <div class="f"><label class="lb">雙唇</label><div class="chips" data-c="lip" data-single="1">
+          <button class="chip" type="button">無異常</button><button class="chip" type="button">力量稍差</button><button class="chip" type="button">力量較差</button><button class="chip" type="button">活動範圍受限</button></div></div>
+        <div class="f"><label class="lb">雙頰</label><div class="chips" data-c="cheek" data-single="1">
+          <button class="chip" type="button">無異常</button><button class="chip" type="button">力量稍差</button><button class="chip" type="button">力量較差</button></div></div>
+      </div>
+      <div class="row">
+        <div class="f"><label class="lb">舌頭：力量</label><div class="chips" data-c="tongStr" data-single="1">
+          <button class="chip" type="button">尚可</button><button class="chip" type="button">稍差</button><button class="chip" type="button">較差</button></div></div>
+        <div class="f"><label class="lb">舌頭：活動範圍</label><div class="chips" data-c="tongRng" data-single="1">
+          <button class="chip" type="button">正常</button><button class="chip" type="button">左右移動受限</button><button class="chip" type="button">明顯受限</button></div></div>
+      </div>
+      <div class="row">
+        <div class="f"><label class="lb">下頷支持度</label><div class="chips" data-c="jaw" data-single="1">
+          <button class="chip" type="button">尚可</button><button class="chip" type="button">稍差</button><button class="chip" type="button">較差</button></div></div>
+        <div class="f"><label class="lb">口腔感覺</label><div class="chips" data-c="sense" data-single="1">
+          <button class="chip" type="button">無異常</button><button class="chip" type="button">過度敏感</button><button class="chip" type="button">輕度鈍感</button></div></div>
+        <div class="f"><label class="lb">整體協調度</label><div class="chips" data-c="coord" data-single="1">
+          <button class="chip" type="button">尚可</button><button class="chip" type="button">較不足</button><button class="chip" type="button">較差</button></div></div>
+      </div>
+      <div class="row"><div class="f wide"><label class="lb" for="t_oralNote">口腔動作補充</label>
+        <input type="text" id="t_oralNote" data-t="oralNote" placeholder="例：舌頭伸出僅可維持 3 秒"></div></div>
+    </div>
+    <div class="row" style="margin-top:14px"><div class="f wide"><label class="lb">口腔功能訓練方向</label>
+      <div class="chips" data-c="oralTrain">
+        <button class="chip" type="button">減／增敏感訓練</button><button class="chip" type="button">雙唇動作訓練</button>
+        <button class="chip" type="button">下頷動作訓練</button><button class="chip" type="button">舌頭動作訓練</button>
+        <button class="chip" type="button">咀嚼動作訓練</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">綜合判斷（落在哪個範圍）</label>
+      <div class="chips" data-c="oralLevel" data-single="1">
+        <button class="chip" type="button">正常</button><button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div></div>
+  </fieldset>
+  </div>`},
+
+{ id:'comp', title:'語言理解', lede:'逐項點選目前的表現程度。',
+  html:`
+  <fieldset><legend>理解項目</legend>
+    <div class="abil" data-abil="comp"></div>
+  </fieldset>
+  <fieldset><legend>故事聽理解</legend>
+    <div class="row">
+      <div class="f"><label class="lb">30 字短故事</label><div class="chips" data-c="story1" data-single="1">
+        <button class="chip" type="button">5</button><button class="chip" type="button">4</button><button class="chip" type="button">3</button>
+        <button class="chip" type="button">2</button><button class="chip" type="button">1</button><button class="chip" type="button">0</button>
+        <button class="chip" type="button">未施測</button></div></div>
+      <div class="f"><label class="lb">100 字長故事</label><div class="chips" data-c="story2" data-single="1">
+        <button class="chip" type="button">5</button><button class="chip" type="button">4</button><button class="chip" type="button">3</button>
+        <button class="chip" type="button">2</button><button class="chip" type="button">1</button><button class="chip" type="button">0</button>
+        <button class="chip" type="button">未施測</button></div></div>
+    </div>
+  </fieldset>
+  <fieldset><legend>補充</legend>
+    <div class="row"><div class="f wide"><label class="lb" for="t_compNote">理解補充說明</label>
+      <textarea id="t_compNote" data-t="compNote" placeholder="例：較長的問題需重複說兩次並提醒注意聽；疑問詞中僅「誰」較穩定。"></textarea></div></div>
+    <div class="row"><div class="f wide"><label class="lb">綜合判斷</label>
+      <div class="chips" data-c="compLevel" data-single="1">
+        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
+        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">理解訓練</label>
+      <div class="chips" data-c="compTrain" data-single="1">
+        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">需要訓練</button></div></div></div>
+  </fieldset>`},
+
+{ id:'expr', title:'口語表達', lede:'表達型態、逐項能力與語樣分析。',
+  html:`
+  <fieldset><legend>表達型態</legend>
+    <div class="row"><div class="f wide"><label class="lb">目前口語表達型態</label>
+      <div class="chips" data-c="exprType" data-single="1">
+        <button class="chip" type="button">尚無口語</button><button class="chip" type="button">單字</button>
+        <button class="chip" type="button">雙詞組合</button><button class="chip" type="button">三詞以上簡單句</button>
+        <button class="chip" type="button">複雜句</button></div></div></div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_recite">覆誦語句長度（字）</label><input type="text" id="t_recite" data-t="recite" placeholder="12"></div>
+      <div class="f"><label class="lb">覆誦條件</label><div class="chips" data-c="reciteCond" data-single="1">
+        <button class="chip" type="button">一次即可</button><button class="chip" type="button">需聆聽兩次</button></div></div>
+    </div>
+  </fieldset>
+  <fieldset><legend>表達項目</legend><div class="abil" data-abil="expr"></div></fieldset>
+  <fieldset><legend>敘事能力</legend>
+    <p class="hint">點選已觀察到的表現。</p>
+    <div class="chips" data-c="narr">${NARR_ITEMS.map(o=>`<button class="chip" type="button">${o}</button>`).join('')}</div>
+  </fieldset>
+  <fieldset><legend>語樣分析</legend>
+    <div class="row"><div class="f wide"><label class="lb" for="t_sample">語料樣本</label>
+      <textarea id="t_sample" data-t="sample" placeholder="直接貼上孩子的原始語料"></textarea></div></div>
+    <div class="row"><div class="f wide"><label class="lb">觀察到的特徵</label>
+      <div class="chips" data-c="sampleFeat">
+        <button class="chip" type="button">事件順序大致清楚</button>
+        <button class="chip" type="button">能描述角色情緒</button>
+        <button class="chip" type="button">語法大致正確</button>
+        <button class="chip" type="button">過度依賴單一連接詞</button>
+        <button class="chip" type="button">較少使用連接詞</button>
+        <button class="chip" type="button">事件間邏輯連結不清楚</button>
+        <button class="chip" type="button">事件順序混亂</button>
+        <button class="chip" type="button">部分句子省略主詞</button>
+        <button class="chip" type="button">代名詞指稱易混淆</button>
+        <button class="chip" type="button">用詞精確度不足</button>
+        <button class="chip" type="button">詞彙豐富度有限</button>
+        <button class="chip" type="button">尚未描述內心感受</button>
+      </div></div></div>
+    <div class="row"><div class="f wide"><label class="lb" for="t_exprNote">表達補充說明</label>
+      <textarea id="t_exprNote" data-t="exprNote"></textarea></div></div>
+  </fieldset>
+  <fieldset><legend>綜合與訓練</legend>
+    <div class="row"><div class="f wide"><label class="lb">綜合判斷</label>
+      <div class="chips" data-c="exprLevel" data-single="1">
+        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
+        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">表達訓練</label>
+      <div class="chips" data-c="exprTrain" data-single="1">
+        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">需要訓練</button></div></div></div>
+  </fieldset>`},
+
+{ id:'speech', title:'說話能力', lede:'構音、流暢度與嗓音。',
+  html:`
+  <fieldset><legend>整體判斷</legend>
+    <div class="row">
+      <div class="f"><label class="lb">說話</label><div class="chips" data-c="spStat" data-single="1">
+        <button class="chip" type="button">無異常</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">異常</button></div></div>
+      <div class="f"><label class="lb" for="t_clarity">整體言語清晰度</label><input type="text" id="t_clarity" data-t="clarity" placeholder="90%"></div>
+    </div>
+    <div class="row"><div class="f wide"><label class="lb">評估結果類別</label>
+      <div class="chips" data-c="spType">
+        <button class="chip" type="button">構音障礙</button><button class="chip" type="button">言語不流暢</button>
+        <button class="chip" type="button">嗓音障礙</button><button class="chip" type="button">語音發展中</button></div></div></div>
+  </fieldset>
+  <div class="cond" data-cond="spAny">
+  <fieldset><legend>構音錯誤</legend>
+    <div class="row"><div class="f wide"><label class="lb" for="t_spErr">逐音記錄</label>
+      <textarea id="t_spErr" data-t="spErr" placeholder="ㄗㄘㄙㄓㄔㄕ扭曲；ㄎ（少數時候，以ㄊ替代），例如「卡車」變「塔車」，示範並重述後即正確"></textarea></div></div>
+    <div class="row"><div class="f wide"><label class="lb">錯誤特徵</label>
+      <div class="chips" data-c="spFeat">
+        <button class="chip" type="button">連續語句中錯誤增加</button>
+        <button class="chip" type="button">錯誤型態不一致</button>
+        <button class="chip" type="button">語速快時錯誤增加</button>
+        <button class="chip" type="button">放慢語速可改善</button>
+        <button class="chip" type="button">示範後可正確</button>
+        <button class="chip" type="button">示範後仍不準確</button>
+        <button class="chip" type="button">合併口腔動作計畫困難</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">訓練方向</label>
+      <div class="chips" data-c="spTrain">
+        <button class="chip" type="button">構音矯正</button><button class="chip" type="button">嗓音復健</button>
+        <button class="chip" type="button">語暢訓練</button><button class="chip" type="button">嗓音保健</button></div></div></div>
+  </fieldset>
+  </div>`},
+
+{ id:'inter', title:'溝通互動', lede:'評估情境下的行為觀察與互動表現。',
+  html:`
+  <fieldset><legend>行為觀察</legend>
+    <div class="row">
+      <div class="f"><label class="lb">注意力</label><div class="chips" data-c="att" data-single="1">
+        <button class="chip" type="button">良好（15分鐘以上）</button><button class="chip" type="button">中等（5–10分鐘）</button>
+        <button class="chip" type="button">偏短（5分鐘以內）</button><button class="chip" type="button">不穩定</button></div></div>
+      <div class="f"><label class="lb">眼神接觸</label><div class="chips" data-c="eye" data-single="1">
+        <button class="chip" type="button">良好</button><button class="chip" type="button">尚佳</button>
+        <button class="chip" type="button">短暫</button><button class="chip" type="button">困難</button></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb">情緒</label><div class="chips" data-c="emo" data-single="1">
+        <button class="chip" type="button">穩定、合作</button><button class="chip" type="button">大致穩定，偶有抗拒</button>
+        <button class="chip" type="button">需要引導</button><button class="chip" type="button">焦慮、抗拒</button></div></div>
+      <div class="f"><label class="lb">安坐</label><div class="chips" data-c="sit" data-single="1">
+        <button class="chip" type="button">可獨立安坐</button><button class="chip" type="button">需提示安坐</button><button class="chip" type="button">難以安坐</button></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb">遊戲層次</label><div class="chips" data-c="play" data-single="1">
+        <button class="chip" type="button">假裝／扮演遊戲</button><button class="chip" type="button">操作型／建構型</button>
+        <button class="chip" type="button">功能性玩法</button><button class="chip" type="button">探索性玩法</button></div></div>
+      <div class="f"><label class="lb">對話輪替</label><div class="chips" data-c="turn" data-single="1">
+        <button class="chip" type="button">良好，主動輪替</button><button class="chip" type="button">尚可，需適度引導</button>
+        <button class="chip" type="button">需要頻繁引導</button><button class="chip" type="button">難以維持輪替</button></div></div>
+    </div>
+    <div class="row"><div class="f wide"><label class="lb">已觀察到的溝通功能</label>
+      <div class="chips" data-c="prag">${PRAG.map(o=>`<button class="chip" type="button">${o}</button>`).join('')}</div></div></div>
+    <div class="row"><div class="f wide"><label class="lb" for="t_behNote">行為觀察補充</label>
+      <textarea id="t_behNote" data-t="behNote" placeholder="客觀現象描述即可，例：容易分心、恍神，看圖時較難注意細節。"></textarea></div></div>
+  </fieldset>
+  <fieldset><legend>綜合與訓練</legend>
+    <div class="row"><div class="f wide"><label class="lb">整體互動能力</label>
+      <div class="chips" data-c="interLevel" data-single="1">
+        <button class="chip" type="button">佳</button><button class="chip" type="button">尚可</button>
+        <button class="chip" type="button">較差</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">語用訓練</label>
+      <div class="chips" data-c="pragTrain" data-single="1">
+        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">需要訓練</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">語用訓練方向</label>
+      <div class="chips" data-c="pragTrainDir">
+        <button class="chip" type="button">建立對事物的廣泛興趣</button><button class="chip" type="button">維持合乎情境的對話主題</button>
+        <button class="chip" type="button">維持一來一往的對話輪替</button><button class="chip" type="button">能使用合乎情境的適當口語</button>
+        <button class="chip" type="button">能聽懂笑話、雙關語</button><button class="chip" type="button">能適切的開啟及結束對話</button>
+        <button class="chip" type="button">增加語用預設的能力</button></div></div></div>
+  </fieldset>`},
+
+{ id:'plan', title:'診斷與建議', lede:'診斷摘要、治療頻率與居家建議。',
+  html:`
+  <fieldset><legend>診斷摘要</legend>
+    <p class="hint">會直接放在「評估結果與建議：」後方。</p>
+    <div class="row"><div class="f wide"><label class="lb" for="t_dxsum">診斷摘要</label>
+      <input type="text" id="t_dxsum" data-t="dxsum" placeholder="發展性語言異常（口語表達為主）、構音異常"></div></div>
+  </fieldset>
+  <fieldset><legend>治療建議</legend>
+    <div class="row"><div class="f wide"><label class="lb">建議治療頻率</label>
+      <div class="chips" data-c="freq" data-single="1">
+        <button class="chip" type="button">一週一次</button><button class="chip" type="button">一週兩次</button>
+        <button class="chip" type="button">密集語言治療</button><button class="chip" type="button">追蹤諮詢</button>
+        <button class="chip" type="button">不需介入</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">輔具需求</label>
+      <div class="chips" data-c="aac" data-single="1">
+        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button>
+        <button class="chip" type="button">溝通輔具</button><button class="chip" type="button">聽覺輔具</button></div></div></div>
+    <div class="row"><div class="f wide"><label class="lb">跨專業合作</label>
+      <div class="chips" data-c="team">
+        <button class="chip" type="button">職能治療</button><button class="chip" type="button">物理治療</button>
+        <button class="chip" type="button">心理</button><button class="chip" type="button">學校老師</button></div></div></div>
+  </fieldset>
+  <fieldset><legend>居家建議</legend>
+    <p class="hint">點選要納入的建議項目，產出時會自動代入孩子的表現細節。可於下方自行補充。</p>
+    <div style="margin-bottom:14px">
+      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">理解</p>
+      <div class="chips" data-c="advC">
+        <button class="chip" type="button">善用情境當小幫手練指令</button>
+        <button class="chip" type="button">圖片細節觀察提問</button>
+        <button class="chip" type="button">簡短描述當下動作</button>
+        <button class="chip" type="button">繪本共讀</button>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">表達</p>
+      <div class="chips" data-c="advE">
+        <button class="chip" type="button">連接詞多樣化練習</button>
+        <button class="chip" type="button">事件邏輯銜接提問</button>
+        <button class="chip" type="button">複雜句示範與仿說</button>
+        <button class="chip" type="button">擴展詞彙豐富度</button>
+        <button class="chip" type="button">創造主動分享與提問機會</button>
+        <button class="chip" type="button">製造溝通需求情境</button>
+        <button class="chip" type="button">跟隨孩子的興趣互動</button>
+        <button class="chip" type="button">玩具模仿語音遊戲</button>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">說話（構音）</p>
+      <div class="chips" data-c="advS">
+        <button class="chip" type="button">放慢語速提升清晰度</button>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">口腔動作與進食</p>
+      <div class="chips" data-c="advO">
+        <button class="chip" type="button">漸進式調整食物質地</button>
+        <button class="chip" type="button">口腔動作遊戲練習</button>
+        <button class="chip" type="button">示範咀嚼動作與節奏</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="f"><label class="lb" for="t_advNoteC">理解｜自行補充</label>
+        <textarea id="t_advNoteC" data-t="advNoteC" placeholder="每行一項"></textarea></div>
+      <div class="f"><label class="lb" for="t_advNoteE">表達｜自行補充</label>
+        <textarea id="t_advNoteE" data-t="advNoteE" placeholder="每行一項"></textarea></div>
+    </div>
+    <div class="row">
+      <div class="f"><label class="lb" for="t_advNoteS">說話｜自行補充</label>
+        <textarea id="t_advNoteS" data-t="advNoteS" placeholder="每行一項"></textarea></div>
+      <div class="f"><label class="lb" for="t_advNoteO">口腔動作｜自行補充</label>
+        <textarea id="t_advNoteO" data-t="advNoteO" placeholder="每行一項"></textarea></div>
+    </div>
+  </fieldset>`}
+];
+
+/* ═══════════ render ═══════════ */
+let cur = 0;
+const navlist = $('#navlist'), main = $('#main');
+
+PAGES.forEach((p,i)=>{
+  const b=document.createElement('button');
+  b.className='navitem'; b.type='button'; b.dataset.i=i;
+  b.innerHTML=`<span class="dot"></span>${p.title}`;
+  b.onclick=()=>go(i);
+  navlist.appendChild(b);
+  const sec=document.createElement('section');
+  sec.className='step'; sec.id='p'+i;
+  sec.innerHTML=`<h2>${p.title}</h2><p class="lede">${p.lede}</p>${p.html}`;
+  main.appendChild(sec);
+});
+
+/* ability grids */
+function buildAbil(key, items){
+  const host=document.querySelector(`[data-abil="${key}"]`);
+  host.innerHTML=`<div class="hd"><span>項目</span><span>可以</span><span>不穩定</span><span>較困難</span><span>未評估</span></div>`
+    + items.map((it,ix)=>`<div class="rw"><div class="nm">${it}</div>`
+      + ['y','m','n','na'].map(c=>`<button type="button" class="${c}" data-k="${key}" data-ix="${ix}" data-v="${c}" aria-pressed="false" aria-label="${it} ${{y:'可以',m:'不穩定',n:'較困難',na:'未評估'}[c]}"></button>`).join('')
+      + `</div>`).join('');
+  host.querySelectorAll('button').forEach(b=>{
+    b.onclick=()=>{
+      const {k,ix,v}=b.dataset;
+      S.abil[k]=S.abil[k]||{};
+      S.abil[k][ix] = (S.abil[k][ix]===v)?null:v;
+      host.querySelectorAll(`button[data-ix="${ix}"]`).forEach(x=>x.setAttribute('aria-pressed', x.dataset.v===S.abil[k][ix]));
+      tick();
+    };
+  });
+}
+buildAbil('comp', COMP_ITEMS);
+buildAbil('expr', EXPR_ITEMS);
+
+/* chips */
+document.querySelectorAll('[data-c]').forEach(g=>{
+  const key=g.dataset.c, single=g.dataset.single==='1';
+  g.querySelectorAll('.chip').forEach(c=>{
+    c.setAttribute('aria-pressed','false');
+    c.onclick=()=>{
+      const v=c.textContent.trim();
+      if(single){
+        const cleared = S.chip[key]===v;
+        S.chip[key]= cleared?null:v;
+        g.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed', !cleared && x.textContent.trim()===v));
+      }else{
+        S.chip[key]=S.chip[key]||[];
+        const i=S.chip[key].indexOf(v);
+        if(i>-1) S.chip[key].splice(i,1); else S.chip[key].push(v);
+        c.setAttribute('aria-pressed', S.chip[key].includes(v));
+      }
+      conds(); tick();
+    };
+  });
+});
+
+/* text inputs */
+document.querySelectorAll('[data-t]').forEach(el=>{
+  S.txt[el.dataset.t]=el.value||'';
+  el.oninput=()=>{ S.txt[el.dataset.t]=el.value; tick(); };
+});
+
+/* conditionals */
+function conds(){
+  const oralAny = (S.chip.oralStat && S.chip.oralStat!=='無異常') || (S.chip.swStat && S.chip.swStat!=='無異常');
+  const spAny = S.chip.spStat && S.chip.spStat!=='無異常';
+  document.querySelectorAll('[data-cond="oralAny"]').forEach(e=>e.classList.toggle('on', !!oralAny));
+  document.querySelectorAll('[data-cond="spAny"]').forEach(e=>e.classList.toggle('on', !!spAny));
+}
+
+function go(i){
+  cur=Math.max(0,Math.min(PAGES.length-1,i));
+  document.querySelectorAll('.step').forEach((s,ix)=>s.classList.toggle('on',ix===cur));
+  document.querySelectorAll('.navitem').forEach((b,ix)=>b.classList.toggle('on',ix===cur));
+  window.scrollTo({top:0});
+}
+function tick(){
+  const filled = PAGES.map((p,i)=>{
+    const sec=document.getElementById('p'+i);
+    return !!sec.querySelector('.chip[aria-pressed=true], .rw button[aria-pressed=true]')
+      || [...sec.querySelectorAll('[data-t]')].some(e=>e.value.trim());
+  });
+  document.querySelectorAll('.navitem').forEach((b,i)=>b.classList.toggle('filled',filled[i]));
+  const n=filled.filter(Boolean).length;
+  $('#status').textContent = n?`已填 ${n} / ${PAGES.length} 個區段`:'尚未填寫';
+}
+function resetAll(){
+  // state
+  S.abil={}; S.chip={}; S.txt={};
+  // chips
+  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
+  // ability grids
+  document.querySelectorAll('.rw button').forEach(b=>b.setAttribute('aria-pressed','false'));
+  // text fields（保留評估者）
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    if(el.dataset.t==='er'){ S.txt.er=el.value; return; }
+    el.value=''; S.txt[el.dataset.t]='';
+  });
+  $('#out').classList.remove('on');
+  conds(); tick(); go(0);
+}
+$('#reset').onclick=()=>{
+  const any = Object.keys(S.chip).some(k=>S.chip[k]&&S.chip[k].length)
+    || Object.values(S.abil).some(o=>Object.values(o).some(Boolean))
+    || Object.entries(S.txt).some(([k,v])=>k!=='er'&&v&&v.trim());
+  if(any && !confirm('清空目前所有填寫內容，開始下一位個案？\n此動作無法復原。')) return;
+  resetAll();
+  const st=$('#status'); st.textContent='已清空，可開始下一位'; st.style.color='var(--pine)';
+  setTimeout(()=>{ st.style.color=''; tick(); },1800);
+};
+$('#prev').onclick=()=>go(cur-1);
+$('#next').onclick=()=>go(cur+1);
+go(0); conds(); tick();
+
+/* ═══════════ text helpers ═══════════ */
+const T = k => (S.txt[k]||'').trim();
+const C = k => S.chip[k]||null;
+const M = k => S.chip[k]||[];
+const join = a => a.filter(Boolean).join('、');
+const VERBS=['理解','使用','描述','說出'];
+function joinSmart(arr){
+  let prev=null;
+  return arr.filter(Boolean).map(it=>{
+    const v=VERBS.find(v=>it.startsWith(v));
+    const out=(v && v===prev)? it.slice(v.length) : it;
+    prev=v||null; return out;
+  }).join('、');
+}
+const box = (on,label) => `${on?'■':'☐'}${label}`;
+
+function abilList(key, items, state){
+  const m=S.abil[key]||{};
+  return items.filter((_,i)=>m[i]===state);
+}
+/** 把項目清單串成「可以…；…尚不穩定；…則尚待發展。」 */
+function abilSentence(key, items){
+  const y=abilList(key,items,'y'), m=abilList(key,items,'m'), n=abilList(key,items,'n');
+  const out=[];
+  if(y.length) out.push(`孩子目前可以${joinSmart(y)}`);
+  if(m.length) out.push(`${joinSmart(m)}的表現尚不穩定`);
+  if(n.length) out.push(`${joinSmart(n)}則尚待發展`);
+  return out.length? out.join('；')+'。' : '';
+}
+
+/* ═══════════ generators ═══════════ */
+function gScoreLine(){
+  const rows=[];
+  if(T('cT')||T('cP')) rows.push(`語言理解部分，T分數為${T('cT')||'—'}，百分等級為${T('cP')||'—'}，語言理解能力落在${C('cR')||'—'}範圍中`);
+  if(T('eT')||T('eP')) rows.push(`口語表達部分，T分數為${T('eT')||'—'}，百分等級為${T('eP')||'—'}，口語表達能力落在${C('eR')||'—'}範圍中`);
+  if(T('tT')||T('tP')) rows.push(`整體語言發展方面，T分數為${T('tT')||'—'}，百分等級為${T('tP')||'—'}，整體語言發展落在${C('tR')||'—'}範圍中`);
+  return rows.join('；');
+}
+function gSummary(){
+  const tool = M('tools').filter(t=>!['臨床觀察','臨床晤談'].includes(t))[0] || '臨床觀察';
+  let s = `　　整體語言發展方面，以「${tool}」施測為主，並輔以自然遊戲情境及自發語樣分析評估。和同齡幼兒相比，`;
+  const sc = gScoreLine();
+  if(sc) s += sc + '。';
+  if(T('clstRaw')) s += `篩檢結果為${C('clstR')||'—'}，得分為${T('clstRaw')}分${T('clstAge')?`，對應發展月齡為${T('clstAge')}`:''}。`;
+  if(T('vC')||T('vE')){
+    s += `根據家長所填之「幼兒詞彙調查表」，孩子目前可以理解的詞彙量約為${T('vC')||'—'}個，可以表達的詞彙量約為${T('vE')||'—'}個`;
+    s += (T('vC')&&T('vE')&&+T('vC')>+T('vE')*2) ? `，理解與表達之間存在明顯落差，可以表達的詞彙量可以再持續加強。` : `。`;
+  }
+  if(T('vNote')) s += T('vNote').replace(/。?$/,'。');
+  if(C('cR')&&C('eR')&&C('cR')!==C('eR')){
+    s += `語言理解與口語表達之間存在落差，${(C('eR')==='遲緩'||C('eR')==='邊緣')?'口語表達':'語言理解'}為孩子目前主要的困難所在。`;
+  }
+  return s;
+}
+function gOral(){
+  const feed=[];
+  let s1='　　吞嚥和進食方面，';
+  if(M('choke').length) s1 += `進食${join(M('choke'))}時會有嗆食情形；`;
+  else s1 += '液體吞嚥和食器使用無異常；';
+  if(T('foodOk')) s1 += `固體食物部分，孩子目前可以自己咀嚼吞嚥${T('foodOk')}`;
+  if(T('foodNo')) s1 += `${T('foodOk')?'，':'固體食物部分，'}較難或拒絕由口進食${T('foodNo')}`;
+  s1 = s1.replace(/[；，]$/,'') + '。';
+  if(T('feed')) s1 += T('feed').replace(/。?$/,'。');
+  feed.push(s1);
+
+  const p=[];
+  const lip=C('lip'), cheek=C('cheek'), tS=C('tongStr'), tR=C('tongRng'), jaw=C('jaw'), sn=C('sense'), co=C('coord');
+  if(lip) p.push(lip==='無異常'?'孩子雙唇動作功能無異常':`雙唇${lip}`);
+  if(tS||tR){
+    let t='舌頭';
+    if(tR==='正常') t+='可以向前伸出和向左右移動';
+    else if(tR) t+=`可以向前伸出，但是${tR==='左右移動受限'?'移動到左右兩側的活動範圍較差':'整體活動範圍明顯受限'}`;
+    if(tS) t+=`${tR?'，':''}肌肉力量${tS}`;
+    p.push(t);
+  }
+  if(jaw) p.push(`下頷支持度${jaw}`);
+  if(cheek) p.push(cheek==='無異常'?'雙頰動作功能無異常':`雙頰肌肉${cheek}`);
+  if(co) p.push(`整體口腔動作的協調度${co}`);
+  let s2='　　口腔動作功能方面，'+ p.join('；') +'。';
+  if(sn) s2 += `口腔感覺方面，為${sn}。`;
+  if(M('oralFeat').length) s2 += `整體觀察到${join(M('oralFeat'))}之情形。`;
+  if(T('oralNote')) s2 += T('oralNote').replace(/。?$/,'。');
+  feed.push(s2);
+
+  const lv=C('oralLevel')||'—', sw=C('swStat');
+  feed.push(`　　綜合上述，相較同月齡的幼兒，孩子目前的吞嚥進食能力落在${sw==='無異常'?'正常':(sw==='臨界'?'邊緣':'遲緩')}的範圍中，口腔動作功能落在${lv}的範圍中，待加強。`);
+  return feed.join('\n');
+}
+function gComp(){
+  let s='　　'+abilSentence('comp', COMP_ITEMS);
+  const s1=C('story1'), s2=C('story2');
+  if(s1&&s1!=='未施測'||s2&&s2!=='未施測'){
+    s += `故事聽理解方面，30字短故事的理解正確率為${s1&&s1!=='未施測'?s1+'/5':'未施測'}，100字長故事為${s2&&s2!=='未施測'?s2+'/5':'未施測'}`;
+    const hi=(x)=>x==='5'||x==='4';
+    s += (hi(s1)&&hi(s2))?'，表現優異。':(s1==='0'&&s2==='0')?'，連續語篇的聽理解能力仍待建立。':'。';
+  }
+  if(T('compNote')) s += T('compNote').replace(/。?$/,'。');
+  s += `綜合上述，相較同月齡的幼兒，孩子目前的語言理解能力落在${C('compLevel')||'—'}的範圍中。`;
+  return s;
+}
+function gExpr(){
+  const out=[];
+  let s='　　';
+  if(C('exprType')==='尚無口語') s+='孩子目前尚無口語表達。';
+  else if(C('exprType')) s+=`孩子目前可以使用${C('exprType')}進行溝通。`;
+  if(T('recite')) s+=`覆誦語句長度可達${T('recite')}個字${C('reciteCond')==='需聆聽兩次'?'，惟需聆聽兩次後才能完整覆誦，顯示對於較長口語訊息的接收和保留仍需要較多時間':''}。`;
+  const a=abilSentence('expr', EXPR_ITEMS);
+  if(a) s+=a.replace(/^孩子目前可以/,'表達方面，孩子可以');
+  if(T('exprNote')) s+=T('exprNote').replace(/。?$/,'。');
+  out.push(s);
+
+  const nr=M('narr');
+  if(nr.length||T('sample')||M('sampleFeat').length){
+    let n='　　敘事能力方面，';
+    if(nr.length){
+      const look=nr.filter(x=>x.startsWith('看圖')).map(x=>x.replace('看圖：',''));
+      const re=nr.filter(x=>x.startsWith('重述')).map(x=>x.replace('重述：',''));
+      const etc=nr.filter(x=>!x.startsWith('看圖')&&!x.startsWith('重述'));
+      const doable=etc.filter(x=>x!=='故事架構完整');
+      const ps=[];
+      if(look.length) ps.push(`看圖時可以${joinSmart(look)}`);
+      if(re.length) ps.push(`重述故事時可以${joinSmart(re)}`);
+      if(doable.length) ps.push(`並可以${joinSmart(doable)}`);
+      n += ps.join('；');
+      n += etc.includes('故事架構完整') ? '，整體故事架構完整。' : '。';
+    }
+    const good=M('sampleFeat').filter(f=>['事件順序大致清楚','能描述角色情緒','語法大致正確'].includes(f));
+    const bad=M('sampleFeat').filter(f=>!good.includes(f));
+    if(good.length) n += `透過自發語樣分析發現，孩子的敘事${join(good)}，為其相對優勢。`;
+    if(bad.length) n += `${good.length?'然而，':'透過自發語樣分析發現，'}敘事中仍觀察到${join(bad)}等情形，為待加強之處。`;
+    out.push(n);
+  }
+  out.push(`　　綜合上述，相較同月齡的幼兒，孩子目前的口語表達能力落在${C('exprLevel')||'—'}的範圍中。`);
+  return out.join('\n');
+}
+function gSpeech(){
+  if(C('spStat')==='無異常')
+    return `　　構音方面，孩子各音素發音清晰${T('clarity')?`，整體的說話清晰度約莫${T('clarity')}`:''}，未觀察到構音錯誤，言語流暢度和嗓音方面亦無異常。`;
+  let s=`　　構音方面，於非熟悉者而言，孩子整體的說話清晰度約莫${T('clarity')||'—'}。`;
+  if(T('spErr')) s+=`評估期間，${T('spErr').replace(/。?$/,'')}。`;
+  if(M('spFeat').length) s+=`整體而言，觀察到${join(M('spFeat'))}等特徵。`;
+  const lv = C('spStat')==='異常'?'異常':'待追蹤';
+  s+=`綜合上述，相較同月齡的幼兒，孩子目前的構音能力落在${lv}的範圍中。`;
+  const langWeak = ['邊緣','遲緩','正常下緣'].includes(C('exprLevel')) || ['邊緣','遲緩'].includes(C('compLevel'));
+  s += langWeak
+    ? '惟考量其語言能力尚待加強，建議先以語言理解和表達能力之提升為優先，後續視語言整體發展進展，再評估啟動正式構音矯正療程之適當時機。'
+    : '考量其整體語言發展已達同齡水準，建議可直接接受構音矯正訓練。';
+  return s;
+}
+function gInter(){
+  let s='　　與孩子於結構化評估和遊戲情境下進行評估，';
+  const b=[];
+  if(C('emo')) b.push(`孩子情緒${C('emo')}`);
+  if(C('sit')) b.push(C('sit'));
+  if(C('att')) b.push(`注意力持續性${C('att')}`);
+  if(C('eye')) b.push(`眼神接觸${C('eye')}`);
+  s += b.join('，')+'。';
+  if(T('behNote')) s += T('behNote').replace(/。?$/,'。');
+  if(C('turn')) s += `對話輪替能力${C('turn')}。`;
+  if(M('prag').length) s += `溝通功能方面，孩子可以${join(M('prag'))}。`;
+  const missing = PRAG.filter(p=>!M('prag').includes(p) && ['主動開啟話題','分享生活經驗','主動提問','澄清想法'].includes(p));
+  if(M('prag').length && missing.length) s += `惟${join(missing)}等溝通功能較少出現，整體溝通意圖偏向被動回應。`;
+  if(C('play')) s += `遊戲能力方面，遊戲層次已達${C('play')}。`;
+  s += `綜合上述，相較同月齡的幼兒，孩子整體溝通互動能力${C('interLevel')||'—'}，建議宜持續追蹤並接受療育。`;
+  return s;
+}
+
+const ADV = {
+ '善用情境當小幫手練指令':'在日常生活中，建議家長可以善用情境，請孩子當小幫手，以提升詞彙豐富度、動作指令和連續步驟指令的理解能力，例如「拿杯子給我」、「你先收好書，再拿鉛筆盒」等。建議可以先給予手勢或肢體動作的協助，之後再讓孩子嘗試自己完成，而不論有無協助，皆應給予孩子正向的鼓勵和讚美。',
+ '連接詞多樣化練習':'在日常對話和親子共讀時，建議家長可以刻意示範不同的連接詞，例如「因為…所以…」、「後來…」、「結果…」等，並鼓勵孩子模仿使用，以豐富敘事的邏輯層次，避免過度依賴單一詞彙。',
+ '事件邏輯銜接提問':'當孩子描述的事件之間缺乏明確關聯時，建議家長可以用提問的方式引導孩子補充說明，例如「那後來怎麼了呢？」、「這兩件事有關係嗎？」，協助孩子建立事件之間更清楚的因果或時序連結。',
+ '複雜句示範與仿說':'在日常生活中，建議家長可以示範完整的複雜句型讓孩子模仿，例如「因為下雨了，所以我們要帶傘」、「如果吃完飯，就可以看電視」等，鼓勵孩子造出類似的句子，逐步從仿說過渡到自發使用。',
+ '擴展詞彙豐富度':'針對孩子已經可以理解、但較少主動說出的詞彙，建議家長可以在共讀或日常互動中，請孩子用這些詞彙來描述圖片或分享的事件，例如「這個蛋糕看起來怎麼樣？」、「他的心情是什麼？」，以逐步增加表達詞彙的多樣性。',
+ '圖片細節觀察提問':'在看圖或共讀時，建議家長可以引導孩子注意圖片中的細節，例如「你看，這個人手上拿著什麼？」、「背景還有什麼東西？」，透過提問訓練孩子的觀察力和對細節的注意。',
+ '創造主動分享與提問機會':'建議家長可以創造孩子主動分享和提問的機會，例如每天固定時間請孩子分享學校發生的事，並在孩子分享後適時追問細節，或是刻意在孩子面前做一些奇怪的事，引發孩子主動詢問，以增加主動溝通和提問等語用功能的運用。',
+ '放慢語速提升清晰度':'建議家長可以鼓勵孩子在說較長句子時，有意識地放慢說話速度、把話說清楚，家長可以用「慢慢說，我在聽」作為提示語，協助孩子建立放慢語速以提升清晰度的習慣。',
+ '繪本共讀':'建議善用周末時間或睡前時間，和孩子進行繪本共讀的活動，可以先用孩子有興趣的主題或互動式繪本為優先，時間不一定要長、也不一定要看完整本繪本，重要的是創造孩子練習的機會，以提升整體詞彙量及豐富度和口語表達能力。',
+ '玩具模仿語音遊戲':'建議家長閒暇時可多陪伴孩子玩玩具，在玩玩具時可以示範不同的聲音讓孩子模仿多變的語音，如火車嘟嘟嘟、貓咪喵喵喵，讓孩子在有趣的環境下學習，以提升其溝通動機和口語表達能力。',
+ '製造溝通需求情境':'在日常生活中，鼓勵孩子用口語和肢體動作來表達需求和尋求協助，可以將孩子喜歡的東西放高，或是放在孩子打不開的透明容器中，讓孩子一定要尋求家長協助並使用口語表達需求，以提升孩子的溝通動機和口語表達能力。',
+ '跟隨孩子的興趣互動':'建議家長行有餘力時，可以加入孩子的遊戲、善用孩子喜愛的玩具，先跟隨孩子的選擇和興趣，再引導孩子和自己互動，以提升溝通動機和給予語言仿說的機會。',
+ '簡短描述當下動作':'在日常生活中，建議家長可以藉由玩玩具或出外的機會多給予語言刺激。與孩子互動期間，家長可以描述自己正在做的動作，或是描述孩子正在做的動作給孩子聽，描述語句盡量簡短明瞭，並可以加入擬聲詞，例如「你疊積木！疊高高！」、「媽媽拿鑰匙，鑰匙，喀擦，開門」。',
+ '漸進式調整食物質地':'吃東西的部分，建議家長用漸進式的方式，漸漸調整食物的大小和比例，並多多讓孩子接觸水果、蔬菜和肉類食物，嘗試增加進食的樂趣，例如參與蔬菜採買和烹煮的過程、摸一摸／聞一聞／舔一舔蔬菜、變換食物呈現方式、添加醬料或風味等，讓孩子漸漸感受到進食咀嚼的樂趣。',
+ '口腔動作遊戲練習':'口腔動作功能方面，建議家長可以善用飲食和日常生活活動、善用遊戲寓教於樂，例如用舌頭或口腔扮鬼臉等好玩的方式，讓孩子練習口腔動作的肌肉力量、活動範圍和協調度；不論孩子有無成功，只要有嘗試完成，皆應給予鼓勵。',
+ '示範咀嚼動作與節奏':'針對孩子目前願意接受進食的食物，建議行有餘力時可以陪著孩子並示範咀嚼動作和節奏，讓孩子跟著節奏一起練習完整的咀嚼動作，也可以陪著孩子一起進食，讓孩子開心享受進食時間。'
+};
+function gAdvice(){
+  const L=[];
+  const areas=[];
+  if(['需要訓練','需要追蹤及諮詢'].includes(C('compTrain'))||['需要訓練','需要追蹤及諮詢'].includes(C('exprTrain'))) areas.push('整體語言發展');
+  if(C('spStat')&&C('spStat')!=='無異常') areas.push('構音');
+  const oralAny=(C('oralStat')&&C('oralStat')!=='無異常')||(C('swStat')&&C('swStat')!=='無異常');
+  if(oralAny) areas.push('口腔動作功能、進食吞嚥');
+  const freq=C('freq')||'一週一次';
+  if(freq==='不需介入'){
+    L.push('－ 孩子目前語言發展各項能力均達同齡水準，暫不需接受語言治療介入。若後續在入小學後出現學習或語言運用上的新困難，建議可再回診評估。');
+  }else{
+    L.push(`－ ${areas.join('、')||'整體語言發展'}方面，建議宜至少接受${freq}的語言治療。${oralAny?'口腔動作功能和進食吞嚥部分，建議可以先行在家練習，並向相關醫療院所的語言治療師諮詢。':''}`);
+  }
+  if(M('team').length) L.push(`－ 建議持續接受${join(M('team'))}，並與相關專業人員討論孩子的整體發展表現。`);
+  if(C('aac')==='溝通輔具') L.push('－ 建議評估圖卡兌換系統或其他擴大性及替代性溝通輔具之使用可行性，以輔助日常溝通需求。');
+  return L.join('\n');
+}
+/** 各類具體建議：回傳條列文字（無則空字串） */
+function gAdviceCat(chipKey, noteKey){
+  const L=[];
+  M(chipKey).forEach(k=>{ if(ADV[k]) L.push('・'+ADV[k]); });
+  if(T(noteKey)) T(noteKey).split('\n').filter(x=>x.trim()).forEach(x=>L.push('・'+x.trim()));
+  return L.join('\n');
+}
+/** 建議段落中彙整的完整版（給「建議」欄位一次貼） */
+function gAdviceFull(){
+  const L=[gAdvice()];
+  const secs=[['理解','advC','advNoteC'],['表達','advE','advNoteE'],
+              ['說話','advS','advNoteS'],['口腔動作與進食','advO','advNoteO']];
+  const any=secs.some(([,c,n])=>M(c).length||T(n));
+  if(any){
+    L.push('');
+    L.push('－ 建議家長可以在家中練習以下事項：');
+    secs.forEach(([label,c,n])=>{
+      const t=gAdviceCat(c,n);
+      if(t){ L.push('　【'+label+'】'); t.split('\n').forEach(x=>L.push('　'+x)); }
+    });
+  }
+  return L.join('\n');
+}
+
+/* 表格欄位文字 */
+function gTblOral(){
+  const d=T('date');
+  return `評估日期：${d}\n`+ORAL_FEAT.map(f=>box(M('oralFeat').includes(f),f)).join('　')+`　☐其他：__________`;
+}
+function gTblOralTrain(){
+  const map=['減／增敏感訓練','雙唇動作訓練','下頷動作訓練','舌頭動作訓練','咀嚼動作訓練'];
+  return '訓練方向：\n'+map.map(m=>box(M('oralTrain').includes(m),m)).join('　');
+}
+function gTblSw(){
+  const c=M('choke');
+  let s=`${box(c.length>0,'會嗆食')}（${box(c.includes('液體'),'液體')}　${box(c.includes('半固體'),'半固體')}　${box(c.includes('固體'),'固體')}）`;
+  if(T('foodOk')) s+=`\n主要食材：${T('foodOk')}。可以安全咀嚼吞嚥主食且無嗆咳等吸入風險。`;
+  if(T('foodNo')) s+=`\n較難或拒絕由口進食：${T('foodNo')}。`;
+  if(T('feed')) s+='\n'+T('feed');
+  return s;
+}
+function gTblLang(which){
+  const isC = which==='c';
+  const t = isC?['cT','cP']:['eT','eP'];
+  const tools=['修訂畢保德圖畫詞彙測驗','修訂學前兒童語言障礙評量表','修訂學齡兒童語言障礙評量表',
+    '嬰幼兒綜合發展測驗','零至三歲華語嬰幼兒溝通及語言篩檢測驗','華語兒童理解與表達詞彙測驗',
+    '學前幼兒與國小低年級兒童口語語法診斷測驗'];
+  return `評估日期：${T('date')}\n評估結果：T分數：${T(t[0])||'　'}　百分等級：${T(t[1])||'　'}　☐不適用\n評估工具：\n`
+    + `${box(M('tools').includes('臨床觀察'),'臨床觀察')}　${box(M('tools').includes('臨床晤談'),'臨床晤談')}\n`
+    + tools.map(x=>box(M('tools').includes(x),x)).join('\n')
+    + `\n☐其他（請敘明）：`;
+}
+function gTblSpeech(){
+  const cat=['構音障礙','言語不流暢','嗓音障礙'];
+  const tr=['構音矯正','嗓音復健','語暢訓練','嗓音保健'];
+  return `評估日期：${T('date')}\n評估結果：`+cat.map(c=>box(M('spType').includes(c),c)).join('　')
+    +`　${box(M('spType').includes('語音發展中'),'其他：語音發展中')}\n`
+    +`訓練方向：`+tr.map(c=>box(M('spTrain').includes(c),c)).join('　')
+    +(T('clarity')?`\n整體言語清晰度約 ${T('clarity')}。`:'');
+}
+function gTblPrag(){
+  const dirs=['建立對事物的廣泛興趣，勿過於侷限','維持合乎情境的對話主題','維持一來一往的對話輪替',
+    '能使用合乎情境的適當口語','能聽懂笑話、雙關語或詞彙非字面的意義','能適切的開啟及結束對話','增加語用預設的能力'];
+  return '訓練方向：\n'+dirs.map(d=>box(M('pragTrainDir').some(x=>d.startsWith(x)),d)).join('\n');
+}
+
+/* ═══════════ build output ═══════════ */
+const oralOn = () => (C('oralStat')&&C('oralStat')!=='無異常')||(C('swStat')&&C('swStat')!=='無異常');
+
+function blocks(){
+  const b=[];
+  b.push(['評估結果與建議（主訴與就診問題下方）','團隊評估結果 → 1.評估結果報告-語言治療評估',
+    `評估結果與建議：${T('dxsum')||'　'}\n\n正式施測結果：\n${gSummary()}`]);
+  if(oralOn()) b.push(['進食、吞嚥和口腔動作功能','語言治療評估欄位 → 評估結果-口腔動作／吞嚥反射／吞嚥功能「行為觀察及綜合結果」',gOral()]);
+  b.push(['語言理解和認知能力','語言治療評估欄位 → 評估結果-口語理解「行為觀察及綜合結果」',gComp()]);
+  b.push(['口語表達能力','語言治療評估欄位 → 評估結果-口語表達「行為觀察及綜合結果」',gExpr()]);
+  b.push(['說話能力：錯誤語音和言語特徵描述','語言治療評估欄位 → 評估結果-「其他」',gSpeech()]);
+  b.push(['溝通互動和效度層面','語言治療評估欄位 → 評估結果-口語表達「行為觀察及綜合結果」',gInter()]);
+  b.push(['建議','團隊評估結果 → 1.評估結果報告-語言治療評估',gAdviceFull()]);
+  const cats=[
+    ['理解訓練｜具體建議','語言治療評估欄位 → 訓練方向-理解訓練「具體建議」','advC','advNoteC'],
+    ['表達訓練｜具體建議','語言治療評估欄位 → 訓練方向-表達訓練「具體建議」','advE','advNoteE'],
+    ['說話｜具體建議','語言治療評估欄位 → 訓練方向-說話「具體建議」','advS','advNoteS'],
+    ['口腔功能訓練｜具體建議','語言治療評估欄位 → 訓練方向-口腔功能訓練「具體建議」','advO','advNoteO'],
+  ];
+  cats.forEach(([t,w,c,n])=>{ const x=gAdviceCat(c,n); if(x) b.push([t,w,x]); });
+  b.push(['— 以下為表格勾選欄位 —','',null]);
+  if(oralOn()){
+    b.push(['口腔動作','吞嚥/口腔功能 → 口腔動作',gTblOral()]);
+    b.push(['口腔功能訓練','吞嚥/口腔功能 → 口腔功能訓練「訓練方向」',gTblOralTrain()]);
+    b.push(['吞嚥功能','吞嚥/口腔功能 → 吞嚥功能',gTblSw()]);
+  }
+  b.push(['口語理解','口語溝通功能 → 口語理解「評估結果」',gTblLang('c')]);
+  b.push(['口語表達','口語溝通功能 → 口語表達「評估結果」',gTblLang('e')]);
+  b.push(['語用訓練','口語溝通功能 → 語用訓練「訓練方向」',gTblPrag()]);
+  b.push(['說話','口語溝通功能 → 說話',gTblSpeech()]);
+  return b;
+}
+
+$('#gen').onclick=()=>{
+  const body=$('#outbody'); body.innerHTML='';
+  blocks().forEach(([title,where,text])=>{
+    if(text===null){
+      const h=document.createElement('p');
+      h.style.cssText='margin:22px 0 10px;font-size:13px;color:#8B979B;text-align:center';
+      h.textContent=title; body.appendChild(h); return;
+    }
+    const d=document.createElement('div'); d.className='blk';
+    d.innerHTML=`<div class="blkhd"><span class="where"><b>${title}</b><small>${where}</small></span>
+      <button class="cp" type="button">複製</button></div><pre></pre>`;
+    d.querySelector('pre').textContent=text;
+    d.querySelector('.cp').onclick=async e=>{
+      await navigator.clipboard.writeText(text);
+      e.target.textContent='已複製'; e.target.classList.add('done');
+      setTimeout(()=>{e.target.textContent='複製';e.target.classList.remove('done');},1400);
+    };
+    body.appendChild(d);
+  });
+  $('#out').classList.add('on');
+};
+$('#close').onclick=()=>$('#out').classList.remove('on');
+$('#out').onclick=e=>{ if(e.target===$('#out')) $('#out').classList.remove('on'); };
+$('#copyall').onclick=async e=>{
+  const txt=blocks().filter(b=>b[2]!==null).map(b=>`【${b[0]}】\n${b[2]}`).join('\n\n');
+  await navigator.clipboard.writeText(txt);
+  e.target.textContent='已複製全部'; setTimeout(()=>e.target.textContent='全部複製',1400);
+};
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') $('#out').classList.remove('on'); });
+</script>
+</body>
+</html>
