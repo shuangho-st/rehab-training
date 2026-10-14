@@ -45,7 +45,7 @@ const CONFIG = {
 function doGet(e) {
   const p = (e && e.parameter && e.parameter.p) ? String(e.parameter.p) : '';
   const fileName = p ? (CONFIG.PAGES[p] || '') : CONFIG.PROJECT_HTML;
-  const title = p ? (p === 'adult' ? '成人評估紀錄' : p === 'daily' ? '語言治療每日紀錄' : p === 'early' ? '早療評估紀錄' : '表單')
+  const title = p ? (p === 'adult' ? '成人評估紀錄' : p === 'daily' ? '語言治療每日紀錄' : p === 'early' ? '小話芽｜早療語言評估' : '表單')
                   : '語言治療組 工作入口';
   let html;
   try {
