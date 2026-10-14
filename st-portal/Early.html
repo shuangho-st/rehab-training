@@ -1,1096 +1,671 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+<base target="_top">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>早療語言治療評估紀錄</title>
+<title>早療語言評估 手機版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600&display=swap">
 <style>
+/* Layout: single-column phone app — sticky step header, scrolling card stack, fixed bottom nav */
 :root{
-  --ink:#1A2327; --ink-2:#5A676C; --ink-3:#8B979B;
-  --paper:#FBFAF8; --card:#FFFFFF;
-  --line:#E2E6E4; --line-2:#CDD4D1;
-  --pine:#0F6E56; --pine-2:#15876A; --pine-wash:#E7F2EE;
-  --amber:#9A6F12; --amber-wash:#FBF3E0;
-  --r:8px;
+  --bg:#F3F5F3; --card:#FFFFFF; --ink:#1C2421; --ink2:#5B6662; --ink3:#8C9893;
+  --line:#DCE2DE; --accent:#1F5F5B; --accent-ink:#FFFFFF; --wash:#E2EEEB;
+  --ok:#2F7D4F; --ok-w:#E3F2E8; --mid:#9C6B0E; --mid-w:#FBF0D9; --hard:#B3473D; --hard-w:#FAE6E3;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-disp:"Noto Serif TC","Songti TC",serif;
+  --r:10px;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%}
-body{
-  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  background:var(--paper); color:var(--ink); font-size:15px; line-height:1.65;
-}
-button{font:inherit;color:inherit}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111614; --card:#1A211F; --ink:#E5EBE8; --ink2:#A0ACA7; --ink3:#73807A;
+  --line:#2D3734; --accent:#63B5AA; --accent-ink:#0E1A18; --wash:#1D322F;
+  --ok:#72C491; --ok-w:#1C2F24; --mid:#E2B356; --mid-w:#33291A; --hard:#EA8E84; --hard-w:#3A2220; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111614; --card:#1A211F; --ink:#E5EBE8; --ink2:#A0ACA7; --ink3:#73807A;
+  --line:#2D3734; --accent:#63B5AA; --accent-ink:#0E1A18; --wash:#1D322F;
+  --ok:#72C491; --ok-w:#1C2F24; --mid:#E2B356; --mid-w:#33291A; --hard:#EA8E84; --hard-w:#3A2220; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:600px;margin:0 auto;padding-inline:16px;padding-block:0 120px}
 
-/* ── shell ── */
-.shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
-@media(max-width:860px){.shell{grid-template-columns:1fr}}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px 8px;margin-inline:-16px;padding-inline:16px;border-bottom:1px solid var(--line)}
+.hrow{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.app{font-size:12px;color:var(--ink3);letter-spacing:.06em}
+h1{font-family:var(--f-disp);font-weight:600;font-size:21px;margin:2px 0 0;text-wrap:balance}
+.count{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-top:8px;scrollbar-width:none;padding-bottom:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 11px;font-size:13px;color:var(--ink2)}
+.tab.done{border-color:var(--accent);color:var(--accent)}
+.tab.cur{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
 
-/* ── nav ── */
-nav{
-  border-right:1px solid var(--line); background:var(--card);
-  position:sticky; top:0; height:100vh; overflow-y:auto; padding:22px 0;
-}
-@media(max-width:860px){
-  nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:14px 0}
-}
-.brand{padding:0 20px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
-.brand h1{font-size:15px;font-weight:600;letter-spacing:.01em}
-.brand p{font-size:12px;color:var(--ink-3);margin-top:2px}
-.navlist{display:flex;flex-direction:column}
-@media(max-width:860px){.navlist{flex-direction:row;overflow-x:auto;gap:2px;padding:0 12px}}
-.navitem{
-  display:flex;align-items:center;gap:9px;padding:9px 20px;border:0;background:none;
-  cursor:pointer;text-align:left;width:100%;font-size:14px;color:var(--ink-2);
-  border-left:2px solid transparent;white-space:nowrap;
-}
-@media(max-width:860px){.navitem{width:auto;border-left:0;border-bottom:2px solid transparent;padding:8px 12px}}
-.navitem:hover{background:var(--pine-wash);color:var(--pine)}
-.navitem.on{border-left-color:var(--pine);color:var(--pine);font-weight:600;background:var(--pine-wash)}
-@media(max-width:860px){.navitem.on{border-left-color:transparent;border-bottom-color:var(--pine)}}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--line-2);flex:none}
-.navitem.filled .dot{background:var(--pine)}
+.banner{margin-top:12px;background:var(--mid-w);color:var(--mid);border-radius:var(--r);padding:9px 12px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner button{border:1px solid currentColor;background:transparent;border-radius:6px;padding:3px 10px;font-size:13px;color:inherit}
 
-/* ── main ── */
-main{padding:34px 40px 90px;max-width:940px}
-@media(max-width:860px){main{padding:22px 18px 80px}}
-.step{display:none}
-.step.on{display:block}
-.step > h2{font-size:21px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px}
-.step > .lede{color:var(--ink-2);font-size:14px;margin-bottom:26px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:12px}
+.card>h2{margin:0;font-size:15px;font-weight:700}
+.sub{font-size:12px;color:var(--ink3);margin-top:-8px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lab{font-size:13px;color:var(--ink2);font-weight:500}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input[type=text],input[type=date],input[type=number],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px}
+textarea{resize:vertical;line-height:1.7}
 
-fieldset{border:0;margin-bottom:26px}
-legend{
-  font-size:13px;font-weight:600;color:var(--pine);
-  padding-bottom:7px;margin-bottom:13px;border-bottom:1px solid var(--line);width:100%;
-}
-.hint{font-size:12.5px;color:var(--ink-3);margin:-7px 0 11px}
-
-.row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:15px}
-.f{flex:1 1 190px;min-width:0}
-.f.wide{flex-basis:100%}
-label.lb{display:block;font-size:13px;color:var(--ink-2);margin-bottom:5px}
-input[type=text],input[type=date],textarea{
-  width:100%;padding:8px 11px;border:1px solid var(--line-2);border-radius:var(--r);
-  background:var(--card);font:inherit;font-size:14px;color:var(--ink);
-}
-textarea{min-height:78px;resize:vertical;line-height:1.6}
-input:focus,textarea:focus{outline:2px solid var(--pine);outline-offset:-1px;border-color:var(--pine)}
-
-/* ── chips ── */
 .chips{display:flex;flex-wrap:wrap;gap:7px}
-.chip{
-  padding:7px 14px;border:1px solid var(--line-2);border-radius:20px;background:var(--card);
-  cursor:pointer;font-size:13.5px;color:var(--ink-2);transition:.12s;
-}
-.chip:hover{border-color:var(--pine);color:var(--pine)}
-.chip[aria-pressed=true]{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:500}
-.chip:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 12px;min-height:40px;font-size:14px;text-align:left}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg .chip{border:0;border-radius:0;flex:1;text-align:center;border-left:1px solid var(--line)}
+.seg .chip:first-child{border-left:0}
 
-/* ── ability grid (3-state) ── */
-.abil{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--card)}
-.abil .hd,.abil .rw{display:grid;grid-template-columns:1fr 62px 62px 62px 62px;align-items:center}
-.abil .hd{background:#F3F6F5;font-size:12px;color:var(--ink-2);padding:7px 0}
-.abil .hd span{text-align:center}
-.abil .hd span:first-child{text-align:left;padding-left:13px}
-.rw{border-top:1px solid var(--line)}
-.rw > .nm{padding:8px 13px;font-size:13.5px}
-.rw button{
-  border:0;background:none;cursor:pointer;padding:9px 0;font-size:12.5px;color:var(--ink-3);
-  border-left:1px solid var(--line);height:100%;
-}
-.rw button:hover{background:#F3F6F5}
-.rw button[aria-pressed=true]{font-weight:600}
-.rw button.y[aria-pressed=true]{background:var(--pine-wash);color:var(--pine)}
-.rw button.m[aria-pressed=true]{background:var(--amber-wash);color:var(--amber)}
-.rw button.n[aria-pressed=true]{background:#FBEDEA;color:#A5432C}
-.rw button.na[aria-pressed=true]{background:#EFF1F0;color:var(--ink-2)}
+.items{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .t{flex:1;min-width:0;font-size:14px}
+.tri{display:flex;gap:4px;flex:none}
+.tri button{border:1px solid var(--line);background:transparent;border-radius:7px;width:48px;height:38px;font-size:13px;color:var(--ink3)}
+.tri .ok.on{background:var(--ok-w);border-color:var(--ok);color:var(--ok);font-weight:700}
+.tri .mid.on{background:var(--mid-w);border-color:var(--mid);color:var(--mid);font-weight:700}
+.tri .hard.on{background:var(--hard-w);border-color:var(--hard);color:var(--hard);font-weight:700}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--ink3);flex-wrap:wrap}
+.legend b{font-weight:500}.legend .a{color:var(--ok)}.legend .m{color:var(--mid)}.legend .h{color:var(--hard)}
 
-/* ── conditional block ── */
-.cond{display:none}
-.cond.on{display:block}
-.sub{border-left:2px solid var(--pine-wash);padding-left:16px;margin-top:6px}
+.zy{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.zy button{border:1px solid var(--line);background:var(--card);border-radius:7px;height:40px;font-size:16px}
+.zy button.has{background:var(--wash);border-color:var(--accent);color:var(--accent);font-weight:700}
+.err{border:1px solid var(--line);border-radius:8px;padding:11px;display:flex;flex-direction:column;gap:9px;background:var(--bg)}
+.errh{display:flex;justify-content:space-between;align-items:center}
+.errh b{font-size:18px}
+.del{border:0;background:transparent;color:var(--hard);font-size:13px;padding:4px 6px}
+.hint{font-size:12px;color:var(--ink3)}
 
-/* ── footer bar ── */
-.bar{
-  position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
-  padding:11px 40px;display:flex;gap:12px;align-items:center;justify-content:flex-end;z-index:20;
-}
-@media(max-width:860px){.bar{padding:10px 16px}}
-.bar .status{margin-right:auto;font-size:13px;color:var(--ink-3)}
-.btn{padding:9px 18px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--card);cursor:pointer;font-size:14px}
-.btn:hover{border-color:var(--pine);color:var(--pine)}
-.btn.ghost{border-color:transparent;color:var(--ink-3)}
-.btn.ghost:hover{border-color:#E0B4A8;color:#A5432C;background:#FCF1EE}
-.btn.solid{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:500}
-.btn.solid:hover{background:var(--pine-2)}
+.out{gap:8px}
+.outh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.outh h2{margin:0;font-size:15px}
+.outh .hint{margin-top:2px}
+.copy{flex:none;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:8px;padding:6px 14px;font-size:14px;min-height:38px}
+.copy.did{background:var(--accent);color:var(--accent-ink)}
+.out textarea{background:var(--bg);font-size:14px;min-height:120px}
 
-/* ── output ── */
-.out{position:fixed;inset:0;background:rgba(20,30,33,.45);display:none;z-index:40;padding:26px}
-.out.on{display:block}
-.outbox{
-  background:var(--paper);max-width:880px;margin:0 auto;height:100%;border-radius:12px;
-  display:flex;flex-direction:column;overflow:hidden;
-}
-.outhd{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;background:var(--card)}
-.outhd h2{font-size:17px;font-weight:600;flex:1}
-.outbody{overflow-y:auto;padding:18px 22px 30px}
-.blk{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
-.blkhd{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#F3F6F5;border-bottom:1px solid var(--line)}
-.blkhd .where{flex:1;min-width:0}
-.blkhd b{display:block;font-size:13.5px;font-weight:600}
-.blkhd small{display:block;font-size:12px;color:var(--ink-3);line-height:1.45}
-.cp{padding:5px 13px;border-radius:6px;border:1px solid var(--line-2);background:var(--card);cursor:pointer;font-size:12.5px;flex:none}
-.cp:hover{border-color:var(--pine);color:var(--pine)}
-.cp.done{background:var(--pine);border-color:var(--pine);color:#fff}
-.blk pre{
-  padding:13px 15px;font-family:inherit;font-size:13.5px;line-height:1.75;
-  white-space:pre-wrap;word-break:break-word;
-}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.rpt-head{text-align:center;margin:4px 0 18px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-.rpt-head h3{font-size:19px;font-weight:700;letter-spacing:.12em;margin-bottom:6px}
-.rpt-head p{font-size:14px;color:var(--ink-2)}
-.rpt-head p span{margin:0 1.2em}
-/* ---------- 列印：只印紀錄文字 ---------- */
-#printArea{display:none}
-@media print{
-  @page{size:A4;margin:16mm 15mm}
-  body{background:#fff}
-  .shell,.bar,.out{display:none!important}
-  #printArea{display:block;font-size:11.5pt;line-height:1.75;color:#000;word-break:break-word}
-  #printArea .ph-title{text-align:center;font-size:17pt;font-weight:700;letter-spacing:.12em;margin:0 0 8pt}
-  #printArea .ph-id{margin:0 0 14pt;padding-bottom:6pt;border-bottom:1px solid #000}
-  #printArea .ph-id span{margin-right:3em}
-  #printArea .ph-body{white-space:pre-wrap}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.bari{max-width:600px;margin:0 auto;display:flex;gap:10px}
+.bar button{flex:1;min-height:48px;border-radius:10px;font-size:16px;font-weight:500;border:1px solid var(--line);background:var(--card)}
+.bar .pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.bar button:disabled{opacity:.4}
+
+.ghost{border:1px solid var(--line);background:transparent;border-radius:8px;padding:8px 12px;font-size:14px;color:var(--ink2)}
+.danger{color:var(--hard);border-color:var(--hard)}
+.confirm{background:var(--hard-w);color:var(--hard);border-radius:8px;padding:10px;font-size:14px;display:flex;flex-direction:column;gap:8px}
+.confirm .chips button{border-color:var(--hard)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+/* 電腦版：左填寫、右即時預覽 */
+#side{display:none}
+.layout{min-width:0}
+.pv{display:flex;flex-direction:column;gap:10px}
+.pvh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-block:2px 4px}
+.pvh b{font-size:13px;color:var(--ink2);letter-spacing:.06em}
+.pvb{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.pvb .outh{margin-bottom:6px}
+.pvb h3{margin:0;font-size:14px}
+.pvt{white-space:pre-wrap;font-size:14px;line-height:1.8;color:var(--ink)}
+@media (min-width:1000px){
+  .wrap{max-width:1280px;padding-inline:24px}
+  header{margin-inline:-24px;padding-inline:24px}
+  .layout{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:24px;align-items:start}
+  #side{display:block;position:sticky;top:calc(env(safe-area-inset-top,0px) + 118px);max-height:calc(100vh - 210px);overflow-y:auto;margin-top:12px;padding-right:4px}
+  .bari{max-width:1280px;padding-inline:24px}
+  .bari button{flex:0 0 268px}
+  body.wide-out .layout{grid-template-columns:minmax(0,820px)}
+  body.wide-out #side{display:none}
 }
 </style>
+
 </head>
 <body>
-
-<div class="shell">
-<nav>
-  <div class="brand">
-    <h1>早療語言治療評估紀錄</h1>
-    <p>雙和醫院 · 語言治療組</p>
-  </div>
-  <div class="navlist" id="navlist"></div>
-</nav>
-
-<main id="main"></main>
-</div>
-
-<div class="bar">
-  <span class="status" id="status">尚未填寫</span>
-  <button class="btn ghost" id="reset">清空重填</button>
-  <button class="btn" id="prev">上一步</button>
-  <button class="btn" id="next">下一步</button>
-  <button class="btn solid" id="gen">產生報告文字</button>
-</div>
-
-<div id="printArea"></div>
-
-<div class="out" id="out" role="dialog" aria-modal="true" aria-label="報告文字">
-  <div class="outbox">
-    <div class="outhd">
-      <h2>報告文字</h2>
-      <button class="btn" id="copyall">全部複製</button>
-      <button class="btn" id="print">列印</button>
-      <button class="btn" id="close">關閉</button>
-    </div>
-    <div class="outbody" id="outbody"></div>
+<div class="wrap">
+  <header>
+    <div class="hrow"><span class="app">早療語言治療評估 · 115/09 格式</span><span class="count" id="count"></span></div>
+    <h1 id="stitle"></h1>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
+  <div class="layout">
+    <div class="formcol"><div id="banner"></div><main id="main"></main></div>
+    <aside id="side" aria-label="報告即時預覽"></aside>
   </div>
 </div>
+<div class="bar"><div class="bari"><button id="prev">上一步</button><button id="next" class="pri">下一步</button></div></div>
+<div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-/* ═══════════ state ═══════════ */
-const S = { abil:{}, chip:{}, txt:{} };
-const $ = s => document.querySelector(s);
-
-/* ═══════════ option data ═══════════ */
-const COMP_ITEMS = [
-  '理解否定詞（不可以／不行）','理解基本動作指令（單一步驟）','可指認身體部位',
-  '理解是非／封閉式問句','理解疑問詞問句（誰／哪裡／怎麼了／為什麼）',
-  '理解連續兩個步驟指令','理解連續三個步驟指令','理解顏色／形狀概念',
-  '理解方位詞（上／下／裡／外）','理解集合名詞（蔬菜／水果等）',
-  '理解形容詞／抽象詞彙','理解時態用詞（快要／已經）','理解數量／比較概念',
-  '理解複雜句型（因為／如果／雖然）','理解排他句（…以外）'
-];
-const EXPR_ITEMS = [
-  '穩定命名圖片物品','使用雙詞組合溝通','使用三詞以上簡單句','使用完整複雜句',
-  '使用因果／假設／讓步句','詞彙涵蓋名詞、動詞、形容詞','主動溝通意圖明顯','能描述圖片情境'
-];
-const NARR_ITEMS = [
-  '看圖：描述人事時地物','看圖：說出引發事件','看圖：說出結局','看圖：描述內在感受',
-  '重述：描述故事背景','重述：描述事件經過','重述：描述結局','重述：描述內在感受',
-  '自發描述生活事件','故事架構完整'
-];
-const PRAG = ['主動開啟話題','表達需求','分享生活經驗','主動提問','澄清想法','修補話題','回應問題','拒絕'];
-const ORAL_FEAT = ['過度敏感','反應遲鈍','動作不靈活','動作不協調','流口水','張力過低','張力過高'];
-
-/* ═══════════ page definitions ═══════════ */
-const PAGES = [
-{ id:'basic', title:'基本資料', lede:'個案基本資訊與本次評估背景。',
-  html:`
-  <fieldset><legend>個案</legend>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_name">姓名</label><input type="text" id="t_name" data-t="name"></div>
-      <div class="f"><label class="lb" for="t_chart">病歷號碼</label><input type="text" id="t_chart" data-t="chart"></div>
-      <div class="f"><label class="lb" for="t_id">身分證字號</label><input type="text" id="t_id" data-t="pid"></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_birth">生日</label><input type="text" id="t_birth" data-t="birth" placeholder="2021年2月3日"></div>
-      <div class="f"><label class="lb" for="t_ageY">年齡（歲）</label><input type="text" id="t_ageY" data-t="ageY" placeholder="5"></div>
-      <div class="f"><label class="lb" for="t_ageM">年齡（月）</label><input type="text" id="t_ageM" data-t="ageM" placeholder="7"></div>
-    </div>
-    <div class="row">
-      <div class="f wide"><label class="lb">性別</label><div class="chips" data-c="gender" data-single="1">
-        <button class="chip" type="button">男</button><button class="chip" type="button">女</button></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_date">報告日</label><input type="text" id="t_date" data-t="date" placeholder="2026年9月8日"></div>
-      <div class="f"><label class="lb" for="t_er">評估者</label><input type="text" id="t_er" data-t="er" value="江慈芯"></div>
-      <div class="f"><label class="lb" for="t_school">就讀／就托機構</label><input type="text" id="t_school" data-t="school" placeholder="幼兒園大班"></div>
-    </div>
-  </fieldset>
-  <fieldset><legend>轉介與療育背景</legend>
-    <div class="row"><div class="f wide"><label class="lb" for="t_dx">主訴／轉介原因</label>
-      <input type="text" id="t_dx" data-t="dx" placeholder="語言表達較弱、專注力不佳，入小學前評估"></div></div>
-    <div class="row"><div class="f wide"><label class="lb">本次評估性質</label>
-      <div class="chips" data-c="evaltype" data-single="1">
-        <button class="chip" type="button">初次評估</button><button class="chip" type="button">追蹤評估</button><button class="chip" type="button">入學前評估</button>
-      </div></div></div>
-    <div class="row"><div class="f wide"><label class="lb" for="t_hist">療育史</label>
-      <textarea id="t_hist" data-t="hist" placeholder="持續於診所接受職能治療及語言治療。無則填「無」"></textarea></div></div>
-  </fieldset>`},
-
-{ id:'tool', title:'評估工具與分數', lede:'勾選本次使用的工具，並填入對應分數。',
-  html:`
-  <fieldset><legend>評估工具</legend>
-    <div class="chips" data-c="tools">
-      <button class="chip" type="button">臨床觀察</button>
-      <button class="chip" type="button">臨床晤談</button>
-      <button class="chip" type="button">修訂學前兒童語言障礙評量表</button>
-      <button class="chip" type="button">修訂學齡兒童語言障礙評量表</button>
-      <button class="chip" type="button">零至三歲華語嬰幼兒溝通及語言篩檢測驗</button>
-      <button class="chip" type="button">修訂畢保德圖畫詞彙測驗</button>
-      <button class="chip" type="button">華語兒童理解與表達詞彙測驗</button>
-      <button class="chip" type="button">嬰幼兒綜合發展測驗</button>
-      <button class="chip" type="button">學前幼兒與國小低年級兒童口語語法診斷測驗</button>
-      <button class="chip" type="button">幼兒詞彙調查表</button>
-    </div>
-  </fieldset>
-  <fieldset><legend>語言障礙評量表分數</legend>
-    <p class="hint">未施測可整區留空。低於量表下限可寫 &lt;13。</p>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_cT">理解 T 分數</label><input type="text" id="t_cT" data-t="cT"></div>
-      <div class="f"><label class="lb" for="t_cP">理解百分等級</label><input type="text" id="t_cP" data-t="cP" placeholder="33%"></div>
-      <div class="f"><label class="lb">理解結果</label><div class="chips" data-c="cR" data-single="1">
-        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
-        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_eT">表達 T 分數</label><input type="text" id="t_eT" data-t="eT"></div>
-      <div class="f"><label class="lb" for="t_eP">表達百分等級</label><input type="text" id="t_eP" data-t="eP"></div>
-      <div class="f"><label class="lb">表達結果</label><div class="chips" data-c="eR" data-single="1">
-        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
-        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_tT">整體 T 分數</label><input type="text" id="t_tT" data-t="tT"></div>
-      <div class="f"><label class="lb" for="t_tP">整體百分等級</label><input type="text" id="t_tP" data-t="tP"></div>
-      <div class="f"><label class="lb">整體結果</label><div class="chips" data-c="tR" data-single="1">
-        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
-        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div>
-    </div>
-  </fieldset>
-  <fieldset><legend>零至三歲篩檢測驗與詞彙調查表</legend>
-    <p class="hint">語言能力較弱、改用 0-3 歲工具施測時填寫。</p>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_clstRaw">篩檢原始分數</label><input type="text" id="t_clstRaw" data-t="clstRaw"></div>
-      <div class="f"><label class="lb" for="t_clstAge">對應發展月齡</label><input type="text" id="t_clstAge" data-t="clstAge" placeholder="17-20 個月"></div>
-      <div class="f"><label class="lb">篩檢結果</label><div class="chips" data-c="clstR" data-single="1">
-        <button class="chip" type="button">通過</button><button class="chip" type="button">未通過</button></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_vC">理解詞彙量（個）</label><input type="text" id="t_vC" data-t="vC"></div>
-      <div class="f"><label class="lb" for="t_vE">表達詞彙量（個）</label><input type="text" id="t_vE" data-t="vE"></div>
-    </div>
-    <div class="row"><div class="f wide"><label class="lb" for="t_vNote">詞彙調查表補充觀察</label>
-      <textarea id="t_vNote" data-t="vNote" placeholder="例：具體詞彙理解表現佳，方位詞及代詞尚未發展；動作詞理解 44 個但僅能說出 4 個。"></textarea></div></div>
-  </fieldset>`},
-
-{ id:'oral', title:'進食、吞嚥與口腔動作', lede:'口腔動作或吞嚥任一項非「無異常」時，報告才會生成此段落。',
-  html:`
-  <fieldset><legend>整體判斷</legend>
-    <div class="row">
-      <div class="f"><label class="lb">口腔動作</label><div class="chips" data-c="oralStat" data-single="1">
-        <button class="chip" type="button">無異常</button><button class="chip" type="button">臨界</button><button class="chip" type="button">異常</button></div></div>
-      <div class="f"><label class="lb">吞嚥功能</label><div class="chips" data-c="swStat" data-single="1">
-        <button class="chip" type="button">無異常</button><button class="chip" type="button">臨界</button><button class="chip" type="button">異常</button></div></div>
-      <div class="f"><label class="lb">吞嚥反射</label><div class="chips" data-c="swRef" data-single="1">
-        <button class="chip" type="button">無異常</button><button class="chip" type="button">異常</button></div></div>
-    </div>
-  </fieldset>
-
-  <div class="cond" data-cond="oralAny">
-  <fieldset><legend>進食與吞嚥</legend>
-    <div class="row"><div class="f wide"><label class="lb">嗆食情形</label>
-      <div class="chips" data-c="choke"><button class="chip" type="button">液體</button><button class="chip" type="button">半固體</button><button class="chip" type="button">固體</button></div></div></div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_foodOk">可安全咀嚼吞嚥之食材</label><input type="text" id="t_foodOk" data-t="foodOk" placeholder="澱粉類、少部分塊狀水果"></div>
-      <div class="f"><label class="lb" for="t_foodNo">較難或拒絕進食之食材</label><input type="text" id="t_foodNo" data-t="foodNo" placeholder="多數水果、蔬菜、肉類"></div>
-    </div>
-    <div class="row"><div class="f wide"><label class="lb" for="t_feed">進食行為補充</label>
-      <textarea id="t_feed" data-t="feed" placeholder="例：因咀嚼費力，會咬一咬後吐出；仍仰賴牛奶，一天三次各 240cc。"></textarea></div></div>
-    <div class="row"><div class="f wide"><label class="lb">吞嚥訓練方向</label>
-      <div class="chips" data-c="swTrain">
-        <button class="chip" type="button">改變姿勢</button><button class="chip" type="button">控制量</button>
-        <button class="chip" type="button">食物材質的選擇</button><button class="chip" type="button">食器的選擇</button>
-        <button class="chip" type="button">咀嚼功能訓練</button></div></div></div>
-  </fieldset>
-
-  <fieldset><legend>口腔動作觀察</legend>
-    <div class="row"><div class="f wide"><label class="lb">整體特徵</label>
-      <div class="chips" data-c="oralFeat">${ORAL_FEAT.map(o=>`<button class="chip" type="button">${o}</button>`).join('')}</div></div></div>
-    <div class="sub">
-      <div class="row">
-        <div class="f"><label class="lb">雙唇</label><div class="chips" data-c="lip" data-single="1">
-          <button class="chip" type="button">無異常</button><button class="chip" type="button">力量稍差</button><button class="chip" type="button">力量較差</button><button class="chip" type="button">活動範圍受限</button></div></div>
-        <div class="f"><label class="lb">雙頰</label><div class="chips" data-c="cheek" data-single="1">
-          <button class="chip" type="button">無異常</button><button class="chip" type="button">力量稍差</button><button class="chip" type="button">力量較差</button></div></div>
-      </div>
-      <div class="row">
-        <div class="f"><label class="lb">舌頭：力量</label><div class="chips" data-c="tongStr" data-single="1">
-          <button class="chip" type="button">尚可</button><button class="chip" type="button">稍差</button><button class="chip" type="button">較差</button></div></div>
-        <div class="f"><label class="lb">舌頭：活動範圍</label><div class="chips" data-c="tongRng" data-single="1">
-          <button class="chip" type="button">正常</button><button class="chip" type="button">左右移動受限</button><button class="chip" type="button">明顯受限</button></div></div>
-      </div>
-      <div class="row">
-        <div class="f"><label class="lb">下頷支持度</label><div class="chips" data-c="jaw" data-single="1">
-          <button class="chip" type="button">尚可</button><button class="chip" type="button">稍差</button><button class="chip" type="button">較差</button></div></div>
-        <div class="f"><label class="lb">口腔感覺</label><div class="chips" data-c="sense" data-single="1">
-          <button class="chip" type="button">無異常</button><button class="chip" type="button">過度敏感</button><button class="chip" type="button">輕度鈍感</button></div></div>
-        <div class="f"><label class="lb">整體協調度</label><div class="chips" data-c="coord" data-single="1">
-          <button class="chip" type="button">尚可</button><button class="chip" type="button">較不足</button><button class="chip" type="button">較差</button></div></div>
-      </div>
-      <div class="row"><div class="f wide"><label class="lb" for="t_oralNote">口腔動作補充</label>
-        <input type="text" id="t_oralNote" data-t="oralNote" placeholder="例：舌頭伸出僅可維持 3 秒"></div></div>
-    </div>
-    <div class="row" style="margin-top:14px"><div class="f wide"><label class="lb">口腔功能訓練方向</label>
-      <div class="chips" data-c="oralTrain">
-        <button class="chip" type="button">減／增敏感訓練</button><button class="chip" type="button">雙唇動作訓練</button>
-        <button class="chip" type="button">下頷動作訓練</button><button class="chip" type="button">舌頭動作訓練</button>
-        <button class="chip" type="button">咀嚼動作訓練</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">綜合判斷（落在哪個範圍）</label>
-      <div class="chips" data-c="oralLevel" data-single="1">
-        <button class="chip" type="button">正常</button><button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div></div>
-  </fieldset>
-  </div>`},
-
-{ id:'comp', title:'語言理解', lede:'逐項點選目前的表現程度。',
-  html:`
-  <fieldset><legend>理解項目</legend>
-    <div class="abil" data-abil="comp"></div>
-  </fieldset>
-  <fieldset><legend>故事聽理解</legend>
-    <div class="row">
-      <div class="f"><label class="lb">30 字短故事</label><div class="chips" data-c="story1" data-single="1">
-        <button class="chip" type="button">5</button><button class="chip" type="button">4</button><button class="chip" type="button">3</button>
-        <button class="chip" type="button">2</button><button class="chip" type="button">1</button><button class="chip" type="button">0</button>
-        <button class="chip" type="button">未施測</button></div></div>
-      <div class="f"><label class="lb">100 字長故事</label><div class="chips" data-c="story2" data-single="1">
-        <button class="chip" type="button">5</button><button class="chip" type="button">4</button><button class="chip" type="button">3</button>
-        <button class="chip" type="button">2</button><button class="chip" type="button">1</button><button class="chip" type="button">0</button>
-        <button class="chip" type="button">未施測</button></div></div>
-    </div>
-  </fieldset>
-  <fieldset><legend>補充</legend>
-    <div class="row"><div class="f wide"><label class="lb" for="t_compNote">理解補充說明</label>
-      <textarea id="t_compNote" data-t="compNote" placeholder="例：較長的問題需重複說兩次並提醒注意聽；疑問詞中僅「誰」較穩定。"></textarea></div></div>
-    <div class="row"><div class="f wide"><label class="lb">綜合判斷</label>
-      <div class="chips" data-c="compLevel" data-single="1">
-        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
-        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">理解訓練</label>
-      <div class="chips" data-c="compTrain" data-single="1">
-        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">需要訓練</button></div></div></div>
-  </fieldset>`},
-
-{ id:'expr', title:'口語表達', lede:'表達型態、逐項能力與語樣分析。',
-  html:`
-  <fieldset><legend>表達型態</legend>
-    <div class="row"><div class="f wide"><label class="lb">目前口語表達型態</label>
-      <div class="chips" data-c="exprType" data-single="1">
-        <button class="chip" type="button">尚無口語</button><button class="chip" type="button">單字</button>
-        <button class="chip" type="button">雙詞組合</button><button class="chip" type="button">三詞以上簡單句</button>
-        <button class="chip" type="button">複雜句</button></div></div></div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_recite">覆誦語句長度（字）</label><input type="text" id="t_recite" data-t="recite" placeholder="12"></div>
-      <div class="f"><label class="lb">覆誦條件</label><div class="chips" data-c="reciteCond" data-single="1">
-        <button class="chip" type="button">一次即可</button><button class="chip" type="button">需聆聽兩次</button></div></div>
-    </div>
-  </fieldset>
-  <fieldset><legend>表達項目</legend><div class="abil" data-abil="expr"></div></fieldset>
-  <fieldset><legend>敘事能力</legend>
-    <p class="hint">點選已觀察到的表現。</p>
-    <div class="chips" data-c="narr">${NARR_ITEMS.map(o=>`<button class="chip" type="button">${o}</button>`).join('')}</div>
-  </fieldset>
-  <fieldset><legend>語樣分析</legend>
-    <div class="row"><div class="f wide"><label class="lb" for="t_sample">語料樣本</label>
-      <textarea id="t_sample" data-t="sample" placeholder="直接貼上孩子的原始語料"></textarea></div></div>
-    <div class="row"><div class="f wide"><label class="lb">觀察到的特徵</label>
-      <div class="chips" data-c="sampleFeat">
-        <button class="chip" type="button">事件順序大致清楚</button>
-        <button class="chip" type="button">能描述角色情緒</button>
-        <button class="chip" type="button">語法大致正確</button>
-        <button class="chip" type="button">過度依賴單一連接詞</button>
-        <button class="chip" type="button">較少使用連接詞</button>
-        <button class="chip" type="button">事件間邏輯連結不清楚</button>
-        <button class="chip" type="button">事件順序混亂</button>
-        <button class="chip" type="button">部分句子省略主詞</button>
-        <button class="chip" type="button">代名詞指稱易混淆</button>
-        <button class="chip" type="button">用詞精確度不足</button>
-        <button class="chip" type="button">詞彙豐富度有限</button>
-        <button class="chip" type="button">尚未描述內心感受</button>
-      </div></div></div>
-    <div class="row"><div class="f wide"><label class="lb" for="t_exprNote">表達補充說明</label>
-      <textarea id="t_exprNote" data-t="exprNote"></textarea></div></div>
-  </fieldset>
-  <fieldset><legend>綜合與訓練</legend>
-    <div class="row"><div class="f wide"><label class="lb">綜合判斷</label>
-      <div class="chips" data-c="exprLevel" data-single="1">
-        <button class="chip" type="button">正常</button><button class="chip" type="button">正常下緣</button>
-        <button class="chip" type="button">邊緣</button><button class="chip" type="button">遲緩</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">表達訓練</label>
-      <div class="chips" data-c="exprTrain" data-single="1">
-        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">需要訓練</button></div></div></div>
-  </fieldset>`},
-
-{ id:'speech', title:'說話能力', lede:'構音、流暢度與嗓音。',
-  html:`
-  <fieldset><legend>整體判斷</legend>
-    <div class="row">
-      <div class="f"><label class="lb">說話</label><div class="chips" data-c="spStat" data-single="1">
-        <button class="chip" type="button">無異常</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">異常</button></div></div>
-      <div class="f"><label class="lb" for="t_clarity">整體言語清晰度</label><input type="text" id="t_clarity" data-t="clarity" placeholder="90%"></div>
-    </div>
-    <div class="row"><div class="f wide"><label class="lb">評估結果類別</label>
-      <div class="chips" data-c="spType">
-        <button class="chip" type="button">構音障礙</button><button class="chip" type="button">言語不流暢</button>
-        <button class="chip" type="button">嗓音障礙</button><button class="chip" type="button">語音發展中</button></div></div></div>
-  </fieldset>
-  <div class="cond" data-cond="spAny">
-  <fieldset><legend>構音錯誤</legend>
-    <div class="row"><div class="f wide"><label class="lb" for="t_spErr">逐音記錄</label>
-      <textarea id="t_spErr" data-t="spErr" placeholder="ㄗㄘㄙㄓㄔㄕ扭曲；ㄎ（少數時候，以ㄊ替代），例如「卡車」變「塔車」，示範並重述後即正確"></textarea></div></div>
-    <div class="row"><div class="f wide"><label class="lb">錯誤特徵</label>
-      <div class="chips" data-c="spFeat">
-        <button class="chip" type="button">連續語句中錯誤增加</button>
-        <button class="chip" type="button">錯誤型態不一致</button>
-        <button class="chip" type="button">語速快時錯誤增加</button>
-        <button class="chip" type="button">放慢語速可改善</button>
-        <button class="chip" type="button">示範後可正確</button>
-        <button class="chip" type="button">示範後仍不準確</button>
-        <button class="chip" type="button">合併口腔動作計畫困難</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">訓練方向</label>
-      <div class="chips" data-c="spTrain">
-        <button class="chip" type="button">構音矯正</button><button class="chip" type="button">嗓音復健</button>
-        <button class="chip" type="button">語暢訓練</button><button class="chip" type="button">嗓音保健</button></div></div></div>
-  </fieldset>
-  </div>`},
-
-{ id:'inter', title:'溝通互動', lede:'評估情境下的行為觀察與互動表現。',
-  html:`
-  <fieldset><legend>行為觀察</legend>
-    <div class="row">
-      <div class="f"><label class="lb">注意力</label><div class="chips" data-c="att" data-single="1">
-        <button class="chip" type="button">良好（15分鐘以上）</button><button class="chip" type="button">中等（5–10分鐘）</button>
-        <button class="chip" type="button">偏短（5分鐘以內）</button><button class="chip" type="button">不穩定</button></div></div>
-      <div class="f"><label class="lb">眼神接觸</label><div class="chips" data-c="eye" data-single="1">
-        <button class="chip" type="button">良好</button><button class="chip" type="button">尚佳</button>
-        <button class="chip" type="button">短暫</button><button class="chip" type="button">困難</button></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb">情緒</label><div class="chips" data-c="emo" data-single="1">
-        <button class="chip" type="button">穩定、合作</button><button class="chip" type="button">大致穩定，偶有抗拒</button>
-        <button class="chip" type="button">需要引導</button><button class="chip" type="button">焦慮、抗拒</button></div></div>
-      <div class="f"><label class="lb">安坐</label><div class="chips" data-c="sit" data-single="1">
-        <button class="chip" type="button">可獨立安坐</button><button class="chip" type="button">需提示安坐</button><button class="chip" type="button">難以安坐</button></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb">遊戲層次</label><div class="chips" data-c="play" data-single="1">
-        <button class="chip" type="button">假裝／扮演遊戲</button><button class="chip" type="button">操作型／建構型</button>
-        <button class="chip" type="button">功能性玩法</button><button class="chip" type="button">探索性玩法</button></div></div>
-      <div class="f"><label class="lb">對話輪替</label><div class="chips" data-c="turn" data-single="1">
-        <button class="chip" type="button">良好，主動輪替</button><button class="chip" type="button">尚可，需適度引導</button>
-        <button class="chip" type="button">需要頻繁引導</button><button class="chip" type="button">難以維持輪替</button></div></div>
-    </div>
-    <div class="row"><div class="f wide"><label class="lb">已觀察到的溝通功能</label>
-      <div class="chips" data-c="prag">${PRAG.map(o=>`<button class="chip" type="button">${o}</button>`).join('')}</div></div></div>
-    <div class="row"><div class="f wide"><label class="lb" for="t_behNote">行為觀察補充</label>
-      <textarea id="t_behNote" data-t="behNote" placeholder="客觀現象描述即可，例：容易分心、恍神，看圖時較難注意細節。"></textarea></div></div>
-  </fieldset>
-  <fieldset><legend>綜合與訓練</legend>
-    <div class="row"><div class="f wide"><label class="lb">整體互動能力</label>
-      <div class="chips" data-c="interLevel" data-single="1">
-        <button class="chip" type="button">佳</button><button class="chip" type="button">尚可</button>
-        <button class="chip" type="button">較差</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">語用訓練</label>
-      <div class="chips" data-c="pragTrain" data-single="1">
-        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button><button class="chip" type="button">需要訓練</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">語用訓練方向</label>
-      <div class="chips" data-c="pragTrainDir">
-        <button class="chip" type="button">建立對事物的廣泛興趣</button><button class="chip" type="button">維持合乎情境的對話主題</button>
-        <button class="chip" type="button">維持一來一往的對話輪替</button><button class="chip" type="button">能使用合乎情境的適當口語</button>
-        <button class="chip" type="button">能聽懂笑話、雙關語</button><button class="chip" type="button">能適切的開啟及結束對話</button>
-        <button class="chip" type="button">增加語用預設的能力</button></div></div></div>
-  </fieldset>`},
-
-{ id:'plan', title:'診斷與建議', lede:'診斷摘要、治療頻率與居家建議。',
-  html:`
-  <fieldset><legend>診斷摘要</legend>
-    <p class="hint">會直接放在「評估結果與建議：」後方。</p>
-    <div class="row"><div class="f wide"><label class="lb" for="t_dxsum">診斷摘要</label>
-      <input type="text" id="t_dxsum" data-t="dxsum" placeholder="發展性語言異常（口語表達為主）、構音異常"></div></div>
-  </fieldset>
-  <fieldset><legend>治療建議</legend>
-    <div class="row"><div class="f wide"><label class="lb">建議治療頻率</label>
-      <div class="chips" data-c="freq" data-single="1">
-        <button class="chip" type="button">一週一次</button><button class="chip" type="button">一週兩次</button>
-        <button class="chip" type="button">密集語言治療</button><button class="chip" type="button">追蹤諮詢</button>
-        <button class="chip" type="button">不需介入</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">輔具需求</label>
-      <div class="chips" data-c="aac" data-single="1">
-        <button class="chip" type="button">不需要</button><button class="chip" type="button">需要追蹤及諮詢</button>
-        <button class="chip" type="button">溝通輔具</button><button class="chip" type="button">聽覺輔具</button></div></div></div>
-    <div class="row"><div class="f wide"><label class="lb">跨專業合作</label>
-      <div class="chips" data-c="team">
-        <button class="chip" type="button">職能治療</button><button class="chip" type="button">物理治療</button>
-        <button class="chip" type="button">心理</button><button class="chip" type="button">學校老師</button></div></div></div>
-  </fieldset>
-  <fieldset><legend>居家建議</legend>
-    <p class="hint">點選要納入的建議項目，產出時會自動代入孩子的表現細節。可於下方自行補充。</p>
-    <div style="margin-bottom:14px">
-      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">理解</p>
-      <div class="chips" data-c="advC">
-        <button class="chip" type="button">善用情境當小幫手練指令</button>
-        <button class="chip" type="button">圖片細節觀察提問</button>
-        <button class="chip" type="button">簡短描述當下動作</button>
-        <button class="chip" type="button">繪本共讀</button>
-      </div>
-    </div>
-    <div style="margin-bottom:14px">
-      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">表達</p>
-      <div class="chips" data-c="advE">
-        <button class="chip" type="button">連接詞多樣化練習</button>
-        <button class="chip" type="button">事件邏輯銜接提問</button>
-        <button class="chip" type="button">複雜句示範與仿說</button>
-        <button class="chip" type="button">擴展詞彙豐富度</button>
-        <button class="chip" type="button">創造主動分享與提問機會</button>
-        <button class="chip" type="button">製造溝通需求情境</button>
-        <button class="chip" type="button">跟隨孩子的興趣互動</button>
-        <button class="chip" type="button">玩具模仿語音遊戲</button>
-      </div>
-    </div>
-    <div style="margin-bottom:14px">
-      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">說話（構音）</p>
-      <div class="chips" data-c="advS">
-        <button class="chip" type="button">放慢語速提升清晰度</button>
-      </div>
-    </div>
-    <div>
-      <p style="font-size:12.5px;color:var(--pine);font-weight:600;margin-bottom:6px">口腔動作與進食</p>
-      <div class="chips" data-c="advO">
-        <button class="chip" type="button">漸進式調整食物質地</button>
-        <button class="chip" type="button">口腔動作遊戲練習</button>
-        <button class="chip" type="button">示範咀嚼動作與節奏</button>
-      </div>
-    </div>
-    <div class="row" style="margin-top:16px">
-      <div class="f"><label class="lb" for="t_advNoteC">理解｜自行補充</label>
-        <textarea id="t_advNoteC" data-t="advNoteC" placeholder="每行一項"></textarea></div>
-      <div class="f"><label class="lb" for="t_advNoteE">表達｜自行補充</label>
-        <textarea id="t_advNoteE" data-t="advNoteE" placeholder="每行一項"></textarea></div>
-    </div>
-    <div class="row">
-      <div class="f"><label class="lb" for="t_advNoteS">說話｜自行補充</label>
-        <textarea id="t_advNoteS" data-t="advNoteS" placeholder="每行一項"></textarea></div>
-      <div class="f"><label class="lb" for="t_advNoteO">口腔動作｜自行補充</label>
-        <textarea id="t_advNoteO" data-t="advNoteO" placeholder="每行一項"></textarea></div>
-    </div>
-  </fieldset>`}
-];
-
-/* ═══════════ render ═══════════ */
-let cur = 0;
-const navlist = $('#navlist'), main = $('#main');
-
-PAGES.forEach((p,i)=>{
-  const b=document.createElement('button');
-  b.className='navitem'; b.type='button'; b.dataset.i=i;
-  b.innerHTML=`<span class="dot"></span>${p.title}`;
-  b.onclick=()=>go(i);
-  navlist.appendChild(b);
-  const sec=document.createElement('section');
-  sec.className='step'; sec.id='p'+i;
-  sec.innerHTML=`<h2>${p.title}</h2><p class="lede">${p.lede}</p>${p.html}`;
-  main.appendChild(sec);
-});
-
-/* ability grids */
-function buildAbil(key, items){
-  const host=document.querySelector(`[data-abil="${key}"]`);
-  host.innerHTML=`<div class="hd"><span>項目</span><span>可以</span><span>不穩定</span><span>較困難</span><span>未評估</span></div>`
-    + items.map((it,ix)=>`<div class="rw"><div class="nm">${it}</div>`
-      + ['y','m','n','na'].map(c=>`<button type="button" class="${c}" data-k="${key}" data-ix="${ix}" data-v="${c}" aria-pressed="false" aria-label="${it} ${{y:'可以',m:'不穩定',n:'較困難',na:'未評估'}[c]}"></button>`).join('')
-      + `</div>`).join('');
-  host.querySelectorAll('button').forEach(b=>{
-    b.onclick=()=>{
-      const {k,ix,v}=b.dataset;
-      S.abil[k]=S.abil[k]||{};
-      S.abil[k][ix] = (S.abil[k][ix]===v)?null:v;
-      host.querySelectorAll(`button[data-ix="${ix}"]`).forEach(x=>x.setAttribute('aria-pressed', x.dataset.v===S.abil[k][ix]));
-      tick();
-    };
-  });
-}
-buildAbil('comp', COMP_ITEMS);
-buildAbil('expr', EXPR_ITEMS);
-
-/* chips */
-document.querySelectorAll('[data-c]').forEach(g=>{
-  const key=g.dataset.c, single=g.dataset.single==='1';
-  g.querySelectorAll('.chip').forEach(c=>{
-    c.setAttribute('aria-pressed','false');
-    c.onclick=()=>{
-      const v=c.textContent.trim();
-      if(single){
-        const cleared = S.chip[key]===v;
-        S.chip[key]= cleared?null:v;
-        g.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed', !cleared && x.textContent.trim()===v));
-      }else{
-        S.chip[key]=S.chip[key]||[];
-        const i=S.chip[key].indexOf(v);
-        if(i>-1) S.chip[key].splice(i,1); else S.chip[key].push(v);
-        c.setAttribute('aria-pressed', S.chip[key].includes(v));
-      }
-      conds(); tick();
-    };
-  });
-});
-
-/* text inputs */
-document.querySelectorAll('[data-t]').forEach(el=>{
-  S.txt[el.dataset.t]=el.value||'';
-  el.oninput=()=>{ S.txt[el.dataset.t]=el.value; tick(); };
-});
-
-/* conditionals */
-function conds(){
-  const oralAny = (S.chip.oralStat && S.chip.oralStat!=='無異常') || (S.chip.swStat && S.chip.swStat!=='無異常');
-  const spAny = S.chip.spStat && S.chip.spStat!=='無異常';
-  document.querySelectorAll('[data-cond="oralAny"]').forEach(e=>e.classList.toggle('on', !!oralAny));
-  document.querySelectorAll('[data-cond="spAny"]').forEach(e=>e.classList.toggle('on', !!spAny));
-}
-
-function go(i){
-  cur=Math.max(0,Math.min(PAGES.length-1,i));
-  document.querySelectorAll('.step').forEach((s,ix)=>s.classList.toggle('on',ix===cur));
-  document.querySelectorAll('.navitem').forEach((b,ix)=>b.classList.toggle('on',ix===cur));
-  window.scrollTo({top:0});
-}
-function tick(){
-  const filled = PAGES.map((p,i)=>{
-    const sec=document.getElementById('p'+i);
-    return !!sec.querySelector('.chip[aria-pressed=true], .rw button[aria-pressed=true]')
-      || [...sec.querySelectorAll('[data-t]')].some(e=>e.value.trim());
-  });
-  document.querySelectorAll('.navitem').forEach((b,i)=>b.classList.toggle('filled',filled[i]));
-  const n=filled.filter(Boolean).length;
-  $('#status').textContent = n?`已填 ${n} / ${PAGES.length} 個區段`:'尚未填寫';
-}
-function resetAll(){
-  // state
-  S.abil={}; S.chip={}; S.txt={};
-  // chips
-  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
-  // ability grids
-  document.querySelectorAll('.rw button').forEach(b=>b.setAttribute('aria-pressed','false'));
-  // text fields（保留評估者）
-  document.querySelectorAll('[data-t]').forEach(el=>{
-    if(el.dataset.t==='er'){ S.txt.er=el.value; return; }
-    el.value=''; S.txt[el.dataset.t]='';
-  });
-  $('#out').classList.remove('on');
-  conds(); tick(); go(0);
-}
-$('#reset').onclick=()=>{
-  const any = Object.keys(S.chip).some(k=>S.chip[k]&&S.chip[k].length)
-    || Object.values(S.abil).some(o=>Object.values(o).some(Boolean))
-    || Object.entries(S.txt).some(([k,v])=>k!=='er'&&v&&v.trim());
-  if(any && !confirm('清空目前所有填寫內容，開始下一位個案？\n此動作無法復原。')) return;
-  resetAll();
-  const st=$('#status'); st.textContent='已清空，可開始下一位'; st.style.color='var(--pine)';
-  setTimeout(()=>{ st.style.color=''; tick(); },1800);
-};
-$('#prev').onclick=()=>go(cur-1);
-$('#next').onclick=()=>go(cur+1);
-go(0); conds(); tick();
-
-/* ═══════════ text helpers ═══════════ */
-const T = k => (S.txt[k]||'').trim();
-const C = k => S.chip[k]||null;
-const M = k => S.chip[k]||[];
-const join = a => a.filter(Boolean).join('、');
-const VERBS=['理解','使用','描述','說出'];
-function joinSmart(arr){
-  let prev=null;
-  return arr.filter(Boolean).map(it=>{
-    const v=VERBS.find(v=>it.startsWith(v));
-    const out=(v && v===prev)? it.slice(v.length) : it;
-    prev=v||null; return out;
-  }).join('、');
-}
-const box = (on,label) => `${on?'■':'☐'}${label}`;
-
-function abilList(key, items, state){
-  const m=S.abil[key]||{};
-  return items.filter((_,i)=>m[i]===state);
-}
-/** 把項目清單串成「可以…；…尚不穩定；…則尚待發展。」 */
-function abilSentence(key, items){
-  const y=abilList(key,items,'y'), m=abilList(key,items,'m'), n=abilList(key,items,'n');
-  const out=[];
-  if(y.length) out.push(`孩子目前可以${joinSmart(y)}`);
-  if(m.length) out.push(`${joinSmart(m)}的表現尚不穩定`);
-  if(n.length) out.push(`${joinSmart(n)}則尚待發展`);
-  return out.length? out.join('；')+'。' : '';
-}
-
-/* ═══════════ generators ═══════════ */
-function gScoreLine(){
-  const rows=[];
-  if(T('cT')||T('cP')) rows.push(`語言理解部分，T分數為${T('cT')||'—'}，百分等級為${T('cP')||'—'}，語言理解能力落在${C('cR')||'—'}範圍中`);
-  if(T('eT')||T('eP')) rows.push(`口語表達部分，T分數為${T('eT')||'—'}，百分等級為${T('eP')||'—'}，口語表達能力落在${C('eR')||'—'}範圍中`);
-  if(T('tT')||T('tP')) rows.push(`整體語言發展方面，T分數為${T('tT')||'—'}，百分等級為${T('tP')||'—'}，整體語言發展落在${C('tR')||'—'}範圍中`);
-  return rows.join('；');
-}
-function gSummary(){
-  const tool = M('tools').filter(t=>!['臨床觀察','臨床晤談'].includes(t))[0] || '臨床觀察';
-  let s = `　　整體語言發展方面，以「${tool}」施測為主，並輔以自然遊戲情境及自發語樣分析評估。和同齡幼兒相比，`;
-  const sc = gScoreLine();
-  if(sc) s += sc + '。';
-  if(T('clstRaw')) s += `篩檢結果為${C('clstR')||'—'}，得分為${T('clstRaw')}分${T('clstAge')?`，對應發展月齡為${T('clstAge')}`:''}。`;
-  if(T('vC')||T('vE')){
-    s += `根據家長所填之「幼兒詞彙調查表」，孩子目前可以理解的詞彙量約為${T('vC')||'—'}個，可以表達的詞彙量約為${T('vE')||'—'}個`;
-    s += (T('vC')&&T('vE')&&+T('vC')>+T('vE')*2) ? `，理解與表達之間存在明顯落差，可以表達的詞彙量可以再持續加強。` : `。`;
-  }
-  if(T('vNote')) s += T('vNote').replace(/。?$/,'。');
-  if(C('cR')&&C('eR')&&C('cR')!==C('eR')){
-    s += `語言理解與口語表達之間存在落差，${(C('eR')==='遲緩'||C('eR')==='邊緣')?'口語表達':'語言理解'}為孩子目前主要的困難所在。`;
-  }
-  return s;
-}
-function gOral(){
-  const feed=[];
-  let s1='　　吞嚥和進食方面，';
-  if(M('choke').length) s1 += `進食${join(M('choke'))}時會有嗆食情形；`;
-  else s1 += '液體吞嚥和食器使用無異常；';
-  if(T('foodOk')) s1 += `固體食物部分，孩子目前可以自己咀嚼吞嚥${T('foodOk')}`;
-  if(T('foodNo')) s1 += `${T('foodOk')?'，':'固體食物部分，'}較難或拒絕由口進食${T('foodNo')}`;
-  s1 = s1.replace(/[；，]$/,'') + '。';
-  if(T('feed')) s1 += T('feed').replace(/。?$/,'。');
-  feed.push(s1);
-
-  const p=[];
-  const lip=C('lip'), cheek=C('cheek'), tS=C('tongStr'), tR=C('tongRng'), jaw=C('jaw'), sn=C('sense'), co=C('coord');
-  if(lip) p.push(lip==='無異常'?'孩子雙唇動作功能無異常':`雙唇${lip}`);
-  if(tS||tR){
-    let t='舌頭';
-    if(tR==='正常') t+='可以向前伸出和向左右移動';
-    else if(tR) t+=`可以向前伸出，但是${tR==='左右移動受限'?'移動到左右兩側的活動範圍較差':'整體活動範圍明顯受限'}`;
-    if(tS) t+=`${tR?'，':''}肌肉力量${tS}`;
-    p.push(t);
-  }
-  if(jaw) p.push(`下頷支持度${jaw}`);
-  if(cheek) p.push(cheek==='無異常'?'雙頰動作功能無異常':`雙頰肌肉${cheek}`);
-  if(co) p.push(`整體口腔動作的協調度${co}`);
-  let s2='　　口腔動作功能方面，'+ p.join('；') +'。';
-  if(sn) s2 += `口腔感覺方面，為${sn}。`;
-  if(M('oralFeat').length) s2 += `整體觀察到${join(M('oralFeat'))}之情形。`;
-  if(T('oralNote')) s2 += T('oralNote').replace(/。?$/,'。');
-  feed.push(s2);
-
-  const lv=C('oralLevel')||'—', sw=C('swStat');
-  feed.push(`　　綜合上述，相較同月齡的幼兒，孩子目前的吞嚥進食能力落在${sw==='無異常'?'正常':(sw==='臨界'?'邊緣':'遲緩')}的範圍中，口腔動作功能落在${lv}的範圍中，待加強。`);
-  return feed.join('\n');
-}
-function gComp(){
-  let s='　　'+abilSentence('comp', COMP_ITEMS);
-  const s1=C('story1'), s2=C('story2');
-  if(s1&&s1!=='未施測'||s2&&s2!=='未施測'){
-    s += `故事聽理解方面，30字短故事的理解正確率為${s1&&s1!=='未施測'?s1+'/5':'未施測'}，100字長故事為${s2&&s2!=='未施測'?s2+'/5':'未施測'}`;
-    const hi=(x)=>x==='5'||x==='4';
-    s += (hi(s1)&&hi(s2))?'，表現優異。':(s1==='0'&&s2==='0')?'，連續語篇的聽理解能力仍待建立。':'。';
-  }
-  if(T('compNote')) s += T('compNote').replace(/。?$/,'。');
-  s += `綜合上述，相較同月齡的幼兒，孩子目前的語言理解能力落在${C('compLevel')||'—'}的範圍中。`;
-  return s;
-}
-function gExpr(){
-  const out=[];
-  let s='　　';
-  if(C('exprType')==='尚無口語') s+='孩子目前尚無口語表達。';
-  else if(C('exprType')) s+=`孩子目前可以使用${C('exprType')}進行溝通。`;
-  if(T('recite')) s+=`覆誦語句長度可達${T('recite')}個字${C('reciteCond')==='需聆聽兩次'?'，惟需聆聽兩次後才能完整覆誦，顯示對於較長口語訊息的接收和保留仍需要較多時間':''}。`;
-  const a=abilSentence('expr', EXPR_ITEMS);
-  if(a) s+=a.replace(/^孩子目前可以/,'表達方面，孩子可以');
-  if(T('exprNote')) s+=T('exprNote').replace(/。?$/,'。');
-  out.push(s);
-
-  const nr=M('narr');
-  if(nr.length||T('sample')||M('sampleFeat').length){
-    let n='　　敘事能力方面，';
-    if(nr.length){
-      const look=nr.filter(x=>x.startsWith('看圖')).map(x=>x.replace('看圖：',''));
-      const re=nr.filter(x=>x.startsWith('重述')).map(x=>x.replace('重述：',''));
-      const etc=nr.filter(x=>!x.startsWith('看圖')&&!x.startsWith('重述'));
-      const doable=etc.filter(x=>x!=='故事架構完整');
-      const ps=[];
-      if(look.length) ps.push(`看圖時可以${joinSmart(look)}`);
-      if(re.length) ps.push(`重述故事時可以${joinSmart(re)}`);
-      if(doable.length) ps.push(`並可以${joinSmart(doable)}`);
-      n += ps.join('；');
-      n += etc.includes('故事架構完整') ? '，整體故事架構完整。' : '。';
-    }
-    const good=M('sampleFeat').filter(f=>['事件順序大致清楚','能描述角色情緒','語法大致正確'].includes(f));
-    const bad=M('sampleFeat').filter(f=>!good.includes(f));
-    if(good.length) n += `透過自發語樣分析發現，孩子的敘事${join(good)}，為其相對優勢。`;
-    if(bad.length) n += `${good.length?'然而，':'透過自發語樣分析發現，'}敘事中仍觀察到${join(bad)}等情形，為待加強之處。`;
-    out.push(n);
-  }
-  out.push(`　　綜合上述，相較同月齡的幼兒，孩子目前的口語表達能力落在${C('exprLevel')||'—'}的範圍中。`);
-  return out.join('\n');
-}
-function gSpeech(){
-  if(C('spStat')==='無異常')
-    return `　　構音方面，孩子各音素發音清晰${T('clarity')?`，整體的說話清晰度約莫${T('clarity')}`:''}，未觀察到構音錯誤，言語流暢度和嗓音方面亦無異常。`;
-  let s=`　　構音方面，於非熟悉者而言，孩子整體的說話清晰度約莫${T('clarity')||'—'}。`;
-  if(T('spErr')) s+=`評估期間，${T('spErr').replace(/。?$/,'')}。`;
-  if(M('spFeat').length) s+=`整體而言，觀察到${join(M('spFeat'))}等特徵。`;
-  const lv = C('spStat')==='異常'?'異常':'待追蹤';
-  s+=`綜合上述，相較同月齡的幼兒，孩子目前的構音能力落在${lv}的範圍中。`;
-  const langWeak = ['邊緣','遲緩','正常下緣'].includes(C('exprLevel')) || ['邊緣','遲緩'].includes(C('compLevel'));
-  s += langWeak
-    ? '惟考量其語言能力尚待加強，建議先以語言理解和表達能力之提升為優先，後續視語言整體發展進展，再評估啟動正式構音矯正療程之適當時機。'
-    : '考量其整體語言發展已達同齡水準，建議可直接接受構音矯正訓練。';
-  return s;
-}
-function gInter(){
-  let s='　　與孩子於結構化評估和遊戲情境下進行評估，';
-  const b=[];
-  if(C('emo')) b.push(`孩子情緒${C('emo')}`);
-  if(C('sit')) b.push(C('sit'));
-  if(C('att')) b.push(`注意力持續性${C('att')}`);
-  if(C('eye')) b.push(`眼神接觸${C('eye')}`);
-  s += b.join('，')+'。';
-  if(T('behNote')) s += T('behNote').replace(/。?$/,'。');
-  if(C('turn')) s += `對話輪替能力${C('turn')}。`;
-  if(M('prag').length) s += `溝通功能方面，孩子可以${join(M('prag'))}。`;
-  const missing = PRAG.filter(p=>!M('prag').includes(p) && ['主動開啟話題','分享生活經驗','主動提問','澄清想法'].includes(p));
-  if(M('prag').length && missing.length) s += `惟${join(missing)}等溝通功能較少出現，整體溝通意圖偏向被動回應。`;
-  if(C('play')) s += `遊戲能力方面，遊戲層次已達${C('play')}。`;
-  s += `綜合上述，相較同月齡的幼兒，孩子整體溝通互動能力${C('interLevel')||'—'}，建議宜持續追蹤並接受療育。`;
-  return s;
-}
-
-const ADV = {
- '善用情境當小幫手練指令':'在日常生活中，建議家長可以善用情境，請孩子當小幫手，以提升詞彙豐富度、動作指令和連續步驟指令的理解能力，例如「拿杯子給我」、「你先收好書，再拿鉛筆盒」等。建議可以先給予手勢或肢體動作的協助，之後再讓孩子嘗試自己完成，而不論有無協助，皆應給予孩子正向的鼓勵和讚美。',
- '連接詞多樣化練習':'在日常對話和親子共讀時，建議家長可以刻意示範不同的連接詞，例如「因為…所以…」、「後來…」、「結果…」等，並鼓勵孩子模仿使用，以豐富敘事的邏輯層次，避免過度依賴單一詞彙。',
- '事件邏輯銜接提問':'當孩子描述的事件之間缺乏明確關聯時，建議家長可以用提問的方式引導孩子補充說明，例如「那後來怎麼了呢？」、「這兩件事有關係嗎？」，協助孩子建立事件之間更清楚的因果或時序連結。',
- '複雜句示範與仿說':'在日常生活中，建議家長可以示範完整的複雜句型讓孩子模仿，例如「因為下雨了，所以我們要帶傘」、「如果吃完飯，就可以看電視」等，鼓勵孩子造出類似的句子，逐步從仿說過渡到自發使用。',
- '擴展詞彙豐富度':'針對孩子已經可以理解、但較少主動說出的詞彙，建議家長可以在共讀或日常互動中，請孩子用這些詞彙來描述圖片或分享的事件，例如「這個蛋糕看起來怎麼樣？」、「他的心情是什麼？」，以逐步增加表達詞彙的多樣性。',
- '圖片細節觀察提問':'在看圖或共讀時，建議家長可以引導孩子注意圖片中的細節，例如「你看，這個人手上拿著什麼？」、「背景還有什麼東西？」，透過提問訓練孩子的觀察力和對細節的注意。',
- '創造主動分享與提問機會':'建議家長可以創造孩子主動分享和提問的機會，例如每天固定時間請孩子分享學校發生的事，並在孩子分享後適時追問細節，或是刻意在孩子面前做一些奇怪的事，引發孩子主動詢問，以增加主動溝通和提問等語用功能的運用。',
- '放慢語速提升清晰度':'建議家長可以鼓勵孩子在說較長句子時，有意識地放慢說話速度、把話說清楚，家長可以用「慢慢說，我在聽」作為提示語，協助孩子建立放慢語速以提升清晰度的習慣。',
- '繪本共讀':'建議善用周末時間或睡前時間，和孩子進行繪本共讀的活動，可以先用孩子有興趣的主題或互動式繪本為優先，時間不一定要長、也不一定要看完整本繪本，重要的是創造孩子練習的機會，以提升整體詞彙量及豐富度和口語表達能力。',
- '玩具模仿語音遊戲':'建議家長閒暇時可多陪伴孩子玩玩具，在玩玩具時可以示範不同的聲音讓孩子模仿多變的語音，如火車嘟嘟嘟、貓咪喵喵喵，讓孩子在有趣的環境下學習，以提升其溝通動機和口語表達能力。',
- '製造溝通需求情境':'在日常生活中，鼓勵孩子用口語和肢體動作來表達需求和尋求協助，可以將孩子喜歡的東西放高，或是放在孩子打不開的透明容器中，讓孩子一定要尋求家長協助並使用口語表達需求，以提升孩子的溝通動機和口語表達能力。',
- '跟隨孩子的興趣互動':'建議家長行有餘力時，可以加入孩子的遊戲、善用孩子喜愛的玩具，先跟隨孩子的選擇和興趣，再引導孩子和自己互動，以提升溝通動機和給予語言仿說的機會。',
- '簡短描述當下動作':'在日常生活中，建議家長可以藉由玩玩具或出外的機會多給予語言刺激。與孩子互動期間，家長可以描述自己正在做的動作，或是描述孩子正在做的動作給孩子聽，描述語句盡量簡短明瞭，並可以加入擬聲詞，例如「你疊積木！疊高高！」、「媽媽拿鑰匙，鑰匙，喀擦，開門」。',
- '漸進式調整食物質地':'吃東西的部分，建議家長用漸進式的方式，漸漸調整食物的大小和比例，並多多讓孩子接觸水果、蔬菜和肉類食物，嘗試增加進食的樂趣，例如參與蔬菜採買和烹煮的過程、摸一摸／聞一聞／舔一舔蔬菜、變換食物呈現方式、添加醬料或風味等，讓孩子漸漸感受到進食咀嚼的樂趣。',
- '口腔動作遊戲練習':'口腔動作功能方面，建議家長可以善用飲食和日常生活活動、善用遊戲寓教於樂，例如用舌頭或口腔扮鬼臉等好玩的方式，讓孩子練習口腔動作的肌肉力量、活動範圍和協調度；不論孩子有無成功，只要有嘗試完成，皆應給予鼓勵。',
- '示範咀嚼動作與節奏':'針對孩子目前願意接受進食的食物，建議行有餘力時可以陪著孩子並示範咀嚼動作和節奏，讓孩子跟著節奏一起練習完整的咀嚼動作，也可以陪著孩子一起進食，讓孩子開心享受進食時間。'
-};
-function gAdvice(){
-  const L=[];
-  const areas=[];
-  if(['需要訓練','需要追蹤及諮詢'].includes(C('compTrain'))||['需要訓練','需要追蹤及諮詢'].includes(C('exprTrain'))) areas.push('整體語言發展');
-  if(C('spStat')&&C('spStat')!=='無異常') areas.push('構音');
-  const oralAny=(C('oralStat')&&C('oralStat')!=='無異常')||(C('swStat')&&C('swStat')!=='無異常');
-  if(oralAny) areas.push('口腔動作功能、進食吞嚥');
-  const freq=C('freq')||'一週一次';
-  if(freq==='不需介入'){
-    L.push('－ 孩子目前語言發展各項能力均達同齡水準，暫不需接受語言治療介入。若後續在入小學後出現學習或語言運用上的新困難，建議可再回診評估。');
-  }else{
-    L.push(`－ ${areas.join('、')||'整體語言發展'}方面，建議宜至少接受${freq}的語言治療。${oralAny?'口腔動作功能和進食吞嚥部分，建議可以先行在家練習，並向相關醫療院所的語言治療師諮詢。':''}`);
-  }
-  if(M('team').length) L.push(`－ 建議持續接受${join(M('team'))}，並與相關專業人員討論孩子的整體發展表現。`);
-  if(C('aac')==='溝通輔具') L.push('－ 建議評估圖卡兌換系統或其他擴大性及替代性溝通輔具之使用可行性，以輔助日常溝通需求。');
-  return L.join('\n');
-}
-/** 各類具體建議：回傳條列文字（無則空字串） */
-function gAdviceCat(chipKey, noteKey){
-  const L=[];
-  M(chipKey).forEach(k=>{ if(ADV[k]) L.push('・'+ADV[k]); });
-  if(T(noteKey)) T(noteKey).split('\n').filter(x=>x.trim()).forEach(x=>L.push('・'+x.trim()));
-  return L.join('\n');
-}
-/** 建議段落中彙整的完整版（給「建議」欄位一次貼） */
-function gAdviceFull(){
-  const L=[gAdvice()];
-  const secs=[['理解','advC','advNoteC'],['表達','advE','advNoteE'],
-              ['說話','advS','advNoteS'],['口腔動作與進食','advO','advNoteO']];
-  const any=secs.some(([,c,n])=>M(c).length||T(n));
-  if(any){
-    L.push('');
-    L.push('－ 建議家長可以在家中練習以下事項：');
-    secs.forEach(([label,c,n])=>{
-      const t=gAdviceCat(c,n);
-      if(t){ L.push('　【'+label+'】'); t.split('\n').forEach(x=>L.push('　'+x)); }
-    });
-  }
-  return L.join('\n');
-}
-
-/* 表格欄位文字 */
-function gTblOral(){
-  const d=T('date');
-  return `評估日期：${d}\n`+ORAL_FEAT.map(f=>box(M('oralFeat').includes(f),f)).join('　')+`　☐其他：__________`;
-}
-function gTblOralTrain(){
-  const map=['減／增敏感訓練','雙唇動作訓練','下頷動作訓練','舌頭動作訓練','咀嚼動作訓練'];
-  return '訓練方向：\n'+map.map(m=>box(M('oralTrain').includes(m),m)).join('　');
-}
-function gTblSw(){
-  const c=M('choke');
-  let s=`${box(c.length>0,'會嗆食')}（${box(c.includes('液體'),'液體')}　${box(c.includes('半固體'),'半固體')}　${box(c.includes('固體'),'固體')}）`;
-  if(T('foodOk')) s+=`\n主要食材：${T('foodOk')}。可以安全咀嚼吞嚥主食且無嗆咳等吸入風險。`;
-  if(T('foodNo')) s+=`\n較難或拒絕由口進食：${T('foodNo')}。`;
-  if(T('feed')) s+='\n'+T('feed');
-  return s;
-}
-function gTblLang(which){
-  const isC = which==='c';
-  const t = isC?['cT','cP']:['eT','eP'];
-  const tools=['修訂畢保德圖畫詞彙測驗','修訂學前兒童語言障礙評量表','修訂學齡兒童語言障礙評量表',
-    '嬰幼兒綜合發展測驗','零至三歲華語嬰幼兒溝通及語言篩檢測驗','華語兒童理解與表達詞彙測驗',
-    '學前幼兒與國小低年級兒童口語語法診斷測驗'];
-  return `評估日期：${T('date')}\n評估結果：T分數：${T(t[0])||'　'}　百分等級：${T(t[1])||'　'}　☐不適用\n評估工具：\n`
-    + `${box(M('tools').includes('臨床觀察'),'臨床觀察')}　${box(M('tools').includes('臨床晤談'),'臨床晤談')}\n`
-    + tools.map(x=>box(M('tools').includes(x),x)).join('\n')
-    + `\n☐其他（請敘明）：`;
-}
-function gTblSpeech(){
-  const cat=['構音障礙','言語不流暢','嗓音障礙'];
-  const tr=['構音矯正','嗓音復健','語暢訓練','嗓音保健'];
-  return `評估日期：${T('date')}\n評估結果：`+cat.map(c=>box(M('spType').includes(c),c)).join('　')
-    +`　${box(M('spType').includes('語音發展中'),'其他：語音發展中')}\n`
-    +`訓練方向：`+tr.map(c=>box(M('spTrain').includes(c),c)).join('　')
-    +(T('clarity')?`\n整體言語清晰度約 ${T('clarity')}。`:'');
-}
-function gTblPrag(){
-  const dirs=['建立對事物的廣泛興趣，勿過於侷限','維持合乎情境的對話主題','維持一來一往的對話輪替',
-    '能使用合乎情境的適當口語','能聽懂笑話、雙關語或詞彙非字面的意義','能適切的開啟及結束對話','增加語用預設的能力'];
-  return '訓練方向：\n'+dirs.map(d=>box(M('pragTrainDir').some(x=>d.startsWith(x)),d)).join('\n');
-}
-
-/* ═══════════ build output ═══════════ */
-const oralOn = () => (C('oralStat')&&C('oralStat')!=='無異常')||(C('swStat')&&C('swStat')!=='無異常');
-
-function blocks(){
-  const b=[];
-  b.push(['評估結果與建議（主訴與就診問題下方）','團隊評估結果 → 1.評估結果報告-語言治療評估',
-    `評估結果與建議：${T('dxsum')||'　'}\n\n正式施測結果：\n${gSummary()}`]);
-  if(oralOn()) b.push(['進食、吞嚥和口腔動作功能','語言治療評估欄位 → 評估結果-口腔動作／吞嚥反射／吞嚥功能「行為觀察及綜合結果」',gOral()]);
-  b.push(['語言理解和認知能力','語言治療評估欄位 → 評估結果-口語理解「行為觀察及綜合結果」',gComp()]);
-  b.push(['口語表達能力','語言治療評估欄位 → 評估結果-口語表達「行為觀察及綜合結果」',gExpr()]);
-  b.push(['說話能力：錯誤語音和言語特徵描述','語言治療評估欄位 → 評估結果-「其他」',gSpeech()]);
-  b.push(['溝通互動和效度層面','語言治療評估欄位 → 評估結果-口語表達「行為觀察及綜合結果」',gInter()]);
-  b.push(['建議','團隊評估結果 → 1.評估結果報告-語言治療評估',gAdviceFull()]);
-  const cats=[
-    ['理解訓練｜具體建議','語言治療評估欄位 → 訓練方向-理解訓練「具體建議」','advC','advNoteC'],
-    ['表達訓練｜具體建議','語言治療評估欄位 → 訓練方向-表達訓練「具體建議」','advE','advNoteE'],
-    ['說話｜具體建議','語言治療評估欄位 → 訓練方向-說話「具體建議」','advS','advNoteS'],
-    ['口腔功能訓練｜具體建議','語言治療評估欄位 → 訓練方向-口腔功能訓練「具體建議」','advO','advNoteO'],
-  ];
-  cats.forEach(([t,w,c,n])=>{ const x=gAdviceCat(c,n); if(x) b.push([t,w,x]); });
-  b.push(['— 以下為表格勾選欄位 —','',null]);
-  if(oralOn()){
-    b.push(['口腔動作','吞嚥/口腔功能 → 口腔動作',gTblOral()]);
-    b.push(['口腔功能訓練','吞嚥/口腔功能 → 口腔功能訓練「訓練方向」',gTblOralTrain()]);
-    b.push(['吞嚥功能','吞嚥/口腔功能 → 吞嚥功能',gTblSw()]);
-  }
-  b.push(['口語理解','口語溝通功能 → 口語理解「評估結果」',gTblLang('c')]);
-  b.push(['口語表達','口語溝通功能 → 口語表達「評估結果」',gTblLang('e')]);
-  b.push(['語用訓練','口語溝通功能 → 語用訓練「訓練方向」',gTblPrag()]);
-  b.push(['說話','口語溝通功能 → 說話',gTblSpeech()]);
-  return b;
-}
-
-/* 報告書標題：姓名、病歷號直接取基本資料欄位，沒填就留底線 */
-const REPORT_TITLE='語言治療評估報告書';
-const blankOr = v => v || '＿＿＿＿＿＿';
-function reportHead(){
-  const h=document.createElement('div'); h.className='rpt-head';
-  h.innerHTML=`<h3></h3><p><span></span><span></span></p>`;
-  h.querySelector('h3').textContent=REPORT_TITLE;
-  const sp=h.querySelectorAll('span');
-  sp[0].textContent='姓名：'+blankOr(T('name'));
-  sp[1].textContent='病歷號：'+blankOr(T('chart'));
-  return h;
-}
-
-$('#gen').onclick=()=>{
-  const body=$('#outbody'); body.innerHTML='';
-  body.appendChild(reportHead());
-  blocks().forEach(([title,where,text])=>{
-    if(text===null){
-      const h=document.createElement('p');
-      h.style.cssText='margin:22px 0 10px;font-size:13px;color:#8B979B;text-align:center';
-      h.textContent=title; body.appendChild(h); return;
-    }
-    const d=document.createElement('div'); d.className='blk';
-    d.innerHTML=`<div class="blkhd"><span class="where"><b>${title}</b><small>${where}</small></span>
-      <button class="cp" type="button">複製</button></div><pre></pre>`;
-    d.querySelector('pre').textContent=text;
-    d.querySelector('.cp').onclick=async e=>{
-      await navigator.clipboard.writeText(text);
-      e.target.textContent='已複製'; e.target.classList.add('done');
-      setTimeout(()=>{e.target.textContent='複製';e.target.classList.remove('done');},1400);
-    };
-    body.appendChild(d);
-  });
-  $('#out').classList.add('on');
-};
-$('#close').onclick=()=>$('#out').classList.remove('on');
-$('#out').onclick=e=>{ if(e.target===$('#out')) $('#out').classList.remove('on'); };
-$('#print').onclick=()=>{
-  const txt=blocks().filter(b=>b[2]!==null).map(b=>`【${b[0]}】\n${b[2]}`).join('\n\n');
-  const pa=$('#printArea'); pa.innerHTML='';
-  const add=(cls,t)=>{ const d=document.createElement('div'); d.className=cls; d.textContent=t; pa.appendChild(d); return d; };
-  add('ph-title',REPORT_TITLE);
-  const id=add('ph-id','');
-  ['姓名：'+blankOr(T('name')),'病歷號：'+blankOr(T('chart'))].forEach(t=>{ const s=document.createElement('span'); s.textContent=t; id.appendChild(s); });
-  add('ph-body',txt);
-  window.print();
-};
-$('#copyall').onclick=async e=>{
-  const txt=blocks().filter(b=>b[2]!==null).map(b=>`【${b[0]}】\n${b[2]}`).join('\n\n');
-  await navigator.clipboard.writeText(txt);
-  e.target.textContent='已複製全部'; setTimeout(()=>e.target.textContent='全部複製',1400);
-};
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') $('#out').classList.remove('on'); });
+const TPL_B64='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';
 </script>
+<script>
+/* ===== 設定 ===== */
+const STEPS=['基本資料','語言理解','口語表達','說話構音','口腔吞嚥','溝通互動','訓練與建議','產出報告'];
+const LV=['正常','正常下緣','邊緣','遲緩'];
+const TOOLS=[
+ ['obs','臨床觀察','臨床觀察'],['int','臨床晤談','臨床晤談'],
+ ['ppvt','修訂畢保德圖畫詞彙測驗 (PPVT-R)','修訂畢保德圖畫詞彙測驗'],
+ ['pre','修訂學前兒童語言障礙評量表','修訂學前兒童語言障礙評量表'],
+ ['sch','修訂學齡兒童語言障礙評量表','修訂學齡兒童語言障礙評量表'],
+ ['cdiit','嬰幼兒綜合發展測驗 (CDIIT)','嬰幼兒綜合發展測驗'],
+ ['clst','零至三歲華語嬰幼兒溝通及語言篩檢測驗 (0-3CLST)','零至三歲華語嬰幼兒溝通及語言篩檢測驗'],
+ ['revt','華語兒童理解與表達詞彙測驗 (REVT)','華語兒童理解與表達詞彙測驗'],
+ ['gram','學前幼兒與國小低年級兒童口語語法診斷測驗','學前幼兒與國小低年級兒童口語語法診斷測驗']];
+const C_ITEMS=[['neg','否定詞'],['cmd1','單一步驟的動作指令'],['cmd2','連續兩個步驟的指令'],['cmd3','連續三個步驟的指令'],['yn','是非與封閉式問句'],['wh','疑問詞問句（誰、哪裡、怎麼了、為什麼）'],['body','身體部位名稱'],['obj','日常物品與圖片名稱'],['color','顏色和形狀概念'],['loc','方位詞（上、下、裡、外）'],['cat','集合名詞（如蔬菜、水果）'],['adj','形容詞和抽象詞彙'],['tense','時態用詞（快要、已經）'],['num','數量和比較概念'],['cplx','複雜句型（因為、如果、雖然）'],['excl','排他句（…以外）']];
+const E_ITEMS=[['w1','使用單詞表達需求'],['w2','使用雙詞組合'],['w3','使用三詞以上的簡單語句'],['name','命名圖片中的物品'],['desc','描述圖片情境'],['full','使用完整的句子'],['caus','使用因果、假設和讓步等複雜句'],['ask','主動提問'],['vocab','運用名詞、動詞和形容詞等多樣詞彙']];
+const NP_ITEMS=[['who','說出圖中的人物和角色'],['act','描述人物的動作和事件'],['set','說出時間和地點等背景'],['seq','依事件先後順序串連圖片'],['feel','推論角色的感受和想法'],['cause','說明事件的原因和結果'],['end','說出故事的結局']];
+const NR_ITEMS=[['set','說出故事背景（人物、時間、地點）'],['ev','說出事件經過'],['seq','依正確順序重述事件'],['feel','描述角色的內在感受'],['end','說出故事結局'],['det','保留故事中的重要細節']];
+const NL_ITEMS=[['life','自發描述生活事件']];
+const N_ALL=[['np',NP_ITEMS],['nr',NR_ITEMS],['nl',NL_ITEMS]];
+const N_STR=[['order','事件先後順序大致清楚','敘事中事件的先後順序大致清楚'],['emo','可描述角色情緒','可以描述角色的情緒']];
+const N_WEAK=[['then','主要依賴「然後」','敘事中主要仰賴「然後」串連事件並重複使用，較少使用其他表達因果或時間關係的詞彙（如「因為」、「結果」、「後來」）'],
+ ['pron','以「他」代稱角色','全程以「他」稱呼故事中的角色，較少具體說出角色的身分或名稱，聽的人需要自己推測'],
+ ['logic','事件邏輯連結不清','部分事件之間的邏輯連結較不清楚'],
+ ['subj','句子少了動作對象','有些句子少了主要的動作對象'],
+ ['word','用詞變化有限','整體用詞的豐富度和變化性仍有限，多以簡單詞彙描述事件']];
+const ZY='ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦㄧㄨㄩ'.split('');
+const SP_TOOLS=['國語正音檢核表','華語兒童構音與音韻測驗','修訂中文口吃嚴重度評估工具(兒童版)'];
+const STRUCT=['雙唇','舌頭','下頷','雙頰','口腔感覺'];
+const MO_PROB=['過度敏感','反應遲鈍','動作不靈活','動作不協調','流口水','張力過低','張力過高'];
+const FUNCS=['回應問題','提出要求','表達拒絕','主動分享','主動提問','開啟話題'];
+const REFS=[['ot','職能治療（專注力）','專注力表現部分，建議持續接受職能治療，並可與職能治療師討論注意力和學習表現之關聯。'],
+ ['pt','物理治療','粗大動作部分，建議可諮詢物理治療師，評估是否需要介入。'],
+ ['aud','聽力檢查','建議安排聽力檢查，以排除聽力因素對語言發展的影響。'],
+ ['psy','兒童心智科','建議可至兒童心智科進一步評估，以了解孩子整體發展和行為表現。'],
+ ['sch','學校資源','建議家長可與學校老師分享評估結果，共同在課堂中提供孩子適當的支持。']];
+const C_DIR=['聽能訓練','鼓勵兒童對話時能注視說話者','理解手勢及肢體動作的意思（如：搖頭／搖手表示「不可以」）','聽懂無手勢動作提示的單一口語指令（如：拿積木給我）','能指認一般日常生活等熟悉物品或圖片（如：杯子／蘋果）','理解形容詞、感覺、表情等抽象詞彙','理解兩個或以上連續動作指令','理解複雜句型','理解經歷過的事件內容','理解故事內容','其他：排他句（…以外）之理解'];
+const E_DIR=['使用溝通輔具／手勢／手語輔助溝通','提升語用溝通技巧','增加主動表達的意願和機會','模仿發聲或模仿語音（發聲遊戲）','以單字加上手勢動作表達，如：我要','加強詞彙使用，如：常見物品名稱、功能性詞彙','加強完整句的表達，如：我要喝水','加強抽象詞彙的表達，如：好大的車子','增長語句長度','練習使用複雜句表達（如：因為…就…）','練習描述經歷過的事件或說故事','建立良好的發聲模式及嗓音保健'];
+const P_DIR=['建立對事物的廣泛興趣，勿過於侷限','維持合乎情境的對話主題','維持一來一往的對話輪替','能使用合乎情境的適當口語','能聽懂笑話、雙關語或詞彙非字面的意義','能適切的開啟及結束對話','增加語用預設的能力','其他：增加主動分享、提問等語用功能之運用'];
+const NEED=['不需要','需要追蹤及諮詢','需要訓練'];
+const FREQ=['至少一周一次','至少兩周一次','定期追蹤','暫不需治療'];
+
+const HOME=[
+ ['cmd','連續指令練習','在日常生活中，建議家長可以善用情境，請孩子當小幫手，練習連續兩個步驟和三個步驟的指令，例如，「你先去拿水杯，再放到桌上」、「先把書收好，再拿鉛筆盒，然後關上書包」等。建議可以先給予手勢或肢體動作的協助，之後再讓孩子嘗試自己完成，而不論有無協助孩子，皆應給予孩子正向的鼓勵和讚美。',
+   s=>nok(s.c.cmd2)||nok(s.c.cmd3)],
+ ['cplxC','複雜句理解','在日常對話中，建議家長可以使用「因為…所以…」、「如果…就…」等句型與孩子對話，並搭配實際情境或圖片說明，協助孩子理解句子中前後的因果或條件關係。',
+   s=>nok(s.c.cplx)||nok(s.c.excl)],
+ ['early','誘發口語表達','在日常生活中，建議家長可以把握孩子有需求的時刻，先示範簡短的詞語（如「要」、「喝水」），等待孩子模仿說出後再給予，逐步引導孩子以口語取代手勢或哭鬧來表達需求。',
+   s=>nok(s.e.w1)||nok(s.e.w2)||nok(s.e.w3)],
+ ['conn','多樣連接詞','在日常對話和親子共讀時，建議家長可以刻意示範「然後」以外的連接詞，例如「因為…所以…」、「後來…」、「結果…」等，並鼓勵孩子模仿使用不同的連接詞來串連事件，以豐富敘事的邏輯層次，避免過度依賴單一詞彙。',
+   s=>s.nWeak.includes('then')],
+ ['logic','事件因果連結','當孩子描述的事件之間缺乏明確關聯時，建議家長可以用提問的方式引導孩子補充說明，例如「後來怎麼了？」、「為什麼會這樣呢？」，協助孩子建立事件之間更清楚的因果或時序連結。',
+   s=>s.nWeak.includes('logic')],
+ ['cplxE','複雜句表達','在日常生活中，建議家長可以示範完整的複雜句型讓孩子模仿，例如「因為下雨了，所以我們要帶傘」、「如果吃完飯，就可以看電視」等，鼓勵孩子模仿造出類似的句子，逐步從仿說過渡到自發使用。',
+   s=>nok(s.e.caus)||nok(s.e.full)],
+ ['vocab','擴充表達詞彙','針對孩子已經可以理解、但較少主動說出的形容詞和動作詞，建議家長可以在共讀或日常互動中，請孩子用這些詞彙來描述圖片或分享的事件，例如「這個蛋糕看起來怎麼樣？」、「他的心情是什麼？」，以逐步增加表達詞彙的多樣性。',
+   s=>nok(s.e.vocab)||nok(s.e.name)],
+ ['detail','觀察圖片細節','在看圖或共讀時，建議家長可以引導孩子注意圖片中的細節，例如「你看，這個人手上拿著什麼？」、「背景還有什麼東西？」，透過提問訓練孩子的觀察力和對細節的注意。',
+   s=>s.it.att&&s.it.att!=='持續性佳'||nok(s.np.who)||nok(s.np.act)],
+ ['share','主動分享與提問','建議家長可以創造孩子主動分享和提問的機會，例如每天固定時間請孩子分享學校發生的事，並在孩子分享後適時追問細節，或是刻意在孩子面前做一些奇怪的事，引發孩子主動詢問，以增加主動溝通和提問等語用功能的運用。',
+   s=>!s.it.func.includes('主動分享')||!s.it.func.includes('主動提問')],
+ ['eye','眼神接觸','與孩子說話時，建議家長可以蹲下或坐到與孩子視線同高的位置，並將孩子感興趣的物品拿到自己眼睛附近，等孩子看向自己時再給予回應，以增加互動中的眼神接觸。',
+   s=>s.it.eye==='較困難'],
+ ['oral','口腔動作遊戲','口腔動作方面，建議家長可以在日常生活中和孩子玩吹泡泡、吹紙片、用吸管喝較濃稠的飲品，以及舌頭舔嘴角的遊戲，以增進雙唇和舌頭的動作控制；進食時可以鼓勵孩子多咀嚼，避免長期只吃軟質食物。',
+   s=>s.o.mo!=='無異常'],
+ ['slow','放慢說話速度','構音方面，建議家長可以鼓勵孩子在說較長句子時，有意識地放慢說話速度、把話說清楚，家長可以用「慢慢說，我在聽」作為提示語，協助孩子建立放慢語速以提升清晰度的習慣；目前階段以提升表達能力為主，構音矯正待後續評估時機。',
+   s=>s.artic==='異常'&&langAbn(s)],
+ ['artic','構音居家練習','構音方面，建議家長可以依照治療師課堂中示範的方式，每天固定時間和孩子練習目標語音的詞語，先從單詞開始，再逐步延伸到句子；當孩子說錯時，家長可以示範正確的說法請孩子再說一次，避免直接糾正或要求孩子反覆重說。',
+   s=>s.artic==='異常'&&!langAbn(s)]
+];
+
+/* ===== 狀態 ===== */
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function blank(){return{sample:false,date:today(),ageY:'',ageM:'',tools:['obs','int'],sl:'T分數',sc:{cT:'',cP:'',eT:'',eP:'',tT:'',tP:'',cAY:'',cAM:'',cDQ:'',eAY:'',eAM:'',eDQ:''},lvC:'正常',lvE:'正常',lvT:'正常',
+ c:{},story:{s:'',l:''},e:{},rep:{n:'',twice:false},np:{},nr:{},nl:{},nStr:[],nWeak:[],nNote:'',
+ intel:'',artic:'正常',lvA:'正常',errs:[],flu:'無異常',voi:'無異常',spTools:[],
+ o:{mo:'無異常',prob:[],sw:'無異常',choke:[],st:{},food:''},
+ it:{emo:'',sit:'',att:'',eye:'',turn:'',func:[],play:''},
+ need:{c:'',e:'',p:'',o:'',s:'',aid:'不需要'},dir:{c:[],e:[],p:[],o:[]},home:[],freq:'至少一周一次',ref:[],auto:true,diag:''}}
+function sample(){const s=blank();Object.assign(s,{sample:true,ageY:'5',ageM:'2',tools:['obs','int','pre'],sc:{cT:'47',cP:'33',eT:'33',eP:'8',tT:'38',tP:'14',cAY:'5',cAM:'0',cDQ:'',eAY:'4',eAM:'3',eDQ:''},lvC:'正常',lvE:'邊緣',lvT:'正常下緣',
+ c:{neg:'ok',cmd1:'ok',cmd2:'mid',cmd3:'hard',yn:'ok',wh:'ok',body:'ok',color:'ok',loc:'ok',cat:'ok',adj:'ok',tense:'ok',num:'ok',cplx:'hard',excl:'hard'},story:{s:'5',l:'5'},
+ e:{w2:'ok',w3:'ok',name:'mid',desc:'mid',full:'hard',caus:'hard',vocab:'hard'},rep:{n:'12',twice:true},
+ np:{who:'ok',act:'ok',set:'mid',seq:'ok',feel:'ok',cause:'hard',end:'mid'},nr:{set:'ok',ev:'ok',seq:'ok',feel:'ok',end:'ok',det:'mid'},nl:{life:'ok'},nStr:['order','emo'],nWeak:['then','logic','word'],nNote:'描述「氣球在天上飄」與「他就騎腳踏車在路上開」之間，缺乏明確的關聯說明',
+ intel:'九',artic:'異常',lvA:'異常',errs:[{ph:'ㄗㄘㄙ',freq:'多數時候',type:'扭曲',sub:'',ex:'',demo:false},{ph:'ㄓㄔㄕ',freq:'部分時候',type:'扭曲',sub:'',ex:'',demo:false}],
+ it:{emo:'需要引導',sit:'可以獨立安坐',att:'持續性偏短',eye:'較困難',turn:'佳',func:['回應問題','提出要求'],play:'假裝／扮演遊戲'},ref:['ot']});return s}
+const KEY='et-mobile-v1';
+let S, cur=0, confirmClear=false;
+try{const d=JSON.parse(localStorage.getItem(KEY));S=d&&d.c?(()=>{const b=blank();const m=Object.assign(b,d);m.sc=Object.assign(blank().sc,d.sc);m.o=Object.assign(blank().o,d.o);return m})():sample()}catch(e){S=sample()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+/* ===== 工具函式 ===== */
+const get=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+function set(o,p,v){const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++){if(a[ks[i]]==null)a[ks[i]]={};a=a[ks[i]]}a[ks[ks.length-1]]=v}
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nok=v=>v==='mid'||v==='hard';
+const isAbn=lv=>lv==='邊緣'||lv==='遲緩';
+const langAbn=s=>isAbn(s.lvC)||isAbn(s.lvE)||isAbn(s.lvT);
+const under3=()=>S.ageY!==''&&Number(S.ageY)<3;
+function J(a){a=a.filter(Boolean);if(!a.length)return'';if(a.length===1)return a[0];return a.slice(0,-1).join('、')+'和'+a[a.length-1]}
+const box=(on,t)=>(on?'■':'☐')+t;
+const opts=(list,sel)=>list.map(t=>box(sel===t,t)).join('　');
+
+/* ===== UI 元件 ===== */
+const seg=(path,list)=>{const cl=path.startsWith('story')?' data-clear="1"':'';return`<div class="seg">${list.map(v=>`<button class="chip${get(S,path)===v?' on':''}" data-set="${path}" data-val="${esc(v)}"${cl}>${esc(v)}</button>`).join('')}</div>`};
+const chips=(path,list,multi)=>`<div class="chips">${list.map(x=>{const [v,l]=Array.isArray(x)?x:[x,x];const cv=get(S,path);const on=multi?(cv||[]).includes(v):cv===v;return`<button class="chip${on?' on':''}" data-${multi?'tog':'set'}="${path}" data-val="${esc(v)}"${multi?'':' data-clear="1"'}>${esc(l)}</button>`}).join('')}</div>`;
+const inp=(path,ph,type='text',mode='')=>`<input type="${type}" id="i-${path.replace(/\./g,'-')}" data-in="${path}" value="${esc(get(S,path))}" placeholder="${esc(ph)}"${mode?` inputmode="${mode}"`:''}>`;
+const tri=(grp,list)=>`<div class="legend"><b class="a">可以</b><b class="m">不穩定</b><b class="h">較困難</b><span>未點選＝未評估</span></div><div class="items">${list.map(([id,l])=>{const v=S[grp][id];return`<div class="item"><span class="t">${esc(l)}</span><span class="tri">${[['ok','可以'],['mid','不穩'],['hard','較難']].map(([k,t])=>`<button class="${k}${v===k?' on':''}" data-tri="${grp}.${id}" data-val="${k}" aria-label="${esc(l)} ${t}">${t}</button>`).join('')}</span></div>`}).join('')}</div>`;
+const F=(lab,html)=>`<div class="field"><span class="lab">${lab}</span>${html}</div>`;
+const card=(h,body,sub)=>`<section class="card"><h2>${h}</h2>${sub?`<div class="sub">${sub}</div>`:''}${body}</section>`;
+
+/* ===== 各步驟 ===== */
+function step0(){
+ return card('評估資訊',
+  F('評估日期',inp('date','','date'))+
+  `<div class="row2">${F('年齡（歲）',inp('ageY','例：4','number','numeric'))}${F('月',inp('ageM','例：6','number','numeric'))}</div>`+
+  `<div class="hint">未滿三歲會隱藏故事聽理解與敘事題目。報告全文以「孩子」稱呼，不需輸入姓名。</div>`)
+ +card('評估工具',chips('tools',TOOLS.map(t=>[t[0],t[1].replace(/ \(.+\)/,'')]),true))
+ +card('測驗分數',F('分數類型',seg('sl',['T分數','標準分數','原始分數']))+
+  ['c|語言理解','e|口語表達','t|整體語言'].map(x=>{const[k,l]=x.split('|');return`<div class="row2">${F(l+'　百分等級 %',inp('sc.'+k+'P','—','number','decimal'))}${F(S.sl,inp('sc.'+k+'T','—','number','decimal'))}</div>`}).join(''))
+ +card('綜合版欄位',['c|語言理解','e|口語表達'].map(x=>{const[k,l]=x.split('|');return`<div class="field"><span class="lab">${l}　目前能力約</span><div class="row2" style="grid-template-columns:1fr 1fr 1fr">${inp('sc.'+k+'AY','歲','number','numeric')}${inp('sc.'+k+'AM','個月','number','numeric')}${inp('sc.'+k+'DQ','發展商數','number','decimal')}</div></div>`}).join(''),'只填入綜合版 Word 表格；不知道可留空')
+ +card('結果落點',F('語言理解',seg('lvC',LV))+F('口語表達',seg('lvE',LV))+F('整體語言',seg('lvT',LV)),'依常模結果點選；會帶入表格勾選與各段結論句');
+}
+function step1(){
+ let h=card('語言理解項目',tri('c',C_ITEMS));
+ const N5=['0','1','2','3','4','5'];
+ if(!under3())h+=card('故事聽理解',F('短故事（答對題數／5）',seg('story.s',N5))+F('長故事（答對題數／5）',seg('story.l',N5)),'未施測就不點選；再點一次可取消');
+ return h;
+}
+function step2(){
+ let h=card('口語表達項目',tri('e',E_ITEMS));
+ h+=card('語句覆誦',`<div class="row2">${F('最長覆誦字數',inp('rep.n','例：12','number','numeric'))}${F('需聽兩次才完整',`<div class="chips"><button class="chip${S.rep.twice?' on':''}" data-act="twice">是</button></div>`)}</div>`);
+ if(!under3()){
+  h+=card('看圖說故事測驗',tri('np',NP_ITEMS),'未施測就不點選');
+  h+=card('重述故事測驗',tri('nr',NR_ITEMS),'未施測就不點選');
+  h+=card('生活事件敘述',tri('nl',NL_ITEMS));
+  h+=card('語樣分析',F('相對優勢',chips('nStr',N_STR.map(x=>[x[0],x[1]]),true))+F('待加強',chips('nWeak',N_WEAK.map(x=>[x[0],x[1]]),true))+F('語料實例（選填，會接在「例如，」後面）',`<textarea id="t-nNote" data-in="nNote" rows="3" placeholder="例：描述「氣球在天上飄」與「騎腳踏車」之間缺乏關聯說明">${esc(S.nNote)}</textarea>`));
+ }
+ return h;
+}
+function step3(){
+ const n=['一','二','三','四','五','六','七','八','九','十'];
+ let h=card('清晰度與構音',F('非熟悉者聽懂約（成）',chips('intel',n))+F('構音',seg('artic',['正常','異常']))+(S.artic==='異常'?F('構音能力落點',seg('lvA',['邊緣','異常'])):''));
+ if(S.artic==='異常'){
+  const has=S.errs.map(e=>e.ph).join('');
+  h+=card('錯誤語音',`<div class="hint">點注音新增一筆；同類型的音可在欄位內合併（如 ㄗㄘㄙ）</div><div class="zy">${ZY.map(z=>`<button data-act="addErr" data-ph="${z}" class="${has.includes(z)?'has':''}">${z}</button>`).join('')}</div>`+
+   S.errs.map((e,i)=>`<div class="err"><div class="errh"><input type="text" id="i-errs-${i}-ph" data-in="errs.${i}.ph" value="${esc(e.ph)}" style="max-width:9em;font-weight:700"><button class="del" data-act="delErr" data-i="${i}">刪除</button></div>
+    ${seg('errs.'+i+'.freq',['少數時候','部分時候','多數時候'])}${seg('errs.'+i+'.type',['替代','省略','扭曲'])}
+    ${e.type==='替代'?inp('errs.'+i+'.sub','以哪個音替代，例：ㄊ'):''}
+    ${inp('errs.'+i+'.ex','例詞，例：「卡」車變「塔」車')}
+    <div class="chips"><button class="chip${e.demo?' on':''}" data-act="demo" data-i="${i}">示範並重述後即正確</button></div></div>`).join(''));
+ }
+ h+=card('流暢度與嗓音',F('言語流暢度',seg('flu',['無異常','不流暢']))+F('嗓音',seg('voi',['無異常','異常']))+F('其他評估工具',chips('spTools',SP_TOOLS,true)));
+ return h;
+}
+function step4(){
+ let h=card('口腔動作',seg('o.mo',['無異常','臨界','異常'])+(S.o.mo!=='無異常'?F('觀察到',chips('o.prob',MO_PROB,true))+STRUCT.map(s=>F(s,seg('o.st.'+s,['良好','尚可','較弱']))).join(''):''));
+ h+=card('進食與吞嚥',seg('o.sw',['無異常','臨界','異常'])+(S.o.sw!=='無異常'?F('嗆食',chips('o.choke',['液體','半固體','固體'],true)):'')+F('主要食材（綜合版用）',inp('o.food','例：軟飯、剁碎的肉和蔬菜')),'三項皆無異常時，報告不產生「進食、吞嚥和口腔動作功能」段落');
+ return h;
+}
+function step5(){
+ return card('行為與互動',
+  F('情緒',chips('it.emo',['穩定','需要引導','起伏較大']))+
+  F('安坐',chips('it.sit',['可以獨立安坐','需要協助']))+
+  F('注意力',chips('it.att',['持續性佳','持續性偏短','容易分心']))+
+  F('眼神接觸',chips('it.eye',['良好','偶爾','較困難']))+
+  F('對話輪替',chips('it.turn',['佳','尚可','較難']))+
+  F('溝通功能（可複選）',chips('it.func',FUNCS,true))+
+  F('遊戲層次',chips('it.play',['感覺動作遊戲','功能性遊戲','假裝／扮演遊戲','規則遊戲'])));
+}
+function autoFill(){
+ const s=S;const lvNeed=(lv,dirs)=>!isAbn(lv)?(dirs.length?'需要追蹤及諮詢':'不需要'):'需要訓練';
+ const c=[];if(nok(s.c.cmd1))c.push(C_DIR[3]);if(nok(s.c.obj))c.push(C_DIR[4]);if(nok(s.c.adj))c.push(C_DIR[5]);if(nok(s.c.cmd2)||nok(s.c.cmd3))c.push(C_DIR[6]);if(nok(s.c.cplx))c.push(C_DIR[7]);
+ if(!under3()&&((s.story.s&&s.story.s<4)||(s.story.l&&s.story.l<4)))c.push(C_DIR[9]);if(nok(s.c.excl))c.push(C_DIR[10]);
+ const e=[];if(nok(s.e.w1))e.push(E_DIR[4]);if(nok(s.e.vocab)||nok(s.e.name))e.push(E_DIR[5]);if(nok(s.e.full))e.push(E_DIR[6]);if(nok(s.e.w2)||nok(s.e.w3))e.push(E_DIR[8]);if(nok(s.e.caus))e.push(E_DIR[9]);
+ if(!under3()&&(N_ALL.some(([g,l])=>l.some(([k])=>nok(s[g][k])))||s.nWeak.length))e.push(E_DIR[10]);
+ const p=[];if(s.it.turn&&s.it.turn!=='佳')p.push(P_DIR[2]);if(!s.it.func.includes('開啟話題'))p.push(P_DIR[5]);if(!s.it.func.includes('主動分享')||!s.it.func.includes('主動提問'))p.push(P_DIR[7]);
+ const o=[];STRUCT.forEach((x,i)=>{if(s.o.mo!=='無異常'&&s.o.st[x]&&s.o.st[x]!=='良好'){if(x==='口腔感覺')o.push('減/增敏感訓練');else if(x!=='雙頰')o.push(x+'動作訓練')}});
+ s.dir={c,e,p,o};
+ s.need.c=lvNeed(s.lvC,c);s.need.e=lvNeed(s.lvE,e);
+ s.need.p=p.length?(s.it.eye==='較困難'||s.it.turn==='較難'?'需要訓練':'需要追蹤及諮詢'):'不需要';
+ s.need.o=s.o.mo==='異常'?'需要訓練':s.o.mo==='臨界'?'需要追蹤及諮詢':'不需要';
+ s.need.s=(s.o.sw==='異常')?'需要訓練':s.o.sw==='臨界'?'需要追蹤及諮詢':'不需要';
+ s.home=HOME.filter(h=>{try{return h[3](s)}catch(_){return false}}).map(h=>h[0]);
+ if(under3())s.home=s.home.filter(k=>!['conn','logic','cplxE'].includes(k));
+ s.freq=(langAbn(s)||s.artic==='異常'||s.o.mo==='異常')?'至少一周一次':'暫不需治療';
+}
+function step6(){
+ if(S.auto)autoFill();
+ const D=(k,list,lab)=>F(lab+'訓練',seg('need.'+k,NEED))+chips('dir.'+k,list.map(x=>[x,x.replace(/（.+?）|，如：.+$/g,'')]),true);
+ return `<div class="card" style="flex-direction:row;align-items:center;justify-content:space-between;gap:10px"><span class="hint" style="font-size:13px">${S.auto?'已依前面的評估結果自動帶入，可再點選調整':'已手動調整，不再自動帶入'}</span><button class="ghost" data-act="reauto">重新帶入</button></div>`
+ +card('治療建議',F('語言治療頻率',chips('freq',FREQ))+F('轉介／跨專業',chips('ref',REFS.map(r=>[r[0],r[1]]),true))+F('輔具需求',seg('need.aid',NEED)))
+ +card('居家練習建議',chips('home',HOME.map(h=>[h[0],h[1]]),true),'報告「具體建議」會依勾選順序排列')
+ +card('表格訓練方向',D('c',C_DIR,'理解')+D('e',E_DIR,'表達')+D('p',P_DIR,'語用')+D('o',['減/增敏感訓練','雙唇動作訓練','下頷動作訓練','舌頭動作訓練','咀嚼動作訓練'],'口腔功能')+F('吞嚥訓練',seg('need.s',NEED)));
+}
+
+/* ===== 報告產生 ===== */
+const lvWord=lv=>lv==='遲緩'?'發展遲緩':lv;
+function diagnosis(){
+ if(S.diag.trim())return S.diag.trim();
+ const cA=isAbn(S.lvC),eA=isAbn(S.lvE);let d;
+ if(!cA&&!eA&&!isAbn(S.lvT))d='語言發展正常';else if(cA&&eA)d='發展性語言異常';else if(eA)d='發展性語言異常（口語表達為主）';else if(cA)d='發展性語言異常（語言理解為主）';else d='發展性語言異常';
+ const add=[];if(S.artic==='異常')add.push('構音異常');if(S.o.mo==='異常')add.push('口腔動作功能異常');if(S.flu!=='無異常')add.push('言語不流暢');if(S.voi!=='無異常')add.push('嗓音異常');
+ return d+(add.length?(d==='語言發展正常'?'，':'、')+add.join('、'):'');
+}
+function pSummary(){
+ const formal=S.tools.filter(t=>t!=='obs'&&t!=='int').map(t=>'「'+TOOLS.find(x=>x[0]===t)[2]+'」');
+ let s='整體語言發展方面，'+(formal.length?'以'+J(formal)+'施測為主，並輔以自然遊戲情境及自發語樣分析評估。':'以臨床觀察、臨床晤談及自然遊戲情境下之自發語樣分析進行評估。');
+ const part=(name,k,lv,ab)=>{const T=S.sc[k+'T'],P=S.sc[k+'P'];let x=name+'部分，';if(T)x+=S.sl+'為'+T+'，';if(P)x+='百分等級為'+P+'%，';return x+ab+'落在'+lvWord(lv)+'範圍中'};
+ s+='和同齡幼兒相比，'+part('語言理解','c',S.lvC,'語言理解能力')+'；'+part('口語表達','e',S.lvE,'口語表達能力')+'；'+part('整體語言發展','t',S.lvT,'整體語言發展')+'。';
+ if(!isAbn(S.lvC)&&isAbn(S.lvE))s+='語言理解與口語表達之間存在明顯落差，口語表達為孩子目前主要的困難所在。';
+ if(isAbn(S.lvC)&&!isAbn(S.lvE))s+='語言理解能力相對口語表達較弱，為孩子目前主要的困難所在。';
+ return'評估結果與建議：'+diagnosis()+'\n\n正式施測結果：\n'+s+'\n\n各項能力闡述，如下：';
+}
+function triSentence(map,list,verb,tail){
+ const g=k=>list.filter(([id])=>map[id]===k).map(x=>x[1]);
+ const ok=g('ok'),mid=g('mid'),hard=g('hard');const p=[];
+ if(ok.length)p.push('孩子目前可以'+verb+J(ok));
+ if(mid.length)p.push((ok.length?'':'孩子')+verb.replace(/^理解$/,'')+J(mid)+(verb==='理解'?'的理解':'')+'尚不穩定，部分時候需要'+tail);
+ if(hard.length)p.push(J(hard)+(verb==='理解'?'的理解':'')+'則較困難，尚待發展');
+ return p.length?p.join('；')+'。':'';
+}
+function pComp(){
+ let s=triSentence(S.c,C_ITEMS,'理解','重複提示');
+ if(!under3()&&(S.story.s!==''||S.story.l!=='')){const a=[];if(S.story.s!=='')a.push('短故事5題答對'+S.story.s+'題');if(S.story.l!=='')a.push('長故事5題答對'+S.story.l+'題');
+  s+='故事聽理解方面，'+a.join('，')+(S.story.s==='5'&&S.story.l==='5'?'，表現優異':'')+'。'}
+ s+='綜合上述，相較同月齡的幼兒，孩子目前的語言理解能力落在'+lvWord(S.lvC)+'的範圍中。';
+ return'語言理解和認知能力：\n'+s;
+}
+function pExp(){
+ let s=triSentence(S.e,E_ITEMS,'','提示');
+ if(S.rep.n)s=s.replace(/。$/,'')+(s?'；':'')+'覆誦語句長度可達'+S.rep.n+'個字'+(S.rep.twice?'，惟需聆聽兩次後才能完整覆誦，顯示對於較長口語訊息的接收和保留仍需要較多時間':'')+'。';
+ let n='';
+ if(!under3()){
+  const sub=(g,list,lead)=>{const t=triSentence(S[g]||{},list,'','提示');return t?lead+t.replace(/^孩子目前可以/,'孩子可以').replace(/^孩子/,'孩子'):''};
+  const ns=[sub('np',NP_ITEMS,'看圖說故事測驗中，'),sub('nr',NR_ITEMS,'重述故事測驗中，'),sub('nl',NL_ITEMS,'此外，')].join('');
+  const st=N_STR.filter(x=>S.nStr.includes(x[0])).map(x=>x[2]);const wk=N_WEAK.filter(x=>S.nWeak.includes(x[0])).map(x=>x[2]);
+  if(ns||st.length||wk.length){
+   n='敘事能力方面，'+ns;
+   if(st.length||wk.length){n+='透過自發語樣分析發現，';if(st.length)n+=st.join('，且')+'，為其相對優勢。';if(wk.length)n+=(st.length?'然而，':'')+wk.join('；')+'。'}
+   if(S.nNote.trim())n+='例如，'+S.nNote.trim().replace(/。$/,'')+'。';
+  }
+ }
+ const wk=[];if(S.nWeak.includes('then'))wk.push('連接詞的多樣性');if(nok(S.e.caus)||nok(S.e.full))wk.push('句型複雜度');if(nok(S.e.vocab)||S.nWeak.includes('word'))wk.push('詞彙豐富度');
+ const end='綜合上述，相較同月齡的幼兒，孩子目前的口語表達能力落在'+lvWord(S.lvE)+'的範圍中'+(isAbn(S.lvE)&&wk.length?'，其中'+J(wk)+'為主要待加強的向度':'')+'。';
+ return'口語表達能力：\n'+[s,n].filter(Boolean).join('\n')+end;
+}
+function pSpeech(){
+ let s='構音方面，於非熟悉者而言，孩子整體的說話清晰度約莫'+(S.intel||'＿')+'成。';
+ if(S.artic==='異常'&&S.errs.length){
+  const types=[...new Set(S.errs.map(e=>e.type))];const order=['替代','扭曲','省略'].filter(t=>types.includes(t));
+  s+='評估期間，些許語音有'+J(order)+'的問題';
+  if(S.errs.some(e=>e.demo))s+='；部分語音在語言治療師示範後，再請孩子重述即正確';
+  s+='。例如，'+S.errs.map(e=>e.ph+'（'+e.freq+'，'+(e.type==='替代'?(e.sub?'以'+e.sub+'替代':'替代'):e.type)+(e.ex?'，例如，'+e.ex:'')+(e.demo?'，示範並重述後即正確':'')+'）').join('、')+'。';
+ }else if(S.artic==='異常')s+='評估期間，部分語音有構音錯誤的情形。';
+ else s+='評估期間未觀察到明顯的構音錯誤。';
+ if(S.flu==='無異常'&&S.voi==='無異常')s+='言語流暢度和嗓音方面則無異常。';
+ else{if(S.flu!=='無異常')s+='言語流暢度方面，說話時出現重複或延長等不流暢的情形。';else s+='言語流暢度方面無異常。';if(S.voi!=='無異常')s+='嗓音方面，有音質或音量異常的情形。';else s+='嗓音方面無異常。'}
+ const lvA=S.artic==='異常'?S.lvA:'正常';
+ s+='綜合上述，相較同月齡的幼兒，孩子目前的構音能力落在'+lvA+'的範圍中';
+ if(S.artic==='異常')s+=langAbn(S)?'，惟考量其語言能力落在'+(isAbn(S.lvE)?lvWord(S.lvE):lvWord(S.lvC))+'範圍，建議先以語言理解和表達能力之提升為優先，後續視語言整體發展進展，再評估啟動正式構音矯正療程之適當時機。':'，建議接受構音治療。';else s+='。';
+ return'說話能力：錯誤語音和言語特徵描述\n'+s;
+}
+function pInter(){
+ const t=S.it;let s='與孩子於結構化評估和遊戲情境下進行評估，';
+ s+='孩子情緒'+({穩定:'穩定',需要引導:'需要治療師適度引導',起伏較大:'起伏較大，需要較多安撫'}[t.emo]||'穩定')+'，'+(t.sit==='需要協助'?'需要協助才能安坐':'可以獨立安坐')+'。';
+ s+={持續性佳:'注意力持續性佳，可以專注完成評估活動。',持續性偏短:'注意力持續性偏短（5分鐘以內），評估期間容易分心、恍神。',容易分心:'注意力較易分散，需要提示才能回到活動。'}[t.att]||'';
+ s+={良好:'眼神接觸良好。',偶爾:'眼神接觸方面偶爾出現，需要引導。',較困難:'眼神接觸方面較為困難，與治療師對話時視線經常轉向其他地方。'}[t.eye]||'';
+ s+={佳:'對話輪替能力佳，可以主動維持一來一往的對話。',尚可:'對話輪替能力尚可，需要引導才能維持一來一往的對話。',較難:'對話輪替方面，較難維持一來一往的對話。'}[t.turn]||'';
+ if(t.func.length){const miss=FUNCS.filter(f=>!t.func.includes(f)&&['主動分享','主動提問','開啟話題'].includes(f));
+  s+='溝通功能方面，孩子可以'+J(t.func)+(miss.length?'，惟'+J(miss)+'等溝通功能較少出現'+(t.func.length<=2?'，整體溝通意圖偏向被動回應':''):'')+'。'}
+ if(t.play)s+='遊戲能力方面，遊戲層次已達'+t.play+'。';
+ const f=[];if(isAbn(S.lvC))f.push('語言理解能力');if(isAbn(S.lvE))f.push('口語表達能力');if(t.att&&t.att!=='持續性佳')f.push('注意力表現');if(t.eye==='較困難')f.push('眼神接觸');
+ s+='綜合上述，相較同月齡的幼兒，'+(f.length?'孩子整體溝通互動能力受'+J(f)+'影響，建議宜持續追蹤並接受療育。':'孩子目前的溝通互動能力落在正常的範圍中。');
+ return'溝通互動和效度層面：\n'+s;
+}
+function oralShown(){return S.o.mo!=='無異常'||S.o.sw!=='無異常'}
+function pOral(){
+ const o=S.o;let a='進食與吞嚥方面，';
+ a+=o.sw==='無異常'?'依家長描述及評估期間觀察，孩子進食及吞嚥功能無異常，未觀察到嗆食的情形。':'孩子進食時偶有嗆咳的情形'+(o.choke.length?'，主要發生於'+J(o.choke)+'食物':'')+'，宜注意進食的量和速度。';
+ let b='';if(o.mo!=='無異常'){const g=STRUCT.filter(x=>o.st[x]).map(x=>x+(x==='口腔感覺'?'':'的動作控制')+(o.st[x]==='良好'?'良好':o.st[x]==='尚可'?'尚可':'較弱'));
+  b='口腔動作功能方面，'+(g.length?g.join('；')+'。':'')+(o.prob.length?'評估期間觀察到'+J(o.prob)+'的情形。':'')}
+ else b='口腔動作功能方面，雙唇、舌頭、下頷和雙頰的動作控制皆良好。';
+ const lv=(o.mo==='異常'||o.sw==='異常')?'異常':'邊緣';
+ return'進食、吞嚥和口腔動作功能：\n'+a+'\n'+b+'\n綜合上述，相較於同儕，孩子目前的口腔動作功能和進食吞嚥能力落在'+lv+'的範圍中。';
+}
+function pRec(){
+ const parts=[];if(langAbn(S))parts.push('整體語言發展');if(S.artic==='異常')parts.push('構音');if(S.o.mo!=='無異常')parts.push('口腔動作');
+ const dom=parts.length?parts.join('和').replace('整體語言發展和構音和','整體語言發展、構音和'):'整體語言發展';
+ let s;
+ if(S.freq==='暫不需治療')s=dom+'目前落在正常範圍，暫無需接受語言治療，建議家長持續於日常生活中提供豐富的語言刺激，若有疑慮可再回診追蹤。';
+ else if(S.freq==='定期追蹤')s=dom+'方面，建議定期追蹤，約三至六個月後再次評估。';
+ else s=dom+'方面，建議宜接受'+S.freq+'的語言治療。';
+ S.ref.forEach(r=>{const x=REFS.find(y=>y[0]===r);if(x)s+=x[2]});
+ return'建議：\n'+s;
+}
+function pHome(){
+ const list=HOME.filter(h=>S.home.includes(h[0]));if(!list.length)return'';
+ return'語言發展方面，建議家長可以在家中練習以下事項：\n'+list.map(h=>'・'+h[2]).join('\n');
+}
+function tables(){
+ const d=S.date?S.date.replace(/^(\d+)-0?(\d+)-0?(\d+)$/,'$1年$2月$3日'):'';
+ const tl=TOOLS.map(t=>box(S.tools.includes(t[0]),t[1]));
+ const toolLines='評估工具：\n'+[tl.slice(0,3),tl.slice(3,5),tl.slice(5,7),tl.slice(7)].map(r=>r.join('　')).join('\n')+'\n☐其他（請敘明）：';
+ const lvT=lv=>lv==='遲緩'?'發展遲緩':isAbn(lv)?'臨界/疑似發展遲緩':'無異常';
+ const res=k=>{const T=S.sc[k+'T'],P=S.sc[k+'P'];return'評估結果：'+S.sl+'：'+(T||'＿')+'　百分等級：'+(P||'＿')+'%　☐不適用'};
+ const dl=(list,sel)=>list.map(x=>box(sel.includes(x),x)).join('\n');
+ const oDir=['減/增敏感訓練'].map(x=>box(S.dir.o.includes(x),x)).join('')+'\n'+box(S.dir.o.some(x=>x.includes('動作')),'口腔動作訓練（可複選）：')+['雙唇','下頷','舌頭','咀嚼'].map(x=>box(S.dir.o.includes(x+'動作訓練'),x+'動作訓練')).join('　');
+ const swObs=S.o.sw==='無異常'?'進食及吞嚥功能無異常，未觀察到嗆食或進食行為異常之情形。':'進食時偶有嗆咳情形'+(S.o.choke.length?'（'+S.o.choke.join('、')+'）':'')+'。';
+ const spAb=S.artic==='異常'||S.flu!=='無異常'||S.voi!=='無異常';
+ return[
+  ['吞嚥/口腔功能',
+   '口腔動作：'+opts(['無異常','臨界','異常'],S.o.mo)+'\n評估日期：'+d+'\n'+MO_PROB.map(x=>box(S.o.prob.includes(x),x)).join('　')+'　☐其他：\n\n'+
+   '口腔功能訓練：'+opts(NEED,S.need.o)+'\n訓練方向：\n'+oDir+'\n☐其他：\n\n'+
+   '吞嚥反射：'+opts(['無異常','異常'],S.o.sw==='異常'?'異常':'無異常')+'\n行為觀察及綜合結果：'+(S.o.sw==='異常'?'異常':'無異常')+'\n\n'+
+   '吞嚥功能：'+opts(['無異常','臨界','異常'],S.o.sw)+'\n'+box(S.o.choke.length,'會嗆食（')+['液體','半固體','固體'].map(x=>box(S.o.choke.includes(x),x)).join('　')+'）\n'+swObs+'\n\n'+
+   '吞嚥訓練：'+opts(NEED,S.need.s)+'\n訓練方向：☐改變姿勢　☐控制量：\n☐食物材質的選擇：☐流質　☐糊狀　☐軟質　☐固體　☐其他：\n☐食器的選擇：☐奶瓶　☐杯子　☐湯匙　☐筷子　☐其他：'],
+  ['口語理解',
+   '口語理解：'+opts(['無異常','臨界/疑似發展遲緩','發展遲緩'],lvT(S.lvC))+'\n評估日期：'+d+'\n'+res('c')+'\n'+toolLines+'\n\n'+
+   '理解訓練：'+opts(NEED,S.need.c)+'\n訓練方向：\n'+dl(C_DIR,S.dir.c)],
+  ['口語表達',
+   '口語表達：'+opts(['無異常','臨界/疑似發展遲緩','發展遲緩'],lvT(S.lvE))+'\n評估日期：'+d+'\n'+res('e')+'\n（整體語言發展 '+S.sl+'：'+(S.sc.tT||'＿')+'　百分等級：'+(S.sc.tP||'＿')+'%）\n'+toolLines+'\n\n'+
+   '表達訓練：'+opts(NEED,S.need.e)+'\n訓練方向：\n'+dl(E_DIR,S.dir.e)+'\n☐其他：'],
+  ['語用訓練','語用訓練：'+opts(NEED,S.need.p)+'\n訓練方向：\n'+dl(P_DIR,S.dir.p)],
+  ['說話',
+   '說話：'+opts(['無異常','異常','需要追蹤及諮詢'],spAb?'異常':'無異常')+'\n評估日期：'+d+'\n評估結果：'+box(S.artic==='異常','構音障礙')+'　'+box(S.flu!=='無異常','言語不流暢/口吃/迅吃')+'　'+box(S.voi!=='無異常','嗓音障礙')+'　☐其他：\n'+
+   '評估工具：'+SP_TOOLS.map(x=>box(S.spTools.includes(x),x)).join('　')+'　■其他：臨床觀察及自發語樣分析\n'+
+   '訓練方向：'+box(S.artic==='異常','構音矯正')+'　'+box(S.voi!=='無異常','嗓音復健')+'　'+box(S.flu!=='無異常','語暢訓練')+'　☐嗓音保健　☐其他：\n'+
+   '整體言語清晰度約 '+(S.intel?('一二三四五六七八九十'.indexOf(S.intel)+1)*10:'＿')+'%。'+(S.artic==='異常'&&langAbn(S)?'考量語言能力落於'+lvWord(isAbn(S.lvE)?S.lvE:S.lvC)+'範圍，建議優先介入語言理解與表達，後續視進展再評估構音矯正之適當時機。':S.artic==='異常'?'建議接受構音治療。':'')],
+  ['輔具需求','輔具需求：'+opts(NEED,S.need.aid)+'\n☐溝通輔具：☐溝通板　☐語言訓練系統　☐圖卡或照片　☐語音溝通器　☐其他\n☐聽覺輔具：☐助聽器　☐人工電子耳　☐調頻系統　☐其他助聽輔具\n☐其他：']
+ ];
+}
+function step7(){
+ if(S.auto)autoFill();
+ const H='語言治療評估欄位內，分項敘述';
+ const blocks=[
+  ['評估結果與建議','團隊評估結果，1.評估結果報告-語言治療評估（「主訴與就診問題」下方）',pSummary()],
+  ...(oralShown()?[['進食、吞嚥和口腔動作功能',H+'（吞嚥/口腔功能「行為觀察及綜合結果」）',pOral()]]:[]),
+  ['語言理解和認知能力',H+'（評估結果-口語理解「行為觀察及綜合結果」）',pComp()],
+  ['口語表達能力',H+'（評估結果-口語表達「行為觀察及綜合結果」）',pExp()],
+  ['說話能力',H+'（評估結果-「其他」）',pSpeech()],
+  ['溝通互動和效度層面',H+'（評估結果-口語表達「行為觀察及綜合結果」）',pInter()],
+  ['建議','團隊評估結果，1.評估結果報告-語言治療評估（「主訴與就診問題」下方）',pRec()],
+  ['具體建議',H+'（訓練方向-理解訓練/表達訓練/說話「具體建議」）',pHome()],
+  ...tables().map(([t,x])=>['表格｜'+t,'評估摘要表格',x])
+ ].filter(b=>b[2]);
+ const diagCard=card('診斷摘要',F('自動產生：'+esc(diagnosis()),`<input type="text" id="i-diag" data-in="diag" data-live="1" value="${esc(S.diag)}" placeholder="需要時改寫，留空則用自動版本">`));
+ return diagCard+card('綜合版 Word 表格',`<button class="copy" data-act="docx" style="min-height:46px;font-size:15px">下載填好的綜合版表格（.docx）</button>`,'依院內綜合版範本自動勾選並填入下方段落；下方文字若有修改，下載時會一併帶入')+`<div class="card" style="flex-direction:row;gap:8px;flex-wrap:wrap"><button class="copy" data-act="copyAll">複製全部敘述</button><span class="hint" style="align-self:center">下方文字可直接修改再複製</span></div>`+
+  blocks.map((b,i)=>`<section class="card out"><div class="outh"><div><h2>${esc(b[0])}</h2><div class="hint">${esc(b[1])}</div></div><button class="copy" data-act="copy" data-t="o${i}">複製</button></div><textarea id="o${i}" data-title="${esc(b[0])}" data-narr="${b[0].startsWith('表格')?0:1}">${esc(b[2])}</textarea></section>`).join('')+
+  card('下一位個案',confirmClear?`<div class="confirm">確定清空所有內容？此動作無法復原。<div class="chips"><button class="chip" data-act="doClear">清空</button><button class="chip" data-act="noClear">取消</button></div></div>`:`<button class="ghost danger" data-act="askClear">清空重填</button>`,'草稿只存在這支手機的瀏覽器裡，不會上傳');
+}
+
+/* ===== 綜合版 Word 表格（依院內範本自動填入） ===== */
+const WNS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const kids=(el,tag)=>[...el.childNodes].filter(n=>n.nodeName===tag);
+const allT=p=>[...p.getElementsByTagName('w:t')];
+const strip=s=>s.replace(/[\s　]/g,'');
+const pText=p=>allT(p).map(t=>t.textContent).join('');
+function setT(t,str){while(t.firstChild)t.removeChild(t.firstChild);t.appendChild(t.ownerDocument.createTextNode(str));t.setAttribute('xml:space','preserve')}
+/* 把「☐+label」的方框改成 ■ */
+function tickP(p,label){
+ const map=[];allT(p).forEach(t=>{[...t.textContent].forEach((ch,i)=>{if(!/[\s　]/.test(ch))map.push([t,i,ch])})});
+ const s=map.map(m=>m[2]).join('');const L=strip(label);let from=0,k;
+ while((k=s.indexOf(L,from))>-1){if(k>0&&s[k-1]==='☐'){const [t,i]=map[k-1];const a=[...t.textContent];a[i]='■';setT(t,a.join(''));return true}from=k+1}
+ return false;
+}
+function tick(cell,label){if(!label)return false;for(const p of cell.getElementsByTagName('w:p'))if(tickP(p,label))return true;return false}
+function findP(cell,start,nth=0){let n=0;for(const p of cell.getElementsByTagName('w:p'))if(strip(pText(p)).startsWith(strip(start))){if(n++===nth)return p}return null}
+/* 依序填入 ____ 空格 */
+function blanks(p,vals){if(!p)return;let i=0;allT(p).forEach(t=>{if(/^_+\s*$/.test(t.textContent)&&i<vals.length){const v=vals[i++];if(v!==''&&v!=null)setT(t,String(v))}})}
+function addRun(p,text){const d=p.ownerDocument;const r=d.createElementNS(WNS,'w:r');const src=p.getElementsByTagName('w:rPr')[0];if(src&&src.parentNode.nodeName==='w:r'){const rp=src.cloneNode(true);kids(rp,'w:b').concat(kids(rp,'w:bCs')).forEach(b=>rp.removeChild(b));r.appendChild(rp)}const t=d.createElementNS(WNS,'w:t');r.appendChild(t);setT(t,text);p.appendChild(r)}
+function newP(tpl,text){const p=tpl.cloneNode(true);kids(p,'w:r').forEach(r=>p.removeChild(r));[...p.childNodes].filter(n=>n.nodeName!=='w:pPr').forEach(n=>p.removeChild(n));
+ const src=tpl.getElementsByTagName('w:rPr');const d=p.ownerDocument;const r=d.createElementNS(WNS,'w:r');
+ const rp=[...src].find(x=>x.parentNode.nodeName==='w:r');if(rp){const c=rp.cloneNode(true);kids(c,'w:b').concat(kids(c,'w:bCs')).forEach(b=>c.removeChild(b));r.appendChild(c)}
+ const t=d.createElementNS(WNS,'w:t');r.appendChild(t);setT(t,text);p.appendChild(r);return p}
+/* 在某段落後插入多段文字；若後面緊接空白佔位段落則取代 */
+function insertAfter(p,text){
+ if(!p||!text)return;const lines=String(text).split('\n').filter(x=>x.trim());if(!lines.length)return;
+ let nx=p.nextSibling;while(nx&&nx.nodeName!=='w:p'&&nx.nodeName!=='w:tbl')nx=nx.nextSibling;
+ const filler=nx&&nx.nodeName==='w:p'&&!strip(pText(nx))?nx:null;
+ const tpl=filler||p;let ref=p;
+ lines.forEach(l=>{const np=newP(tpl,l);ref.parentNode.insertBefore(np,ref.nextSibling);ref=np});
+ if(filler)filler.parentNode.removeChild(filler);
+}
+const bodyOf=t=>String(t||'').split('\n').slice(1).join('\n');
+function edited(title,fallback){const el=document.querySelector('textarea[data-title="'+title+'"]');return el?el.value:fallback}
+const TPL_TOOL={obs:'臨床觀察',int:'臨床晤談',ppvt:'修訂畢保德圖畫詞彙測驗',pre:'修訂學前兒童語言障礙評量表',sch:'修訂學齡兒童語言障礙評量表',cdiit:'嬰幼兒綜合發展測驗',clst:'零至三歲華語嬰幼兒溝通及語言',revt:'華語兒童理解與表達詞彙測驗',gram:'學前幼兒與國小低年級兒童口語語法診斷測驗'};
+const HOME_C=['cmd','cplxC','detail'],HOME_E=['early','conn','logic','cplxE','vocab','share','eye','slow','artic'],HOME_O=['oral'];
+const homeText=keys=>HOME.filter(h=>keys.includes(h[0])&&S.home.includes(h[0])).map(h=>'・'+h[2]).join('\n');
+function tickDirs(cell,list){list.forEach(x=>{if(x.startsWith('其他：')){const p=findP(cell,'☐其他');if(p){tickP(p,'其他');addRun(p,x.slice(3))}}else tick(cell,x.replace(/[（(].*$/,'').replace(/，如：.*$/,''))})}
+function fillDoc(doc){
+ const rows=[...doc.getElementsByTagName('w:tr')];const C=i=>kids(rows[i],'w:tc');
+ const dt=S.date?S.date.split('-').map(Number):['','',''];
+ const lv3=lv=>lv==='遲緩'?'發展遲緩':isAbn(lv)?'臨界/疑似發展遲緩':'無異常';
+ const o=S.o;
+ // 1 口腔動作
+ let [,a,b]=C(1);tick(a,o.mo);blanks(findP(b,'評估日期'),dt);o.prob.forEach(x=>tick(b,x));
+ insertAfter(findP(b,'行為觀察及綜合結果'),oralShown()?bodyOf(edited('進食、吞嚥和口腔動作功能',pOral())).split('\n').slice(1).join('\n'):'雙唇、舌頭、下頷和雙頰的動作控制皆良好，口腔動作功能無異常。');
+ // 2 口腔功能訓練
+ [,a,b]=C(2);tick(a,S.need.o);S.dir.o.forEach(x=>tick(b,x));if(S.dir.o.some(x=>/唇|頷|舌|咀嚼/.test(x)))tick(b,'口腔動作訓練');
+ insertAfter(findP(b,'具體建議'),homeText(HOME_O));
+ // 3 吞嚥反射
+ [,a,b]=C(3);const sr=o.sw==='異常'?'異常':'無異常';tick(a,sr);insertAfter(findP(b,'行為觀察及綜合結果'),sr==='無異常'?'吞嚥反射無異常。':'吞嚥反射有異常情形，建議進一步評估。');
+ // 4 吞嚥功能
+ [,a,b]=C(4);tick(a,o.sw);o.choke.forEach(x=>tick(b,x));const fp=findP(b,'主要食材');if(fp&&o.food)addRun(fp,o.food);
+ insertAfter(findP(b,'行為觀察及綜合結果'),oralShown()?bodyOf(edited('進食、吞嚥和口腔動作功能',pOral())).split('\n')[0]:'依家長描述及評估期間觀察，孩子進食及吞嚥功能無異常，未觀察到嗆食的情形。');
+ // 5 吞嚥訓練
+ [,a]=C(5);tick(a,S.need.s);
+ // 6 口語理解
+ [,a,b]=C(6);tick(a,lv3(S.lvC));blanks(findP(b,'評估日期'),dt);blanks(findP(b,'評估結果'),[S.sc.cAY,S.sc.cAM,S.sc.cP,S.sc.cDQ]);
+ S.tools.forEach(k=>tick(b,TPL_TOOL[k]));insertAfter(findP(b,'行為觀察及綜合結果'),bodyOf(edited('語言理解和認知能力',pComp())));
+ // 7 理解訓練
+ [,a,b]=C(7);tick(a,S.need.c);tickDirs(b,S.dir.c);insertAfter(findP(b,'具體建議'),homeText(HOME_C));
+ // 8 口語表達
+ [,a,b]=C(8);tick(a,lv3(S.lvE));blanks(findP(b,'評估日期'),dt);blanks(findP(b,'評估結果'),[S.sc.eAY,S.sc.eAM,S.sc.eT,S.sc.eP,S.sc.eDQ]);
+ S.tools.forEach(k=>k!=='ppvt'&&k!=='gram'&&tick(b,TPL_TOOL[k]));if(S.spTools.some(x=>x.includes('口吃')))tick(b,'修訂中文口吃嚴重度評估工具');
+ insertAfter(findP(b,'行為觀察及綜合結果'),bodyOf(edited('口語表達能力',pExp()))+'\n'+bodyOf(edited('溝通互動和效度層面',pInter())));
+ // 9 表達訓練
+ [,a,b]=C(9);tick(a,S.need.e);tickDirs(b,S.dir.e);insertAfter(findP(b,'具體建議'),homeText(HOME_E));
+ // 10 語用訓練
+ [,a,b]=C(10);tick(a,S.need.p);tickDirs(b,S.dir.p);
+ // 11 說話
+ [,a,b]=C(11);const spAb=S.artic==='異常'||S.flu!=='無異常'||S.voi!=='無異常';tick(a,spAb?'異常':'無異常');
+ if(S.artic==='異常')tick(b,'構音障礙');if(S.flu!=='無異常')tick(b,'言語不流暢');if(S.voi!=='無異常')tick(b,'嗓音障礙');
+ S.spTools.forEach(x=>tick(b,x.replace(/\(.*$/,'')));
+ const op=findP(b,'☐其他(請敘明)');if(op){tickP(op,'其他(請敘明)');addRun(op,'臨床觀察及自發語樣分析')}
+ if(S.artic==='異常')tick(b,'構音矯正');if(S.voi!=='無異常')tick(b,'嗓音復健');if(S.flu!=='無異常')tick(b,'語暢訓練');
+ insertAfter(findP(b,'☐其他：'),bodyOf(edited('說話能力',pSpeech())));
+ return doc;
+}
+async function buildDocx(){
+ const zip=await JSZip.loadAsync(TPL_B64,{base64:true});
+ const xml=await zip.file('word/document.xml').async('string');
+ const doc=new DOMParser().parseFromString(xml,'application/xml');
+ fillDoc(doc);
+ zip.file('word/document.xml',new XMLSerializer().serializeToString(doc));
+ return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+async function saveDocx(btn){
+ btn.disabled=true;const old=btn.textContent;btn.textContent='產生中…';
+ try{
+  if(typeof JSZip==='undefined')throw new Error('nolib');
+  const blob=await buildDocx();
+  const d=(S.date||today()).replace(/-/g,'');
+  const name='ST_combined_'+d+'.docx';
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  toast('已下載：'+name);
+ }catch(e){
+  toast(e&&e.message==='nolib'?'元件載入失敗，請重新整理':'下載失敗，請改用下方複製');
+ }finally{btn.disabled=false;btn.textContent=old}
+}
+
+/* ===== 渲染 ===== */
+const RENDER=[step0,step1,step2,step3,step4,step5,step6,step7];
+const isWide=()=>window.matchMedia('(min-width:1000px)').matches;
+function sidePreview(){
+ if(S.auto)autoFill();
+ const bl=[['評估結果與建議',pSummary()],...(oralShown()?[['進食、吞嚥和口腔動作功能',pOral()]]:[]),['語言理解和認知能力',pComp()],['口語表達能力',pExp()],['說話能力',pSpeech()],['溝通互動和效度層面',pInter()],['建議',pRec()],['具體建議',pHome()]].filter(b=>b[1]);
+ PV=bl.map(b=>b[1]);
+ return `<div class="pv"><div class="pvh"><b>報告即時預覽</b><button class="copy" data-act="docx">下載綜合版 Word</button></div>`+
+  bl.map((b,i)=>`<section class="pvb"><div class="outh"><h3>${esc(b[0])}</h3><button class="copy" data-act="pvcopy" data-i="${i}">複製</button></div><div class="pvt">${esc(b[1].split('\n').slice(b[0]==='具體建議'?0:1).join('\n').trim())}</div></section>`).join('')+
+  `<div class="hint">要修改文字或複製表格，請到「產出報告」步驟</div></div>`;
+}
+let PV=[];
+function renderSide(){const sd=$('#side');if(!isWide()||cur===7){sd.innerHTML='';return}const st=sd.scrollTop;sd.innerHTML=sidePreview();sd.scrollTop=st}
+function render(keepScroll){
+ const y=window.scrollY;
+ document.body.classList.toggle('wide-out',cur===7);
+ $('#stitle').textContent=STEPS[cur];$('#count').textContent=(cur+1)+' / '+STEPS.length;
+ $('#tabs').innerHTML=STEPS.map((t,i)=>`<button class="tab${i===cur?' cur':i<cur?' done':''}" data-act="go" data-i="${i}">${t}</button>`).join('');
+ $('#banner').innerHTML=S.sample?`<div class="banner"><span>目前為範例個案資料，可先看產出效果</span><button data-act="askClear2">開始新個案</button></div>`:'';
+ $('#main').innerHTML=RENDER[cur]();
+ $('#prev').disabled=cur===0;$('#next').textContent=cur===STEPS.length-1?'回到開頭':'下一步';
+ document.querySelectorAll('textarea[id^=o]').forEach(fit);
+ const tab=document.querySelector('.tab.cur');if(tab)tab.scrollIntoView({inline:'center',block:'nearest'});
+ renderSide();
+ window.scrollTo(0,keepScroll?y:0);
+}
+function fit(t){t.style.height='auto';t.style.height=(t.scrollHeight+4)+'px'}
+const $=s=>document.querySelector(s);
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),1500)}
+async function copyText(txt,btn){
+ try{await navigator.clipboard.writeText(txt);toast('已複製')}catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(_){}ta.remove();toast(ok?'已複製':'請長按文字手動複製')}
+ if(btn){btn.classList.add('did');setTimeout(()=>btn.classList.remove('did'),1200)}
+}
+const touchAuto=p=>{if(cur===6&&/^(need|dir|home|freq|ref)/.test(p))S.auto=false};
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+ if(b.id==='prev'){if(cur>0){cur--;render()}return}
+ if(b.id==='next'){cur=cur<STEPS.length-1?cur+1:0;confirmClear=false;render();return}
+ if(d.set){let v=d.val;if(v==='true')v=true;const curV=get(S,d.set);set(S,d.set,(d.clear&&curV==v)?'':v);touchAuto(d.set);S.sample&&0;save();render(true);return}
+ if(d.tog){const a=(get(S,d.tog)||[]).slice();const i=a.indexOf(d.val);i>-1?a.splice(i,1):a.push(d.val);set(S,d.tog,a);touchAuto(d.tog);save();render(true);return}
+ if(d.tri){set(S,d.tri,get(S,d.tri)===d.val?'':d.val);save();render(true);return}
+ const a=d.act;
+ if(a==='go'){cur=+d.i;confirmClear=false;render()}
+ else if(a==='twice'){S.rep.twice=!S.rep.twice;save();render(true)}
+ else if(a==='addErr'){S.errs.push({ph:d.ph,freq:'少數時候',type:'替代',sub:'',ex:'',demo:true});save();render(true)}
+ else if(a==='delErr'){S.errs.splice(+d.i,1);save();render(true)}
+ else if(a==='demo'){S.errs[+d.i].demo=!S.errs[+d.i].demo;save();render(true)}
+ else if(a==='reauto'){S.auto=true;save();render(true);toast('已重新帶入')}
+ else if(a==='copy'){copyText($('#'+d.t).value,b)}
+ else if(a==='docx'){saveDocx(b)}
+ else if(a==='pvcopy'){copyText(PV[+d.i]||'',b)}
+ else if(a==='copyAll'){copyText([...document.querySelectorAll('textarea[data-narr="1"]')].map(t=>t.value).join('\n\n'),b)}
+ else if(a==='askClear'){confirmClear=true;render(true)}
+ else if(a==='askClear2'){S=blank();save();cur=0;render();toast('已清空，開始新個案')}
+ else if(a==='noClear'){confirmClear=false;render(true)}
+ else if(a==='doClear'){S=blank();confirmClear=false;save();cur=0;render();toast('已清空')}
+});
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(t.dataset.in){set(S,t.dataset.in,t.value);save();if(t.dataset.live){const h=t.closest('.card').querySelector('.lab');}}
+ if(t.matches('textarea'))fit(t);
+ if(t.dataset.in){clearTimeout(renderSide.h);renderSide.h=setTimeout(renderSide,300)}
+});
+let rsz;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderSide,200)});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.in&&(t.dataset.in==='ageY'||t.dataset.live))render(true)});
+render();
+</script>
+
 </body>
 </html>
