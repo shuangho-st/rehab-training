@@ -219,7 +219,7 @@ const HOME=[
 /* ===== 狀態 ===== */
 function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function blank(){return{sample:false,date:today(),ageY:'',ageM:'',tools:['obs','int'],sl:'T分數',sc:{cT:'',cP:'',eT:'',eP:'',tT:'',tP:'',cAY:'',cAM:'',cDQ:'',eAY:'',eAM:'',eDQ:''},lvC:'正常',lvE:'正常',lvT:'正常',
- c:{},story:{s:'',l:''},e:{},rep:{n:'',twice:false},np:{},nr:{},nl:{},nStr:[],nWeak:[],nNote:'',
+ c:{},story:{s:'',l:''},e:{},rep:{n:'',twice:false},np:{},nr:{},nl:{},nStr:[],nWeak:[],nNote:'',cNote:'',eNote:'',
  intel:'',artic:'正常',lvA:'正常',errs:[],flu:'無異常',voi:'無異常',spTools:[],
  o:{mo:'無異常',prob:[],sw:'無異常',choke:[],st:{},food:''},
  it:{emo:'',sit:'',att:'',eye:'',turn:'',func:[],play:''},
@@ -271,6 +271,7 @@ function step1(){
  let h=card('語言理解項目',tri('c',C_ITEMS));
  const N5=['0','1','2','3','4','5'];
  if(!under3())h+=card('故事聽理解',F('短故事（答對題數／5）',seg('story.s',N5))+F('長故事（答對題數／5）',seg('story.l',N5)),'未施測就不點選；再點一次可取消');
+ h+=card('補充說明',`<textarea id="t-cNote" data-in="cNote" rows="3" placeholder="例：較長的問題需重複說兩次並提醒注意聽；疑問詞中僅「誰」較穩定">${esc(S.cNote||'')}</textarea>`,'選填，會接在「綜合上述」前面');
  return h;
 }
 function step2(){
@@ -282,6 +283,7 @@ function step2(){
   h+=card('生活事件敘述',tri('nl',NL_ITEMS));
   h+=card('語樣分析',F('相對優勢',chips('nStr',N_STR.map(x=>[x[0],x[1]]),true))+F('待加強',chips('nWeak',N_WEAK.map(x=>[x[0],x[1]]),true))+F('語料實例（選填，會接在「例如，」後面）',`<textarea id="t-nNote" data-in="nNote" rows="3" placeholder="例：描述「氣球在天上飄」與「騎腳踏車」之間缺乏關聯說明">${esc(S.nNote)}</textarea>`));
  }
+ h+=card('補充說明',`<textarea id="t-eNote" data-in="eNote" rows="3" placeholder="例：表達時常以「那個」代替名詞，需提示才能說出完整句子">${esc(S.eNote||'')}</textarea>`,'選填，會接在「綜合上述」前面');
  return h;
 }
 function step3(){
@@ -366,10 +368,13 @@ function triSentence(map,list,verb,tail){
  if(hard.length)p.push(J(hard)+(verb==='理解'?'的理解':'')+'則較困難，尚待發展');
  return p.length?p.join('；')+'。':'';
 }
+/* 自由書寫內容去掉換行，接成同一段 */
+const oneLine=t=>String(t||'').trim().split(/\s*\n\s*/).filter(Boolean).map((x,i,a)=>i<a.length-1&&!/[。，；！？、：]$/.test(x)?x+'，':x).join('');
 function pComp(){
  let s=triSentence(S.c,C_ITEMS,'理解','重複提示');
  if(!under3()&&(S.story.s!==''||S.story.l!=='')){const a=[];if(S.story.s!=='')a.push('短故事5題答對'+S.story.s+'題');if(S.story.l!=='')a.push('長故事5題答對'+S.story.l+'題');
   s+='故事聽理解方面，'+a.join('，')+(S.story.s==='5'&&S.story.l==='5'?'，表現優異':'')+'。'}
+ if((S.cNote||'').trim())s+=oneLine(S.cNote).replace(/。?$/,'。');
  s+='綜合上述，相較同月齡的幼兒，孩子目前的語言理解能力落在'+lvWord(S.lvC)+'的範圍中。';
  return'語言理解和認知能力：\n'+s;
 }
@@ -384,12 +389,13 @@ function pExp(){
   if(ns||st.length||wk.length){
    n='敘事能力方面，'+ns;
    if(st.length||wk.length){n+='透過自發語樣分析發現，';if(st.length)n+=st.join('，且')+'，為其相對優勢。';if(wk.length)n+=(st.length?'然而，':'')+wk.join('；')+'。'}
-   if(S.nNote.trim())n+='例如，'+S.nNote.trim().replace(/。$/,'')+'。';
+   if(S.nNote.trim())n+='例如，'+oneLine(S.nNote).replace(/。$/,'')+'。';
   }
  }
  const wk=[];if(S.nWeak.includes('then'))wk.push('連接詞的多樣性');if(nok(S.e.caus)||nok(S.e.full))wk.push('句型複雜度');if(nok(S.e.vocab)||S.nWeak.includes('word'))wk.push('詞彙豐富度');
  const end='綜合上述，相較同月齡的幼兒，孩子目前的口語表達能力落在'+lvWord(S.lvE)+'的範圍中'+(isAbn(S.lvE)&&wk.length?'，其中'+J(wk)+'為主要待加強的向度':'')+'。';
- return'口語表達能力：\n'+[s,n].filter(Boolean).join('\n')+end;
+ const en=(S.eNote||'').trim()?oneLine(S.eNote).replace(/。?$/,'。'):'';
+ return'口語表達能力：\n'+[s,n,en].filter(Boolean).join('\n')+end;
 }
 function pSpeech(){
  let s='構音方面，於非熟悉者而言，孩子整體的說話清晰度約莫'+(S.intel||'＿')+'成。';
@@ -514,10 +520,21 @@ function tick(cell,label){if(!label)return false;for(const p of cell.getElements
 function findP(cell,start,nth=0){let n=0;for(const p of cell.getElementsByTagName('w:p'))if(strip(pText(p)).startsWith(strip(start))){if(n++===nth)return p}return null}
 /* 依序填入 ____ 空格 */
 function blanks(p,vals){if(!p)return;let i=0;allT(p).forEach(t=>{if(/^_+\s*$/.test(t.textContent)&&i<vals.length){const v=vals[i++];if(v!==''&&v!=null)setT(t,String(v))}})}
-function addRun(p,text){const d=p.ownerDocument;const r=d.createElementNS(WNS,'w:r');const src=p.getElementsByTagName('w:rPr')[0];if(src&&src.parentNode.nodeName==='w:r'){const rp=src.cloneNode(true);kids(rp,'w:b').concat(kids(rp,'w:bCs')).forEach(b=>rp.removeChild(b));r.appendChild(rp)}const t=d.createElementNS(WNS,'w:t');r.appendChild(t);setT(t,text);p.appendChild(r)}
-function newP(tpl,text){const p=tpl.cloneNode(true);kids(p,'w:r').forEach(r=>p.removeChild(r));[...p.childNodes].filter(n=>n.nodeName!=='w:pPr').forEach(n=>p.removeChild(n));
- const src=tpl.getElementsByTagName('w:rPr');const d=p.ownerDocument;const r=d.createElementNS(WNS,'w:r');
- const rp=[...src].find(x=>x.parentNode.nodeName==='w:r');if(rp){const c=rp.cloneNode(true);kids(c,'w:b').concat(kids(c,'w:bCs')).forEach(b=>c.removeChild(b));r.appendChild(c)}
+/* 填入的文字一律用範本字型（標楷體 13pt），避免沒指定字型的地方被 Word 換成新細明體 */
+const DOC_FONT='標楷體',DOC_SZ='26';
+function runPr(d,src){
+ const rp=src?src.cloneNode(true):d.createElementNS(WNS,'w:rPr');
+ ['w:b','w:bCs','w:u','w:i','w:iCs','w:color','w:highlight'].forEach(n=>kids(rp,n).forEach(x=>rp.removeChild(x)));
+ let f=kids(rp,'w:rFonts')[0];if(!f){f=d.createElementNS(WNS,'w:rFonts');rp.insertBefore(f,rp.firstChild)}
+ ['w:ascii','w:hAnsi','w:eastAsia'].forEach(a=>f.setAttributeNS(WNS,a,DOC_FONT));f.setAttributeNS(WNS,'w:hint','eastAsia');
+ ['w:sz','w:szCs'].forEach(n=>{if(!kids(rp,n).length){const z=d.createElementNS(WNS,n);z.setAttributeNS(WNS,'w:val',DOC_SZ);rp.appendChild(z)}});
+ return rp}
+const runSrc=p=>[...p.getElementsByTagName('w:rPr')].find(x=>x.parentNode.nodeName==='w:r')||null;
+function addRun(p,text){const d=p.ownerDocument;const r=d.createElementNS(WNS,'w:r');r.appendChild(runPr(d,runSrc(p)));const t=d.createElementNS(WNS,'w:t');r.appendChild(t);setT(t,text);p.appendChild(r)}
+function newP(tpl,text,src){const p=tpl.cloneNode(true);kids(p,'w:r').forEach(r=>p.removeChild(r));[...p.childNodes].filter(n=>n.nodeName!=='w:pPr').forEach(n=>p.removeChild(n));
+ // 不沿用範本段落的縮排／定位點，各段左右對齊一致
+ const pp=kids(p,'w:pPr')[0];if(pp)['w:ind','w:tabs','w:numPr'].forEach(n=>kids(pp,n).forEach(x=>pp.removeChild(x)));
+ const d=p.ownerDocument;const r=d.createElementNS(WNS,'w:r');r.appendChild(runPr(d,runSrc(tpl)||src||null));
  const t=d.createElementNS(WNS,'w:t');r.appendChild(t);setT(t,text);p.appendChild(r);return p}
 /* 在某段落後插入多段文字；若後面緊接空白佔位段落則取代 */
 function insertAfter(p,text){
@@ -525,7 +542,7 @@ function insertAfter(p,text){
  let nx=p.nextSibling;while(nx&&nx.nodeName!=='w:p'&&nx.nodeName!=='w:tbl')nx=nx.nextSibling;
  const filler=nx&&nx.nodeName==='w:p'&&!strip(pText(nx))?nx:null;
  const tpl=filler||p;let ref=p;
- lines.forEach(l=>{const np=newP(tpl,l);ref.parentNode.insertBefore(np,ref.nextSibling);ref=np});
+ lines.forEach(l=>{const np=newP(tpl,l,runSrc(p));ref.parentNode.insertBefore(np,ref.nextSibling);ref=np});
  if(filler)filler.parentNode.removeChild(filler);
 }
 const bodyOf=t=>String(t||'').split('\n').slice(1).join('\n');
