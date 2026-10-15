@@ -186,6 +186,7 @@ const E_DIR=['使用溝通輔具／手勢／手語輔助溝通','提升語用溝
 const P_DIR=['建立對事物的廣泛興趣，勿過於侷限','維持合乎情境的對話主題','維持一來一往的對話輪替','能使用合乎情境的適當口語','能聽懂笑話、雙關語或詞彙非字面的意義','能適切的開啟及結束對話','增加語用預設的能力','其他：增加主動分享、提問等語用功能之運用'];
 const NEED=['不需要','需要追蹤及諮詢','需要訓練'];
 const FREQ=['至少一周一次','至少兩周一次','定期追蹤','暫不需治療'];
+const FU=['1個月後','3個月後','6個月後','1年後','入小學前'];
 
 const HOME=[
  ['cmd','連續指令練習','在日常生活中，建議家長可以善用情境，請孩子當小幫手，練習連續兩個步驟和三個步驟的指令，例如，「你先去拿水杯，再放到桌上」、「先把書收好，再拿鉛筆盒，然後關上書包」等。建議可以先給予手勢或肢體動作的協助，之後再讓孩子嘗試自己完成，而不論有無協助孩子，皆應給予孩子正向的鼓勵和讚美。',
@@ -223,7 +224,7 @@ function blank(){return{sample:false,date:today(),ageY:'',ageM:'',tools:['obs','
  intel:'',artic:'正常',lvA:'正常',errs:[],flu:'無異常',voi:'無異常',spTools:[],
  o:{mo:'無異常',prob:[],sw:'無異常',choke:[],st:{},food:''},
  it:{emo:'',sit:'',att:'',eye:'',turn:'',func:[],play:''},
- need:{c:'',e:'',p:'',o:'',s:'',aid:'不需要'},dir:{c:[],e:[],p:[],o:[]},home:[],freq:'至少一周一次',ref:[],auto:true,diag:''}}
+ need:{c:'',e:'',p:'',o:'',s:'',aid:'不需要'},dir:{c:[],e:[],p:[],o:[]},home:[],freq:'至少一周一次',fu:'',ref:[],auto:true,diag:''}}
 function sample(){const s=blank();Object.assign(s,{sample:true,ageY:'5',ageM:'2',tools:['obs','int','pre'],sc:{cT:'47',cP:'33',eT:'33',eP:'8',tT:'38',tP:'14',cAY:'5',cAM:'0',cDQ:'',eAY:'4',eAM:'3',eDQ:''},lvC:'正常',lvE:'邊緣',lvT:'正常下緣',
  c:{neg:'ok',cmd1:'ok',cmd2:'mid',cmd3:'hard',yn:'ok',wh:'ok',body:'ok',color:'ok',loc:'ok',cat:'ok',adj:'ok',tense:'ok',num:'ok',cplx:'hard',excl:'hard'},story:{s:'5',l:'5'},
  e:{w2:'ok',w3:'ok',name:'mid',desc:'mid',full:'hard',caus:'hard',vocab:'hard'},rep:{n:'12',twice:true},
@@ -339,7 +340,7 @@ function step6(){
  if(S.auto)autoFill();
  const D=(k,list,lab)=>F(lab+'訓練',seg('need.'+k,NEED))+chips('dir.'+k,list.map(x=>[x,x.replace(/（.+?）|，如：.+$/g,'')]),true);
  return `<div class="card" style="flex-direction:row;align-items:center;justify-content:space-between;gap:10px"><span class="hint" style="font-size:13px">${S.auto?'已依前面的評估結果自動帶入，可再點選調整':'已手動調整，不再自動帶入'}</span><button class="ghost" data-act="reauto">重新帶入</button></div>`
- +card('治療建議',F('語言治療頻率',chips('freq',FREQ))+F('轉介／跨專業',chips('ref',REFS.map(r=>[r[0],r[1]]),true))+F('輔具需求',seg('need.aid',NEED)))
+ +card('治療建議',F('語言治療頻率',chips('freq',FREQ))+F('何時再評估／追蹤',chips('fu',FU)+`<span class="hint">不選會自動帶入：治療中約六個月後、定期追蹤三至六個月後</span>`)+F('轉介／跨專業',chips('ref',REFS.map(r=>[r[0],r[1]]),true))+F('輔具需求',seg('need.aid',NEED)))
  +card('居家練習建議',chips('home',HOME.map(h=>[h[0],h[1]]),true),'報告「具體建議」會依勾選順序排列')
  +card('表格訓練方向',D('c',C_DIR,'理解')+D('e',E_DIR,'表達')+D('p',P_DIR,'語用')+D('o',['減/增敏感訓練','雙唇動作訓練','下頷動作訓練','舌頭動作訓練','咀嚼動作訓練'],'口腔功能')+F('吞嚥訓練',seg('need.s',NEED)));
 }
@@ -360,7 +361,14 @@ function pSummary(){
  s+='和'+(under3()?'同齡幼兒':'同年齡兒童')+'相比，'+part('語言理解','c',S.lvC,'語言理解能力')+'；'+part('口語表達','e',S.lvE,'口語表達能力')+'；'+part('整體語言發展','t',S.lvT,'整體語言發展')+'。';
  if(!isAbn(S.lvC)&&isAbn(S.lvE))s+='語言理解與口語表達之間存在明顯落差，口語表達為孩子目前主要的困難所在。';
  if(isAbn(S.lvC)&&!isAbn(S.lvE))s+='語言理解能力相對口語表達較弱，為孩子目前主要的困難所在。';
- return'評估結果與建議：'+diagnosis()+'\n\n正式施測結果：\n'+s+'\n\n各項能力闡述，如下：';
+ return'評估結果與建議：'+diagnosis()+'\n\n正式施測結果：\n'+s+'\n\n建議：\n'+pAdvice()+'\n\n各項能力闡述，如下：';
+}
+/* 評估結果與建議裡的「建議」：要不要療育、要不要追蹤、何時再評估 */
+function pAdvice(){
+ const fu=S.fu||'';
+ if(S.freq==='暫不需治療')return'孩子目前語言發展落在正常範圍，暫不需接受語言療育'+(fu?'，建議於'+fu+'回診追蹤':'；建議家長持續於日常生活中提供豐富的語言刺激，若仍有疑慮可再回診追蹤')+'。';
+ if(S.freq==='定期追蹤')return'孩子目前暫不需接受語言療育，建議定期追蹤，於'+(fu||'三至六個月後')+'再次評估語言發展情形。';
+ return'建議宜接受'+S.freq+'的語言療育，並於'+(fu||'治療約六個月後')+'再次評估，以了解進步情形。';
 }
 function triSentence(map,list,verb,tail){
  const g=k=>list.filter(([id])=>map[id]===k).map(x=>x[1]);
