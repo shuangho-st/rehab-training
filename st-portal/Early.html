@@ -227,7 +227,7 @@ function blank(){return{sample:false,date:today(),ageY:'',ageM:'',tools:['obs','
 function sample(){const s=blank();Object.assign(s,{sample:true,ageY:'5',ageM:'2',tools:['obs','int','pre'],sc:{cT:'47',cP:'33',eT:'33',eP:'8',tT:'38',tP:'14',cAY:'5',cAM:'0',cDQ:'',eAY:'4',eAM:'3',eDQ:''},lvC:'正常',lvE:'邊緣',lvT:'正常下緣',
  c:{neg:'ok',cmd1:'ok',cmd2:'mid',cmd3:'hard',yn:'ok',wh:'ok',body:'ok',color:'ok',loc:'ok',cat:'ok',adj:'ok',tense:'ok',num:'ok',cplx:'hard',excl:'hard'},story:{s:'5',l:'5'},
  e:{w2:'ok',w3:'ok',name:'mid',desc:'mid',full:'hard',caus:'hard',vocab:'hard'},rep:{n:'12',twice:true},
- np:{who:'ok',act:'ok',set:'mid',seq:'ok',feel:'ok',cause:'hard',end:'mid'},nr:{set:'ok',ev:'ok',seq:'ok',feel:'ok',end:'ok',det:'mid'},nl:{life:'ok'},nStr:['order','emo'],nWeak:['then','logic','word'],nNote:'描述「氣球在天上飄」與「他就騎腳踏車在路上開」之間，缺乏明確的關聯說明',
+ np:{who:'ok',act:'ok',set:'mid',seq:'ok',feel:'ok',cause:'hard',end:'mid'},nr:{set:'ok',ev:'ok',seq:'ok',feel:'ok',end:'ok',det:'mid'},nl:{life:'ok'},nStr:['order','emo'],nWeak:['then','logic','word'],nNote:'氣球在天上飄\n他就騎腳踏車在路上開',
  intel:'九',artic:'異常',lvA:'異常',errs:[{ph:'ㄗㄘㄙ',freq:'多數時候',type:'扭曲',sub:'',ex:'',demo:false},{ph:'ㄓㄔㄕ',freq:'部分時候',type:'扭曲',sub:'',ex:'',demo:false}],
  it:{emo:'需要引導',sit:'可以獨立安坐',att:'持續性偏短',eye:'較困難',turn:'佳',func:['回應問題','提出要求'],play:'假裝／扮演遊戲'},ref:['ot']});return s}
 const KEY='et-mobile-v1';
@@ -243,6 +243,8 @@ const nok=v=>v==='mid'||v==='hard';
 const isAbn=lv=>lv==='邊緣'||lv==='遲緩';
 const langAbn=s=>isAbn(s.lvC)||isAbn(s.lvE)||isAbn(s.lvT);
 const under3=()=>S.ageY!==''&&Number(S.ageY)<3;
+/* 3 歲以下比「同月齡的幼兒」，3 歲以上比「同年齡的兒童」 */
+const PEER=()=>under3()?'同月齡的幼兒':'同年齡的兒童';
 function J(a){a=a.filter(Boolean);if(!a.length)return'';if(a.length===1)return a[0];return a.slice(0,-1).join('、')+'和'+a[a.length-1]}
 const box=(on,t)=>(on?'■':'☐')+t;
 const opts=(list,sel)=>list.map(t=>box(sel===t,t)).join('　');
@@ -281,7 +283,7 @@ function step2(){
   h+=card('看圖說故事測驗',tri('np',NP_ITEMS),'未施測就不點選');
   h+=card('重述故事測驗',tri('nr',NR_ITEMS),'未施測就不點選');
   h+=card('生活事件敘述',tri('nl',NL_ITEMS));
-  h+=card('語樣分析',F('相對優勢',chips('nStr',N_STR.map(x=>[x[0],x[1]]),true))+F('待加強',chips('nWeak',N_WEAK.map(x=>[x[0],x[1]]),true))+F('語料實例（選填，會接在「例如，」後面）',`<textarea id="t-nNote" data-in="nNote" rows="3" placeholder="例：描述「氣球在天上飄」與「騎腳踏車」之間缺乏關聯說明">${esc(S.nNote)}</textarea>`));
+  h+=card('語樣分析',F('相對優勢',chips('nStr',N_STR.map(x=>[x[0],x[1]]),true))+F('待加強',chips('nWeak',N_WEAK.map(x=>[x[0],x[1]]),true))+F('個案語料（選填，每行一句孩子說的原話，照實記錄、不用修正）',`<textarea id="t-nNote" data-in="nNote" rows="3" placeholder="例：&#10;氣球在天上飄&#10;他就騎腳踏車在路上開">${esc(S.nNote)}</textarea><span class="hint">報告會寫成：（個案語料：「氣球在天上飄」、「他就騎腳踏車在路上開」）</span>`));
  }
  h+=card('補充說明',`<textarea id="t-eNote" data-in="eNote" rows="3" placeholder="例：表達時常以「那個」代替名詞，需提示才能說出完整句子">${esc(S.eNote||'')}</textarea>`,'選填，會接在「綜合上述」前面');
  return h;
@@ -355,7 +357,7 @@ function pSummary(){
  const formal=S.tools.filter(t=>t!=='obs'&&t!=='int').map(t=>'「'+TOOLS.find(x=>x[0]===t)[2]+'」');
  let s='整體語言發展方面，'+(formal.length?'以'+J(formal)+'施測為主，並輔以自然遊戲情境及自發語樣分析評估。':'以臨床觀察、臨床晤談及自然遊戲情境下之自發語樣分析進行評估。');
  const part=(name,k,lv,ab)=>{const T=S.sc[k+'T'],P=S.sc[k+'P'];let x=name+'部分，';if(T)x+=S.sl+'為'+T+'，';if(P)x+='百分等級為'+P+'%，';return x+ab+'落在'+lvWord(lv)+'範圍中'};
- s+='和同齡幼兒相比，'+part('語言理解','c',S.lvC,'語言理解能力')+'；'+part('口語表達','e',S.lvE,'口語表達能力')+'；'+part('整體語言發展','t',S.lvT,'整體語言發展')+'。';
+ s+='和'+(under3()?'同齡幼兒':'同年齡兒童')+'相比，'+part('語言理解','c',S.lvC,'語言理解能力')+'；'+part('口語表達','e',S.lvE,'口語表達能力')+'；'+part('整體語言發展','t',S.lvT,'整體語言發展')+'。';
  if(!isAbn(S.lvC)&&isAbn(S.lvE))s+='語言理解與口語表達之間存在明顯落差，口語表達為孩子目前主要的困難所在。';
  if(isAbn(S.lvC)&&!isAbn(S.lvE))s+='語言理解能力相對口語表達較弱，為孩子目前主要的困難所在。';
  return'評估結果與建議：'+diagnosis()+'\n\n正式施測結果：\n'+s+'\n\n各項能力闡述，如下：';
@@ -368,6 +370,11 @@ function triSentence(map,list,verb,tail){
  if(hard.length)p.push(J(hard)+(verb==='理解'?'的理解':'')+'則較困難，尚待發展');
  return p.length?p.join('；')+'。':'';
 }
+/* 個案語料：每行一句原話 →（個案語料：「…」、「…」） */
+function corpusText(t){
+ const u=String(t||'').split(/\n+/).map(x=>x.trim().replace(/^[「『"“]+|[」』"”]+$/g,'').replace(/[。．.]+$/,'')).filter(Boolean);
+ return u.length?'（個案語料：'+u.map(x=>'「'+x+'」').join('、')+'）':'';
+}
 /* 自由書寫內容去掉換行，接成同一段 */
 const oneLine=t=>String(t||'').trim().split(/\s*\n\s*/).filter(Boolean).map((x,i,a)=>i<a.length-1&&!/[。，；！？、：]$/.test(x)?x+'，':x).join('');
 function pComp(){
@@ -375,7 +382,7 @@ function pComp(){
  if(!under3()&&(S.story.s!==''||S.story.l!=='')){const a=[];if(S.story.s!=='')a.push('短故事5題答對'+S.story.s+'題');if(S.story.l!=='')a.push('長故事5題答對'+S.story.l+'題');
   s+='故事聽理解方面，'+a.join('，')+(S.story.s==='5'&&S.story.l==='5'?'，表現優異':'')+'。'}
  if((S.cNote||'').trim())s+=oneLine(S.cNote).replace(/。?$/,'。');
- s+='綜合上述，相較同月齡的幼兒，孩子目前的語言理解能力落在'+lvWord(S.lvC)+'的範圍中。';
+ s+='綜合上述，相較'+PEER()+'，孩子目前的語言理解能力落在'+lvWord(S.lvC)+'的範圍中。';
  return'語言理解和認知能力：\n'+s;
 }
 function pExp(){
@@ -389,11 +396,11 @@ function pExp(){
   if(ns||st.length||wk.length){
    n='敘事能力方面，'+ns;
    if(st.length||wk.length){n+='透過自發語樣分析發現，';if(st.length)n+=st.join('，且')+'，為其相對優勢。';if(wk.length)n+=(st.length?'然而，':'')+wk.join('；')+'。'}
-   if(S.nNote.trim())n+='例如，'+oneLine(S.nNote).replace(/。$/,'')+'。';
+   const corpus=corpusText(S.nNote);if(corpus)n=n.replace(/。$/,'')+corpus+'。';
   }
  }
  const wk=[];if(S.nWeak.includes('then'))wk.push('連接詞的多樣性');if(nok(S.e.caus)||nok(S.e.full))wk.push('句型複雜度');if(nok(S.e.vocab)||S.nWeak.includes('word'))wk.push('詞彙豐富度');
- const end='綜合上述，相較同月齡的幼兒，孩子目前的口語表達能力落在'+lvWord(S.lvE)+'的範圍中'+(isAbn(S.lvE)&&wk.length?'，其中'+J(wk)+'為主要待加強的向度':'')+'。';
+ const end='綜合上述，相較'+PEER()+'，孩子目前的口語表達能力落在'+lvWord(S.lvE)+'的範圍中'+(isAbn(S.lvE)&&wk.length?'，其中'+J(wk)+'為主要待加強的向度':'')+'。';
  const en=(S.eNote||'').trim()?oneLine(S.eNote).replace(/。?$/,'。'):'';
  return'口語表達能力：\n'+[s,n,en].filter(Boolean).join('\n')+end;
 }
@@ -409,7 +416,7 @@ function pSpeech(){
  if(S.flu==='無異常'&&S.voi==='無異常')s+='言語流暢度和嗓音方面則無異常。';
  else{if(S.flu!=='無異常')s+='言語流暢度方面，說話時出現重複或延長等不流暢的情形。';else s+='言語流暢度方面無異常。';if(S.voi!=='無異常')s+='嗓音方面，有音質或音量異常的情形。';else s+='嗓音方面無異常。'}
  const lvA=S.artic==='異常'?S.lvA:'正常';
- s+='綜合上述，相較同月齡的幼兒，孩子目前的構音能力落在'+lvA+'的範圍中';
+ s+='綜合上述，相較'+PEER()+'，孩子目前的構音能力落在'+lvA+'的範圍中';
  if(S.artic==='異常')s+=langAbn(S)?'，惟考量其語言能力落在'+(isAbn(S.lvE)?lvWord(S.lvE):lvWord(S.lvC))+'範圍，建議先以語言理解和表達能力之提升為優先，後續視語言整體發展進展，再評估啟動正式構音矯正療程之適當時機。':'，建議接受構音治療。';else s+='。';
  return'說話能力：錯誤語音和言語特徵描述\n'+s;
 }
@@ -423,7 +430,7 @@ function pInter(){
   s+='溝通功能方面，孩子可以'+J(t.func)+(miss.length?'，惟'+J(miss)+'等溝通功能較少出現'+(t.func.length<=2?'，整體溝通意圖偏向被動回應':''):'')+'。'}
  if(t.play)s+='遊戲能力方面，遊戲層次已達'+t.play+'。';
  const f=[];if(isAbn(S.lvC))f.push('語言理解能力');if(isAbn(S.lvE))f.push('口語表達能力');if(t.att&&t.att!=='持續性佳')f.push('注意力表現');if(t.eye==='較困難')f.push('眼神接觸');
- s+='綜合上述，相較同月齡的幼兒，'+(f.length?'孩子整體溝通互動能力受'+J(f)+'影響，建議宜持續追蹤並接受療育。':'孩子目前的溝通互動能力落在正常的範圍中。');
+ s+='綜合上述，相較'+PEER()+'，'+(f.length?'孩子整體溝通互動能力受'+J(f)+'影響，建議宜持續追蹤並接受療育。':'孩子目前的溝通互動能力落在正常的範圍中。');
  return'溝通互動和效度層面：\n'+s;
 }
 function oralShown(){return S.o.mo!=='無異常'||S.o.sw!=='無異常'}
