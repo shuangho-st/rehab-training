@@ -13,7 +13,7 @@ env:
   # 更新同一個部署，網址才不會變。尚未填入前不會部署。
   DEPLOYMENT_ID: AKfycbwp_A-yvS0DYXf02a20ceiqjtJOQveEMi22PrvommX4VBVuemf6dpberFgMakZ42lT5ug
   # clasp push 會整個覆蓋線上專案，這些頁面缺一個都不部署，避免網站被刪壞
-  REQUIRED_FILES: Code.gs Wish.gs appsscript.json Index.html Adult.html Daily.html Early.html Wish.html
+  REQUIRED_FILES: Code.gs appsscript.json Index.html Adult.html Daily.html Early.html
 
 jobs:
   deploy:
