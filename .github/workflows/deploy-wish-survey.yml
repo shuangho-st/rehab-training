@@ -1,0 +1,93 @@
+name: Deploy Wish Survey (Apps Script)
+
+# 年度排班許願問卷：獨立的 Apps Script 網頁應用程式，附屬於自己的試算表。
+# 第一次執行時（wish-survey/.clasp.json 還不存在）會在 CLASPRC_JSON 那個 Google 帳號
+# 建立「排班許願問卷（組長專用）」試算表與附屬程式，並把 scriptId、部署 ID 存回 repo。
+# 之後每次 wish-survey/ 有改動就推送程式並更新同一個部署，網址不變。
+
+on:
+  push:
+    branches: [main]
+    paths: ['wish-survey/**']
+  workflow_dispatch:
+
+concurrency: wish-survey-deploy
+
+permissions:
+  contents: write
+
+env:
+  SHEET_TITLE: 排班許願問卷（組長專用）
+  DOMAIN: s.tmu.edu.tw
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wish-survey
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check files
+        run: |
+          for f in Code.gs Index.html appsscript.json; do
+            test -s "$f" || { echo "::error::缺少 wish-survey/$f"; exit 1; }
+          done
+          test -n "$CLASPRC_JSON" || { echo "::error::尚未設定 GitHub Secret CLASPRC_JSON"; exit 1; }
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install -g @google/clasp@2.4.2
+
+      - name: Write credentials
+        run: printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - name: Create spreadsheet and script (first run only)
+        id: create
+        run: |
+          if [ -f .clasp.json ]; then echo "已有 .clasp.json，略過建立"; exit 0; fi
+          tmp=$(mktemp -d)
+          (cd "$tmp" && clasp create --type sheets --title "$SHEET_TITLE")
+          cat "$tmp/.clasp.json"
+          jq '{scriptId: .scriptId, rootDir: "."} + (if .parentId then {parentId: .parentId} else {} end)' "$tmp/.clasp.json" > .clasp.json
+          cat .clasp.json
+          echo "created=1" >> "$GITHUB_OUTPUT"
+
+      - name: Push code
+        run: clasp push --force
+
+      - name: Deploy web app
+        run: |
+          id=$(cat DEPLOYMENT_ID 2>/dev/null | tr -d '[:space:]' || true)
+          if [ -n "$id" ]; then
+            clasp deploy --deploymentId "$id" --description "GitHub ${GITHUB_SHA::7}"
+          else
+            out=$(clasp deploy --description "GitHub ${GITHUB_SHA::7}")
+            echo "$out"
+            id=$(echo "$out" | grep -oE 'AKfyc[A-Za-z0-9_-]+' | tail -1)
+            test -n "$id" || { echo "::error::讀不到新的部署 ID"; exit 1; }
+            echo "$id" > DEPLOYMENT_ID
+          fi
+          echo "網頁網址：https://script.google.com/a/macros/$DOMAIN/s/$id/exec"
+          echo "### 排班許願問卷" >> "$GITHUB_STEP_SUMMARY"
+          echo "網頁：https://script.google.com/a/macros/$DOMAIN/s/$id/exec" >> "$GITHUB_STEP_SUMMARY"
+          sid=$(jq -r .scriptId .clasp.json)
+          echo "程式：https://script.google.com/d/$sid/edit" >> "$GITHUB_STEP_SUMMARY"
+          pid=$(jq -r '.parentId[0] // empty' .clasp.json)
+          [ -n "$pid" ] && echo "試算表：https://docs.google.com/spreadsheets/d/$pid/edit" >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Save project IDs to repo
+        run: |
+          git add .clasp.json DEPLOYMENT_ID
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "wish-survey: record Apps Script project and deployment IDs"
+          git push origin HEAD:main
