@@ -204,6 +204,15 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
 @media print{nav.tabs,.statusbar{display:none!important} body{background:#fff}
   section.block,.scale-card{break-inside:avoid;border-color:#bbb}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+#donebox{position:fixed;inset:0;z-index:90;background:rgba(22,35,43,.55);display:none;align-items:center;justify-content:center;padding:20px}
+#donebox.show{display:flex}
+#donebox .card{background:var(--card);border-radius:6px;max-width:440px;width:100%;padding:30px 26px 24px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#donebox .tick{width:58px;height:58px;border-radius:50%;background:var(--s5-bg);color:var(--s5);font-size:32px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+#donebox h2{margin:0 0 8px;font-size:21px}
+#donebox p{margin:0 0 20px;color:var(--ink-2);font-size:15px}
+#donebox .acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#donebox .acts .btn{min-width:120px}
 </style>
 </head>
 <body class="locked">
@@ -415,6 +424,19 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
   </div>
 
 </div>
+</div>
+
+<div id="donebox" role="dialog" aria-modal="true" aria-labelledby="done-title">
+  <div class="card">
+    <div class="tick" aria-hidden="true">✓</div>
+    <h2 id="done-title">送出完成</h2>
+    <p id="done-text"></p>
+    <div class="acts">
+      <button class="btn ghost" id="done-edit">修改回覆</button>
+      <button class="btn ghost" id="done-agg" hidden>查看彙整</button>
+      <button class="btn" id="done-ok">完成</button>
+    </div>
+  </div>
 </div>
 
 <div class="statusbar" id="statusbar">
@@ -674,6 +696,7 @@ $("#btn-export").onclick = () => {
     .withSuccessHandler(t => {
       btn.disabled = false; btn.textContent = "重新送出";
       flash($("#formmsg"), `已送出（${esc(t)}）。截止前都可以用同一條連結回來修改，以最後一次送出為準。`, "ok");
+      showDone(t);
       $("#savedmsg").textContent = `你在 ${t} 送出過。修改後按「重新送出」即可。`;
       if (BOOT.role === "lead") loadAll();
     })
@@ -683,6 +706,19 @@ $("#btn-export").onclick = () => {
     })
     .wishSubmit(BOOT.k, d);
 };
+
+/* 送出完成的提示：可以直接回到第一步修改，或關閉 */
+function showDone(t){
+  $("#done-text").innerHTML = `${esc(BOOT.name)}，你的回覆已在 <b>${esc(t)}</b> 存好了。<br>截止前都可以用同一條連結回來修改，以最後一次送出為準。`;
+  $("#done-agg").hidden = BOOT.role !== "lead";
+  $("#donebox").classList.add("show");
+  $("#done-ok").focus();
+}
+const hideDone = () => $("#donebox").classList.remove("show");
+$("#done-ok").onclick = hideDone;
+$("#done-edit").onclick = () => { hideDone(); cur = 0; showStep(); };
+$("#done-agg").onclick = () => { hideDone(); tab(false); loadAll(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") hideDone(); });
 
 function tab(f){
   $("#tab-form").setAttribute("aria-selected", f); $("#tab-agg").setAttribute("aria-selected", !f);
