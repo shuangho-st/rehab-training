@@ -44,13 +44,14 @@ const CONFIG = {
 /* ---------------- 網頁進入點 ---------------- */
 function doGet(e) {
   const p = (e && e.parameter && e.parameter.p) ? String(e.parameter.p) : '';
+  if (p === 'wish') return wishDoGet_(e);   // 年度排班許願問卷，見 Wish.gs
   const fileName = p ? (CONFIG.PAGES[p] || '') : CONFIG.PROJECT_HTML;
   const title = p ? (p === 'adult' ? '成人評估紀錄' : p === 'daily' ? '語言治療每日紀錄' : p === 'early' ? '小話芽｜早療語言評估' : '表單')
                   : '語言治療組 工作入口';
   let html;
   try {
     if (!fileName) throw new Error('未知的頁面代號「' + p + '」。目前可用：' +
-      Object.keys(CONFIG.PAGES).join('、'));
+      Object.keys(CONFIG.PAGES).concat('wish').join('、'));
     html = loadHtml_(fileName);
   } catch (e) {
     html = '<!DOCTYPE html><meta charset="utf-8">' +

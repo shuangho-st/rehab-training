@@ -6,6 +6,8 @@
 
 - `Code.gs`：伺服器端程式
 - `Index.html`、`Adult.html`、`Daily.html`、`Early.html`：各頁面
+- `Wish.gs`、`Wish.html`：年度排班許願問卷（`?p=wish&k=個人代碼`）。回覆存在部署者雲端硬碟裡自動建立的
+  「排班許願問卷（組長專用）」試算表；每人連結在該試算表「名單」分頁，組長的「彙整與試排」也看得到
 - `appsscript.json`：專案設定（僅限臺北醫學大學存取）
 - `.clasp.json`：指定要推送到哪個 Apps Script 專案（scriptId）
 
