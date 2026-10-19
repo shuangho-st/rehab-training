@@ -820,9 +820,28 @@ google.script.run
 
 /* ══════════ 彙整 ══════════ */
 const RES = [];
+/* 臨床題沒填（例如晚班開放選班前就已送出）時，依「志願排序」推估：第 1 志願 5 分、第 2、3 志願 4 分，
+   其餘維持空白（試排時當 3 分）。推估的分數在矩陣裡標「推」，本人回來修改送出後就以本人填的為準 */
+const RANK_ITEMS = {
+  "BS 病房": SOLO.filter(i => i.id.startsWith("BS-")),
+  "護理之家": SOLO.filter(i => i.id.startsWith("NH-")),
+  "成人下樓治療室": POOL.filter(i => i.id === "AD-DAY"),
+  "兒童白班": POOL.filter(i => i.id === "KD-DAY"),
+  "早療評估診": EIA
+};
+function inferClinical(obj){
+  obj.inferred = {};
+  const clinical = [...SOLO, ...POOL, ...EIA];
+  if (clinical.some(i => obj.answers[i.id] !== undefined)) return;
+  (obj.rank || []).forEach((r, n) => (RANK_ITEMS[r] || []).forEach(i => {
+    if (obj.answers[i.id] === undefined) { obj.answers[i.id] = n === 0 ? 5 : 4; obj.inferred[i.id] = true; }
+  }));
+}
+
 function add(obj, src){
   if (!obj || typeof obj !== "object" || !obj.answers) throw new Error(src + " 不是這份問卷的匯出檔");
   if (obj.evening === undefined) obj.evening = obj.name === EVENING_NAME;
+  inferClinical(obj);
   const i = RES.findIndex(r => r.name === obj.name);
   if (i >= 0) RES.splice(i,1);
   RES.push(obj);
@@ -927,7 +946,7 @@ function planTable(roles, pl, showHours){
     const p = pl.map[r], v = RES[p].answers[ro.id];
     return `<tr>
       <td>${ro.code?esc(ro.code)+"　":""}${esc(ro.label)}${ro.mins?`<span class="hours">${ro.mins} 分／月</span>`:""}</td>
-      <td>${esc(nameOf(p))}<span style="color:var(--ink-3);font-size:13px">（自評 ${v ?? "未填"} 分）</span>
+      <td>${esc(nameOf(p))}<span style="color:var(--ink-3);font-size:13px">（${RES[p].inferred?.[ro.id] ? "依志願推估" : "自評"} ${v ?? "未填"} 分）</span>
         ${v===1?'<span class="flag">違反意願</span>':""}
         ${ro.ugyOpt && UGY_TEACHERS.includes(RES[p].name) ? ((RES[p].answers.UGY||0) >= 4 ? '<span class="flag good">可加帶 UGY</span>' : (RES[p].answers.UGY ? `<span class="flag warm">UGY 意願 ${RES[p].answers.UGY}</span>` : "")) : ""}</td></tr>`;
   }).join("")}
@@ -1018,7 +1037,7 @@ function render(){
         <tr class="${want===0?"alert":""}">
           <td class="item">${it.code?esc(it.code)+"　":""}${esc(it.label)}${want===0?'<span class="flag">沒人想要</span>':""}${no>=3?`<span class="flag warm">${no} 人拒絕</span>`:""}</td>
           ${RES.map(r => { if (!applies(it, r.evening, r.lead)) return `<td style="color:var(--ink-3);font-size:12px">${r.lead?"固定":"晚班"}</td>`;
-            const v = r.answers[it.id]; return `<td class="${v?"v"+v:""}">${v??"—"}</td>`; }).join("")}
+            const v = r.answers[it.id], inf = r.inferred?.[it.id]; return `<td class="${v?"v"+v:""}"${inf?' title="依志願排序推估，本人未逐題填寫"':""}>${v??"—"}${inf?'<sup style="font-size:10px;font-weight:400">推</sup>':""}</td>`; }).join("")}
           <td class="avg">${avg.toFixed(1)}</td><td>${want}</td><td>${no}</td>
           <td>${g.elig ? (elig + (elig<=1?'<span class="flag">人數過少</span>':"")) : "—"}</td></tr>`).join("");
     }).join("")}</tbody></table>`;
