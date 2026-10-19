@@ -130,7 +130,6 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--focus);outline-o
 .msg.ok{background:var(--s5-bg);color:#12564F;border:1px solid var(--s4)}
 
 .pane{display:none} .pane.on{display:block}
-body.evening fieldset.row[data-day],body.evening section[data-dayblock]{display:none}
 body.lead fieldset.row[data-adm],body.lead section[data-admblock]{display:none}
 #login{position:fixed;inset:0;z-index:100;background:var(--paper);overflow-y:auto}
 #login .box{max-width:560px;margin:8vh auto 40px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:30px 26px}
@@ -270,7 +269,7 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
       <div class="field">
         <div style="display:none"><input type="checkbox" id="f-lead"><input type="checkbox" id="f-eve"></div>
         <p id="f-role" style="margin:0;color:var(--ink-2);font-size:14.5px"></p>
-        <div class="evenote">明年兒童晚班由你固定負責，臨床白班（專責區、共同時段池、早療評估診）與「盤點」已隱藏，不需要填。請照常填主要行政與其他附加工作的意願。</div>
+        <div class="evenote">明年兒童晚班由你固定負責；晚班以外的時段（例如下午）仍可以選班，所以臨床、早療評估診、行政各項都請照常填意願。</div>
       </div>
     </div>
   </section>
@@ -491,7 +490,7 @@ const ELIGIBLE = {
 };
 const isElig = (name, id) => !(ELIGIBLE[id]||[]).length || ELIGIBLE[id].includes(name);
 
-/* 明年兒童晚班固定人選：只排晚班，不排任何白班臨床（專責區、共同時段池、早療評估診）與限白班的附加工作 */
+/* 明年兒童晚班固定人選：晚班固定，其餘時段（例如下午）仍可選班，所以各項照常填、照常試排 */
 const EVENING_NAME = (MEMBERS.find(m => m.role === "evening") || {}).name || "";
 
 /* 已固定人選、不需要調查的項目 */
@@ -558,7 +557,7 @@ const GROUPS = [
   {key:"extra", name:"行政｜附加工作",   need:"一人一項，工作量較小", items:EXTRA}
 ];
 const ITEMS = GROUPS.flatMap(g => g.items);
-/* 白班才有的項目：晚班人員不填、不排 */
+/* 白班才有的項目（目前僅作標記，晚班人員仍可選） */
 [...SOLO, ...POOL, ...EIA, ...UGY].forEach(i => i.dayOnly = true);
 EXTRA.filter(i => /限白班/.test(i.hint||"")).forEach(i => i.dayOnly = true);
 [...ADMIN, ...EXTRA].forEach(i => i.admOnly = true);
@@ -567,8 +566,8 @@ GROUPS.forEach(g => { g.step = STEP_NAME[g.key]; });
 GROUPS.forEach(g => { g.dayBlock = g.items.every(i => i.dayOnly); g.admBlock = g.items.every(i => i.admOnly); });
 const isEve = () => $("#f-eve").checked;
 const isLead = () => $("#f-lead").checked;
-/* 這一題是否適用於此人：晚班人員不填白班項目；組長行政已固定，不填行政與附加工作 */
-const applies = (it, eve, lead) => !(eve && it.dayOnly) && !(lead && it.admOnly);
+/* 這一題是否適用於此人：組長行政已固定，不填行政與附加工作 */
+const applies = (it, eve, lead) => !(lead && it.admOnly);
 const RANKS = ["BS 病房","成人下樓治療室","兒童白班","早療評估診","護理之家","教學／實習督導","研究／計畫","行政管理"];
 const GROWS = ["吞嚥","失語症／認知溝通","兒童語言","構音","NICU／早產兒","嗓音","護理之家長照","早療評估","研究","教學／實習帶領","行政管理"];
 
@@ -668,9 +667,9 @@ function check(d){
   if (noWhy.length) bad.push(`有 ${noWhy.length} 項給 1 分但沒寫原因`);
   if (ones.length > 3) bad.push(`1 分共 ${ones.length} 項，超過建議上限 3 項——請保留真正不行的，其餘改 2 分`);
   const soloBlock = SOLO.filter(s => d.answers[s.id] === 1).length;
-  if (!d.evening && soloBlock >= 5) bad.push(`${SOLO.length} 個專責區中有 ${soloBlock} 個給 1 分，這樣幾乎排不出來`);
+  if (soloBlock >= 5) bad.push(`${SOLO.length} 個專責區中有 ${soloBlock} 個給 1 分，這樣幾乎排不出來`);
   const admOK = ADMIN.filter(a => d.answers[a.id] !== 1).length;
-  const eiOK  = d.evening ? 0 : EIA.filter(a => d.answers[a.id] !== 1).length;
+  const eiOK  = EIA.filter(a => d.answers[a.id] !== 1).length;
   if (!d.lead && admOK === 0 && eiOK === 0)
     bad.push("行政主要工作與早療評估診全部給 1 分，至少要留一項可承接");
   return bad;
@@ -732,7 +731,7 @@ $("#tab-agg").onclick  = () => tab(false);
 const roleOf = n => n === EVENING_NAME ? "evening" : (MEMBERS.find(m => m.name === n)?.role || "staff");
 const ROLE_TXT = {
   lead:"技術組長——你的行政工作已固定，這裡只填臨床與早療評估診的意願；上方可切到「彙整與試排」。",
-  evening:"明年兒童晚班（固定）——白班臨床與「盤點」不用填，請填主要行政與附加工作的意願。",
+  evening:"明年兒童晚班（固定）——晚班以外的時段仍可選班，請照常填所有區塊的意願。",
   staff:"一般組員——請填所有區塊的意願。"
 };
 function enter(name){
@@ -886,7 +885,6 @@ function solve(roles, {allowOne=false, checkElig=false, skipLead=false, rank}){
   const val = (p,r) => {
     const id = roles[r].id;
     if (skipLead && RES[p].lead) return null;
-    if (roles[r].dayOnly && RES[p].evening) return null;
     if (checkElig && !isElig(RES[p].name, id)) return null;
     const v = RES[p].answers[id];
     if (v === undefined) return 3;
@@ -924,7 +922,7 @@ const nameOf = i => RES[i]?.name || "未具名";
 function planTable(roles, pl, showHours){
   const hrs = {};
   roles.forEach((ro,r) => { const p = pl.map[r]; hrs[p] = (hrs[p]||0) + (ro.mins||0); });
-  const free = RES.map((_,i)=>i).filter(i => !pl.map.includes(i) && !(RES[i].evening && roles.every(x => x.dayOnly)));
+  const free = RES.map((_,i)=>i).filter(i => !pl.map.includes(i));
   return `<table>${roles.map((ro,r) => {
     const p = pl.map[r], v = RES[p].answers[ro.id];
     return `<tr>
@@ -941,7 +939,7 @@ function planTable(roles, pl, showHours){
 }
 
 function renderSolve(box, roles, opts, note, showHours){
-  const avail = RES.filter(r => !(opts.skipLead && r.lead) && !(r.evening && roles.every(x => x.dayOnly))).length;
+  const avail = RES.filter(r => !(opts.skipLead && r.lead)).length;
   if (avail < roles.length) {
     box.innerHTML = `<p style="margin:0;color:var(--ink-2)">目前可分配的人有 ${avail} 位，這裡有 ${roles.length} 個項目，回覆載滿之後才試排。</p>`;
     return null;
@@ -974,7 +972,7 @@ function render(){
 
   /* 臨床專責區：先保最低分，再比總分 */
   renderSolve($("#planbox"), SOLO, {rank:s => s.min*1000 + s.total},
-    `排序方式：先讓最不情願的那個人分數盡量高，同樣情況下再比意願總分。未分配到專責區的人，時段全部投入共同時段池與早療評估診。${EVENING_NAME}固定兒童晚班，不納入白班臨床分配。`, false);
+    `排序方式：先讓最不情願的那個人分數盡量高，同樣情況下再比意願總分。未分配到專責區的人，時段全部投入共同時段池與早療評估診。${EVENING_NAME}固定兒童晚班，晚班以外的時段一樣納入分配。`, false);
 
 
   /* 累計每人已背的行政時數（分／月），一階段一階段往下傳 */
@@ -1051,7 +1049,7 @@ function render(){
       const eiOK  = EIA.filter(a => isElig(r.name, a.id) && r.answers[a.id] !== 1).length;
       return `<tr><td class="item">${esc(r.name||"未具名")}${r.lead?'<span class="flag warm">組長</span>':""}${r.evening?'<span class="flag warm">兒童晚班</span>':""}</td>
         <td class="v5">${c(5)}</td><td class="v4">${c(4)}</td><td class="v1">${c(1)}</td>
-        <td>${r.evening ? "不納入" : eiOK+"/"+EIA.length}</td>
+        <td>${eiOK+"/"+EIA.length}</td>
         <td>${r.lead ? "不納入" : admOK+"/"+ADMIN.length}</td>
         <td class="item">${esc((r.rank||[]).join(" › ")) || "—"}</td>
         <td class="item">${esc(r.load||"—")}</td><td class="item">${esc(r.adm||"—")}</td>
