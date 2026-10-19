@@ -255,7 +255,7 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
         <div class="grid3">
           <div><label for="f-name">姓名</label><input type="text" id="f-name" readonly></div>
           <div><label for="f-year">語言治療年資</label><input type="text" id="f-year" placeholder="例：5 年"></div>
-          <div><label for="f-now">今年主要負責</label><input type="text" id="f-now" placeholder="例：BS C 區 + 兒童 + 衛材管理"></div>
+          <div><label for="f-now">今年主要負責</label><input type="text" id="f-now" placeholder="例：NICU、7A／7B／7C 病房 + 兒童 + 衛材管理"></div>
         </div>
       </div>
       <div class="field">
@@ -479,11 +479,11 @@ const LOCKED = [
 
 /* 臨床：一人專責區 */
 const SOLO = [
-  {id:"BS-A",   label:"BS　A 區",     hint:"207／208　一人負責，含 3 個時段"},
-  {id:"BS-B",   label:"BS　B 區",     hint:"217／219　一人負責，含 3 個時段"},
-  {id:"BS-C",   label:"BS　C 區",     hint:"NICU、7A／7B／7C　一人負責，含 3 個時段"},
-  {id:"BS-D",   label:"BS　D 區",     hint:"8A／8B／8C／9A　一人負責，含 3 個時段"},
-  {id:"BS-E",   label:"BS　E 區",     hint:"9B／9C／10A／11A／11B　一人負責，含 3 個時段"},
+  {id:"BS-A",   label:"病房　207／208",                hint:"一人負責，含 3 個時段"},
+  {id:"BS-B",   label:"病房　217／219",                hint:"一人負責，含 3 個時段"},
+  {id:"BS-C",   label:"病房　NICU、7A／7B／7C",        hint:"一人負責，含 3 個時段"},
+  {id:"BS-D",   label:"病房　8A／8B／8C／9A",          hint:"一人負責，含 3 個時段"},
+  {id:"BS-E",   label:"病房　9B／9C／10A／11A／11B",   hint:"一人負責，含 3 個時段"},
   {id:"NH-213", label:"護理之家　213", hint:"一人負責，含 3 個時段"},
   {id:"NH-215", label:"護理之家　215", hint:"一人負責，含 3 個時段"}
 ];
