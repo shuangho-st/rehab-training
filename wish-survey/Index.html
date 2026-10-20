@@ -489,10 +489,10 @@ const WEEK_DAYS = ["一","二","三","四","五"];
 const HALVES = [["AM","上午"],["PM","下午"]];
 /* 病房、護家每區每週要幾個半天。不綁固定時段，白天哪個時段都可以（不排晚上），由程式挑人力最寬裕的時段 */
 const AREA_HALF_DAYS = { "BS-A":3, "BS-B":3, "BS-C":3, "BS-D":3, "BS-E":3, "NH-213":3, "NH-215":3 };
-/* 早療評估診各時段，會占用一間兒童治療室。聯評由組長確認；分評（★）依今年班表推估 */
+/* 早療評估診各時段（組長確認），會占用一間兒童治療室。聯評：週二下午、週四上午、週四下午；分評：週二上午 11:00 兩個、週二下午 13:20、週四下午 15:30 */
 const EI_SLOTS = {
   "EA-U-A":"二PM", "EA-U-B":"四AM", "EA-U-C":"四PM",
-  "EA-S-1":"二AM", "EA-S-2":"二PM", "EA-S-3":"四PM", "EA-S-4":"四AM"
+  "EA-S-1":"二AM", "EA-S-2":"二AM", "EA-S-3":"二PM", "EA-S-4":"四PM"
 };
 /* 治療室：兒童每個白班時段 3 間都要有人；成人 3 間，排不滿時留空 */
 const KID_ROOMS = ["兒童語言治療室1","兒童語言治療室2","兒童語言治療室3"];
@@ -501,7 +501,9 @@ const ADULT_ROOMS = ["成人語言治療室1","成人語言治療室2","成人�
 const FIXED_SLOTS = [
   {name:"彥妤", slot:"五PM", room:"兒童語言治療室3", txt:"跨專業團課"},
   {name:"婉瑜", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
-  {name:"郁方", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"}
+  {name:"郁方", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
+  /* 週三下午 13:20 分評（支援評估），不在問卷分配內，先由組長支援，和今年一樣 */
+  {lead:true, slot:"三PM", room:"兒童語言治療室3", txt:"支援分評"}
 ];
 /* 組長固定行政時段 */
 const LEAD_ADMIN_SLOTS = ["四AM"];
@@ -1050,9 +1052,9 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   const grid = {kid:{}, adult:{}};
   const kindOf = room => KID_ROOMS.includes(room) ? "kid" : ADULT_ROOMS.includes(room) ? "adult" : "";
   FIXED_SLOTS.forEach(f => {
-    const i = P.findIndex(p => p.name === f.name);
+    const i = P.findIndex(p => f.lead ? p.lead : p.name === f.name);
     if (i < 0) return;
-    if (job[i][f.slot]) { warn.push(`${f.name}：${f.txt}（${slotName(f.slot)}）和${job[i][f.slot].txt}撞時段`); return; }
+    if (job[i][f.slot]) { warn.push(`${P[i].name}：${f.txt}（${slotName(f.slot)}）和${job[i][f.slot].txt}撞時段`); return; }
     const kind = kindOf(f.room || "");
     job[i][f.slot] = {t: kind || "fx", txt:f.txt};
     if (kind) {
@@ -1166,7 +1168,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   ].join("");
 
   box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + sum +
-    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著把兒童 3 間治療室每格排滿，最後排成人治療室。誰坐哪一格看兒童白班／成人下樓的意願分數、還剩多少可排時段（行政工作重的人會多留行政時間），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評照今年班表推估。</p>`;
+    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著把兒童 3 間治療室每格排滿，最後排成人治療室。誰坐哪一格看兒童白班／成人下樓的意願分數、還剩多少可排時段（行政工作重的人會多留行政時間），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午；週三下午支援分評由組長負責。</p>`;
 
   /* 複製到試算表用（Tab 分隔） */
   const rows = [];
@@ -1196,7 +1198,7 @@ function render(){
   /* 臨床專責區：先保最低分，再比總分 */
   /* 已固定的個人時段與組長行政時段，病房、護家、早療都要避開 */
   const fixedBusy = p => [
-    ...FIXED_SLOTS.filter(f => f.name === RES[p].name).map(f => f.slot),
+    ...FIXED_SLOTS.filter(f => f.name === RES[p].name || (f.lead && RES[p].lead)).map(f => f.slot),
     ...(RES[p].lead ? LEAD_ADMIN_SLOTS : [])
   ];
   const soloPlan = renderSolve($("#planbox"), SOLO, {rank:s => s.min*1000 + s.total},
