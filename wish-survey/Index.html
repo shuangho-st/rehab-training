@@ -893,8 +893,11 @@ function loadAll(){
   google.script.run
     .withSuccessHandler(list => {
       RES.length = 0; list.forEach(o => add(o, "試算表"));
+      /* 還沒回覆的人先以「都可以」（3 分）放進試排，回覆後自動換成本人的意願 */
+      MEMBERS.filter(m => !RES.some(r => r.name === m.name)).forEach(m =>
+        RES.push({name:m.name, answers:{}, inferred:{}, lead:m.role === "lead", evening:m.role === "evening", pending:true}));
       render();
-      const done = RES.map(r => r.name), todo = MEMBERS.map(m => m.name).filter(n => !done.includes(n));
+      const done = RES.filter(r => !r.pending).map(r => r.name), todo = MEMBERS.map(m => m.name).filter(n => !done.includes(n));
       $("#statusline").innerHTML = `已回覆 <b>${done.length}</b> / ${MEMBERS.length} 人` +
         (todo.length ? `　<span style="color:var(--ink-3)">尚未回覆：${todo.map(esc).join("、")}</span>` : "　<span class='flag good'>全部到齊</span>") +
         `<span style="color:var(--ink-3);font-size:13px">　（更新於 ${new Date().toTimeString().slice(0,5)}）</span>`;
@@ -996,7 +999,7 @@ function planTable(roles, pl, showHours){
     const p = pl.map[r], v = RES[p].answers[ro.id];
     return `<tr>
       <td>${ro.code?esc(ro.code)+"　":""}${esc(ro.label)}${ro.mins?`<span class="hours">${ro.mins} 分／月</span>`:""}</td>
-      <td>${esc(nameOf(p))}<span style="color:var(--ink-3);font-size:13px">（${RES[p].inferred?.[ro.id] ? "依志願推估" : "自評"} ${v ?? "未填"} 分）</span>
+      <td>${esc(nameOf(p))}<span style="color:var(--ink-3);font-size:13px">（${RES[p].pending ? "未回覆，暫以 3 分" : `${RES[p].inferred?.[ro.id] ? "依志願推估" : "自評"} ${v ?? "未填"} 分`}）</span>
         ${v===1?'<span class="flag">違反意願</span>':""}
         ${ro.ugyOpt && UGY_TEACHERS.includes(RES[p].name) ? ((RES[p].answers.UGY||0) >= 4 ? '<span class="flag good">可加帶 UGY</span>' : (RES[p].answers.UGY ? `<span class="flag warm">UGY 意願 ${RES[p].answers.UGY}</span>` : "")) : ""}</td></tr>`;
   }).join("")}
@@ -1037,7 +1040,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   const slotName = s => `週${s[0]}${s.slice(1)==="AM"?"上午":"下午"}`;
 
   /* 人員：已回覆的人＋沒填問卷的固定人員 */
-  const P = RES.map(r => ({name:r.name, lead:!!r.lead, evening:!!r.evening, ans:r.answers}));
+  const P = RES.map(r => ({name:r.name, lead:!!r.lead, evening:!!r.evening, ans:r.answers, pending:!!r.pending}));
   EXTRA_STAFF.filter(n => !P.some(p => p.name === n)).forEach(n => P.push({name:n, lead:false, evening:false, ans:{}, extra:true}));
   const pref = (p, id) => { const v = p.ans[id]; return v === undefined ? 3 : v; };
 
@@ -1105,13 +1108,19 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   /* 填治療室：兒童先排（每格都要有人），再排成人；同一間房前一天同時段的人優先，讓大家固定房間 */
   const used = P.map(() => 0);
   const home = {};   /* 每人上午／下午習慣待的房間，讓大家盡量每天同一間 */
+  /* 早療先放進兒童治療室 */
+  SLOTS.forEach(s => P.forEach((p,i) => {
+    if (job[i][s]?.t !== "ei") return;
+    const room = KID_ROOMS.find(r => !grid.kid[s + "|" + r]);
+    if (room) grid.kid[s + "|" + room] = {is:[i], txt:job[i][s].txt};
+  }));
+  /* 一間一間房排：每一輪先排人手最緊的時段，空格才會分散，不會集中在週末前 */
   const fill = (kind, rooms, itemId, must) => {
-    SLOTS.forEach((s, si) => {
-      const eiHere = P.map((p,i) => job[i][s]?.t === "ei" ? i : -1).filter(i => i >= 0);
-      rooms.forEach((room, ri) => {
+    rooms.forEach(room => {
+      const freeCount = s => P.filter((p,i) => !job[i][s] && used[i] < cap[i]).length;
+      [...SLOTS].sort((a,b) => freeCount(a) - freeCount(b) || SLOTS.indexOf(a) - SLOTS.indexOf(b)).forEach(s => {
         const key = s + "|" + room;
         if (grid[kind][key]) return;
-        if (kind === "kid" && eiHere.length) { const i = eiHere.shift(); grid.kid[key] = {is:[i], txt:job[i][s].txt}; return; }
         const half = s.slice(1);
         let best = -1, bestScore = -1e9;
         P.forEach((p,i) => {
@@ -1156,7 +1165,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   const sum = `<h3 style="margin:22px 0 8px;font-size:16px">每人一週半天數</h3>
     <table class="mx"><thead><tr><th class="item">姓名</th><th>兒童</th><th>成人</th><th>病房</th><th>護家</th><th>早療</th><th>行政／彈性</th><th>行政需留</th><th>兒童意願</th><th>成人意願</th></tr></thead><tbody>
     ${P.map((p,i) => { const free = SLOTS.filter(s => !job[i][s] || job[i][s].t === "adm").length;
-      return `<tr><td class="item">${esc(p.name)}${p.lead?'<span class="flag warm">組長</span>':""}${p.evening?'<span class="flag warm">晚班</span>':""}${p.extra?'<span class="flag warm">未填問卷</span>':""}</td>
+      return `<tr><td class="item">${esc(p.name)}${p.lead?'<span class="flag warm">組長</span>':""}${p.evening?'<span class="flag warm">晚班</span>':""}${p.extra||p.pending?'<span class="flag warm">未回覆</span>':""}</td>
       <td>${tally[i].kid}</td><td>${tally[i].adult}</td><td>${tally[i].bs}</td><td>${tally[i].nh}</td><td>${tally[i].ei}</td>
       <td>${free}</td><td>${adminHalf[i]}</td><td class="v${pref(p,"KD-DAY")}">${p.ans["KD-DAY"] ?? "—"}</td><td class="v${pref(p,"AD-DAY")}">${p.ans["AD-DAY"] ?? "—"}</td></tr>`; }).join("")}
     </tbody></table>`;
@@ -1193,7 +1202,7 @@ function render(){
   }
 
   $("#loadedbox").innerHTML = RES.map((r,i) =>
-    `<span class="chip" style="padding-right:12px">${esc(r.name||"未具名")}<span style="color:var(--ink-3);font-size:12.5px">${esc(r.submitted||"")}</span></span>`).join("");
+    `<span class="chip" style="padding-right:12px">${esc(r.name||"未具名")}<span style="color:var(--ink-3);font-size:12.5px">${r.pending ? "尚未回覆，暫以 3 分試排" : esc(r.submitted||"")}</span></span>`).join("");
 
   /* 臨床專責區：先保最低分，再比總分 */
   /* 已固定的個人時段與組長行政時段，病房、護家、早療都要避開 */
@@ -1247,7 +1256,7 @@ function render(){
 
   /* 意願矩陣（分區塊） */
   $("#matrixbox").innerHTML = `<table class="mx">
-    <thead><tr><th class="item">項目</th>${RES.map(r=>`<th>${esc((r.name||"?").slice(0,4))}</th>`).join("")}
+    <thead><tr><th class="item">項目</th>${RES.map(r=>`<th${r.pending?' style="color:var(--ink-3)" title="尚未回覆"':""}>${esc((r.name||"?").slice(0,4))}${r.pending?"<br>未回覆":""}</th>`).join("")}
       <th>平均</th><th>想要<br>≥4分</th><th>拒絕<br>1分</th><th>符合<br>條件</th></tr></thead>
     <tbody>${GROUPS.map(g => {
       const rows = g.items.map(it => ({it, ...stats(it.id)})).sort((a,b) => a.avg - b.avg || b.no - a.no);
@@ -1280,7 +1289,7 @@ function render(){
     <thead><tr><th class="item">治療師</th><th>5 分</th><th>4 分</th><th>1 分</th>
       <th>早療<br>可接項數</th><th>行政<br>可接項數</th>
       <th class="item">前三志願</th><th class="item">臨床總量</th><th class="item">行政總量</th><th class="item">固定不能排</th></tr></thead>
-    <tbody>${RES.map(r => {
+    <tbody>${RES.filter(r => !r.pending).map(r => {
       const v = Object.values(r.answers), c = n => v.filter(x=>x===n).length;
       const admOK = ADMIN.filter(a => isElig(r.name, a.id) && r.answers[a.id] !== 1).length;
       const eiOK  = EIA.filter(a => isElig(r.name, a.id) && r.answers[a.id] !== 1).length;
@@ -1293,7 +1302,7 @@ function render(){
         <td class="item">${esc(r.fixed||"—")}</td></tr>`;
     }).join("")}</tbody></table>`;
 
-  $("#textbox").innerHTML = RES.map(r => `
+  $("#textbox").innerHTML = RES.filter(r => !r.pending).map(r => `
     <div style="padding:12px 0;border-bottom:1px solid var(--line-2)">
       <div style="font-weight:700">${esc(r.name||"未具名")}
         <span style="font-weight:400;color:var(--ink-3);font-size:13.5px">　年資 ${esc(r.years||"—")}　排班原則：${esc(r.fair||"—")}　缺人時輪替：${esc(r.swap||"—")}</span></div>
@@ -1306,7 +1315,7 @@ function render(){
 $("#btn-agg-csv").onclick = () => {
   if (!RES.length) { flash($("#aggmsg"), "還沒有人送出，沒有東西可以下載。", "warn"); return; }
   const q = s => { let t = String(s??""); if (/^[=+\-@]/.test(t)) t = "'" + t; return `"${t.replace(/"/g,'""')}"`; };
-  const rows = [["項目", ...RES.map(r=>r.name||"未具名"), "平均","想要人數","拒絕人數","符合條件人數"]];
+  const rows = [["項目", ...RES.map(r=>(r.name||"未具名") + (r.pending ? "（未回覆）" : "")), "平均","想要人數","拒絕人數","符合條件人數"]];
   GROUPS.forEach(g => {
     rows.push([g.name]);
     g.items.forEach(it => { const s = stats(it.id);
