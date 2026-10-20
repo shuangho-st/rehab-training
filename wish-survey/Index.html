@@ -516,7 +516,7 @@ const LEAD_ADMIN_SLOTS = ["四AM"];
 /* 晚班人員白天只排下午（上午為晚班補休） */
 const EVENING_FREE = ["PM"];
 /* 沒有填問卷、但明年仍在組內排班的人（意願當 3 分）。不在組內就刪掉名字 */
-const EXTRA_STAFF = ["子妍"];
+const EXTRA_STAFF = [];
 /* 行政時數換算成每週要留的半天數：分／月 ÷ 60 ÷ 4.33 週 ÷ 每個半天 3.5 小時 */
 const HALF_DAY_HOURS = 3.5;
 const slotsOfItem = id => [].concat(AREA_SLOTS[id] || EI_SLOTS[id] || []);
