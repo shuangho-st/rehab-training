@@ -515,6 +515,8 @@ const LEAD_OVERRIDES = {
   "慈芯": { "BS-A":1, "KD-DAY":1 },                   /* 組長希望不負責 207／208，也不排兒童時段 */
   "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5 }      /* 請書寧協助早療聯評 */
 };
+/* 每週固定保留的兒童時段數（其餘兒童時段不排給她）。園菁：兒童自費個案，組長定一週 3 個 */
+const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長固定行政時段 */
 const LEAD_ADMIN_SLOTS = ["四AM"];
 /* 晚班人員白天只排下午（上午為晚班補休） */
@@ -1178,6 +1180,25 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
       });
     });
   };
+  /* 保留固定兒童時段：挑不同天、當下人力最寬裕的時段 */
+  Object.entries(KID_QUOTA).forEach(([name, q]) => {
+    const i = P.findIndex(p => p.name === name);
+    if (i < 0) return;
+    const days = [];
+    for (let k = 0; k < q.n; k++) {
+      let best = null, bestSc = -1e9;
+      SLOTS.forEach(s => {
+        if (job[i][s] || days.includes(s[0]) || !KID_ROOMS.some(r => !grid.kid[s + "|" + r])) return;
+        const sc = P.filter((p,j) => !job[j][s]).length;
+        if (sc > bestSc) { bestSc = sc; best = s; }
+      });
+      if (!best) { warn.push(`${name}：兒童${q.txt}時段排不滿 ${q.n} 個`); break; }
+      const room = KID_ROOMS.slice().reverse().find(r => !grid.kid[best + "|" + r]);
+      job[i][best] = {t:"kid", txt:q.txt}; tally[i].kid++; used[i]++; days.push(best[0]);
+      grid.kid[best + "|" + room] = {is:[i], txt:q.txt};
+    }
+  });
+
   fill("adult", ADULT_ROOMS, "AD-DAY", true);
   fill("kid", KID_ROOMS, "KD-DAY", false);
 
