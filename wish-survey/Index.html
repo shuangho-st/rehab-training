@@ -499,7 +499,7 @@ const EI_SLOTS = {
   "EA-U-A":"二PM", "EA-U-B":"四AM", "EA-U-C":"四PM",
   "EA-S-1":"二AM", "EA-S-2":"二AM", "EA-S-3":"二PM", "EA-S-4":"四PM"
 };
-/* 治療室：兒童每個白班時段 3 間都要有人；成人 3 間，排不滿時留空 */
+/* 治療室：成人門診優先，每個白班時段 3 間都要排滿；兒童 3 間其次，人力不夠時留空（組長決定，成人比兒童重要） */
 const KID_ROOMS = ["兒童語言治療室1","兒童語言治療室2","兒童語言治療室3"];
 const ADULT_ROOMS = ["成人語言治療室1","成人語言治療室2","成人語言治療室3"];
 /* 個人固定時段（問卷「固定行程」）。有寫 room 就占用那間治療室；同一間可以兩人一起帶團體 */
@@ -512,7 +512,7 @@ const FIXED_SLOTS = [
 ];
 /* 組長調整：把某人某一項的分數改成這裡的值，優先於本人填的分數（1＝不排給這個人） */
 const LEAD_OVERRIDES = {
-  "慈芯": { "BS-A":1 },                               /* 組長希望不負責 207／208 */
+  "慈芯": { "BS-A":1, "KD-DAY":1 },                   /* 組長希望不負責 207／208，也不排兒童時段 */
   "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5 }      /* 請書寧協助早療聯評 */
 };
 /* 組長固定行政時段 */
@@ -1143,7 +1143,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   P.forEach((p,i) => { if (p.lead) adminHalf[i] += 1380; adminHalf[i] = Math.round(adminHalf[i] / 60 / 4.33 / HALF_DAY_HOURS); });
   const cap = P.map((p,i) => SLOTS.filter(s => !job[i][s]).length - Math.max(0, adminHalf[i] - tally[i].adm));
 
-  /* 填治療室：兒童先排（每格都要有人），再排成人；同一間房前一天同時段的人優先，讓大家固定房間 */
+  /* 填治療室：成人先排（每格都要有人），再排兒童；同一間房前一天同時段的人優先，讓大家固定房間 */
   const used = P.map(() => 0);
   const home = {};   /* 每人上午／下午習慣待的房間，讓大家盡量每天同一間 */
   /* 早療先放進兒童治療室 */
@@ -1178,8 +1178,8 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
       });
     });
   };
-  fill("kid", KID_ROOMS, "KD-DAY", true);
-  fill("adult", ADULT_ROOMS, "AD-DAY", false);
+  fill("adult", ADULT_ROOMS, "AD-DAY", true);
+  fill("kid", KID_ROOMS, "KD-DAY", false);
 
   /* 各時段外出（病房、護家）與留白的人 */
   const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS":j.t==="nh"?"護家":j.txt}）` : null; }).filter(Boolean);
@@ -1209,13 +1209,13 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
     </tbody></table>`;
 
   const notes = [
-    kidHoles.length ? `<div class="msg show warn" style="margin:0 0 10px">兒童治療室有 ${kidHoles.length} 格排不到人：${kidHoles.map(esc).join("、")}</div>` : "",
+    adultHoles.length ? `<div class="msg show warn" style="margin:0 0 10px">成人治療室有 ${adultHoles.length} 格排不到人：${adultHoles.map(esc).join("、")}</div>` : "",
     warn.length ? `<div class="msg show warn" style="margin:0 0 10px">${warn.map(esc).join("<br>")}</div>` : "",
-    adultHoles.length ? `<p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">成人治療室空著的格子：${adultHoles.length} 格（人力不夠時成人優先留空）。</p>` : ""
+    kidHoles.length ? `<p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">兒童治療室空著的格子：${kidHoles.length} 格（成人優先，人力不夠時兒童留空）：${kidHoles.map(esc).join("、")}</p>` : ""
   ].join("");
 
   box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + sum +
-    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著把兒童 3 間治療室每格排滿，最後排成人治療室。誰坐哪一格看兒童白班／成人下樓的意願分數、還剩多少可排時段（行政工作重的人會多留行政時間），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午；週三下午支援分評由組長負責。</p>`;
+    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政工作重的人會多留行政時間），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午；週三下午支援分評由組長負責。</p>`;
 
   /* 複製到試算表用（Tab 分隔） */
   const rows = [];
