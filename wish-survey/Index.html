@@ -374,6 +374,11 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
   </section>
 
   <section class="block">
+    <div class="block-head"><h2>試排假設</h2><span class="need">模擬有人離職或組長調整後的排法</span></div>
+    <div class="block-body" id="scenariobox"><div class="empty">讀取中…</div></div>
+  </section>
+
+  <section class="block">
     <div class="block-head"><h2>臨床專責區試排</h2>
       <span class="need">一人負責一區。先讓「最不情願的人」分數盡量高，再比總分；被打 1 分的組合直接排除</span></div>
     <div class="block-body" id="planbox"><div class="empty">載入回覆後會算出方案。</div></div>
@@ -505,6 +510,11 @@ const FIXED_SLOTS = [
   /* 週三下午 13:20 分評（支援評估），不在問卷分配內，先由組長支援，和今年一樣 */
   {lead:true, slot:"三PM", room:"兒童語言治療室3", txt:"支援分評"}
 ];
+/* 組長調整：把某人某一項的分數改成這裡的值，優先於本人填的分數（1＝不排給這個人） */
+const LEAD_OVERRIDES = {
+  "慈芯": { "BS-A":1 },                               /* 組長希望不負責 207／208 */
+  "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5 }      /* 請書寧協助早療聯評 */
+};
 /* 組長固定行政時段 */
 const LEAD_ADMIN_SLOTS = ["四AM"];
 /* 晚班人員白天只排下午（上午為晚班補休） */
@@ -861,6 +871,14 @@ google.script.run
 
 /* ══════════ 彙整 ══════════ */
 const RES = [];
+/* 試排假設：勾選「明年不在」的人不納入試排（只影響這台電腦的畫面） */
+const ALLRES = [];
+const ABSENT = new Set((() => { try { return JSON.parse(localStorage.getItem("wish-absent") || "[]"); } catch (e) { return []; } })());
+function applyScenario(){
+  RES.length = 0;
+  ALLRES.filter(r => !ABSENT.has(r.name)).forEach(r => RES.push(r));
+  render();
+}
 /* 臨床題沒填（例如晚班開放選班前就已送出）時，依「志願排序」推估：第 1 志願 5 分、第 2、3 志願 4 分，
    其餘維持空白（試排時當 3 分）。推估的分數在矩陣裡標「推」，本人回來修改送出後就以本人填的為準 */
 const RANK_ITEMS = {
@@ -883,6 +901,8 @@ function add(obj, src){
   if (!obj || typeof obj !== "object" || !obj.answers) throw new Error(src + " 不是這份問卷的匯出檔");
   if (obj.evening === undefined) obj.evening = obj.name === EVENING_NAME;
   inferClinical(obj);
+  obj.overridden = {};
+  Object.entries(LEAD_OVERRIDES[obj.name] || {}).forEach(([id, v]) => { obj.answers[id] = v; obj.overridden[id] = true; });
   const i = RES.findIndex(r => r.name === obj.name);
   if (i >= 0) RES.splice(i,1);
   RES.push(obj);
@@ -895,9 +915,11 @@ function loadAll(){
       RES.length = 0; list.forEach(o => add(o, "試算表"));
       /* 還沒回覆的人先以「都可以」（3 分）放進試排，回覆後自動換成本人的意願 */
       MEMBERS.filter(m => !RES.some(r => r.name === m.name)).forEach(m =>
-        RES.push({name:m.name, answers:{}, inferred:{}, lead:m.role === "lead", evening:m.role === "evening", pending:true}));
-      render();
-      const done = RES.filter(r => !r.pending).map(r => r.name), todo = MEMBERS.map(m => m.name).filter(n => !done.includes(n));
+        RES.push({name:m.name, answers:{}, inferred:{}, overridden:{}, lead:m.role === "lead", evening:m.role === "evening", pending:true}));
+      ALLRES.length = 0; RES.forEach(r => ALLRES.push(r));
+      renderScenario();
+      applyScenario();
+      const done = ALLRES.filter(r => !r.pending).map(r => r.name), todo = MEMBERS.map(m => m.name).filter(n => !done.includes(n));
       $("#statusline").innerHTML = `已回覆 <b>${done.length}</b> / ${MEMBERS.length} 人` +
         (todo.length ? `　<span style="color:var(--ink-3)">尚未回覆：${todo.map(esc).join("、")}</span>` : "　<span class='flag good'>全部到齊</span>") +
         `<span style="color:var(--ink-3);font-size:13px">　（更新於 ${new Date().toTimeString().slice(0,5)}）</span>`;
@@ -906,6 +928,22 @@ function loadAll(){
     .wishGetAll(BOOT.k);
 }
 $("#btn-refresh").onclick = loadAll;
+function renderScenario(){
+  const adj = Object.entries(LEAD_OVERRIDES).flatMap(([name, o]) => Object.entries(o).map(([id, v]) =>
+    `${esc(name)}：${esc((byId(id)?.code ? byId(id).code + "　" : "") + (byId(id)?.label || id).replace(/\s+/g," "))} → ${v === 1 ? "不排給她" : v + " 分"}`));
+  $("#scenariobox").innerHTML = `
+    <div style="font-size:14.5px;color:var(--ink-2);margin-bottom:8px">勾選明年可能不在的人，下面所有試排會馬上重算（不影響大家的回覆）：</div>
+    <div class="loaded" style="margin-top:0">${MEMBERS.map(m => `<label class="chip" style="cursor:pointer;padding-right:12px">
+      <input type="checkbox" data-absent="${esc(m.name)}" ${ABSENT.has(m.name) ? "checked" : ""}> ${esc(m.name)} 明年不在</label>`).join("")}</div>
+    ${adj.length ? `<div style="font-size:14px;color:var(--ink-2);margin-top:14px"><b>組長調整（優先於本人填的分數，意願矩陣標「調」）</b><br>${adj.join("<br>")}</div>` : ""}`;
+}
+document.addEventListener("change", e => {
+  const n = e.target.dataset?.absent;
+  if (!n) return;
+  if (e.target.checked) ABSENT.add(n); else ABSENT.delete(n);
+  try { localStorage.setItem("wish-absent", JSON.stringify([...ABSENT])); } catch (err) {}
+  applyScenario();
+});
 $("#btn-copyweek").onclick = () => {
   const b = $("#btn-copyweek");
   if (!WEEK_TSV) { b.textContent = "還沒有班表"; setTimeout(() => b.textContent = "複製班表（可貼到試算表）", 1500); return; }
@@ -999,7 +1037,7 @@ function planTable(roles, pl, showHours){
     const p = pl.map[r], v = RES[p].answers[ro.id];
     return `<tr>
       <td>${ro.code?esc(ro.code)+"　":""}${esc(ro.label)}${ro.mins?`<span class="hours">${ro.mins} 分／月</span>`:""}</td>
-      <td>${esc(nameOf(p))}<span style="color:var(--ink-3);font-size:13px">（${RES[p].pending ? "未回覆，暫以 3 分" : `${RES[p].inferred?.[ro.id] ? "依志願推估" : "自評"} ${v ?? "未填"} 分`}）</span>
+      <td>${esc(nameOf(p))}<span style="color:var(--ink-3);font-size:13px">（${RES[p].pending ? "未回覆，暫以 3 分" : `${RES[p].overridden?.[ro.id] ? "組長調整" : RES[p].inferred?.[ro.id] ? "依志願推估" : "自評"} ${v ?? "未填"} 分`}）</span>
         ${v===1?'<span class="flag">違反意願</span>':""}
         ${ro.ugyOpt && UGY_TEACHERS.includes(RES[p].name) ? ((RES[p].answers.UGY||0) >= 4 ? '<span class="flag good">可加帶 UGY</span>' : (RES[p].answers.UGY ? `<span class="flag warm">UGY 意願 ${RES[p].answers.UGY}</span>` : "")) : ""}</td></tr>`;
   }).join("")}
@@ -1264,7 +1302,7 @@ function render(){
         <tr class="${want===0?"alert":""}">
           <td class="item">${it.code?esc(it.code)+"　":""}${esc(it.label)}${want===0?'<span class="flag">沒人想要</span>':""}${no>=3?`<span class="flag warm">${no} 人拒絕</span>`:""}</td>
           ${RES.map(r => { if (!applies(it, r.evening, r.lead)) return `<td style="color:var(--ink-3);font-size:12px">${r.lead?"固定":"晚班"}</td>`;
-            const v = r.answers[it.id], inf = r.inferred?.[it.id]; return `<td class="${v?"v"+v:""}"${inf?' title="依志願排序推估，本人未逐題填寫"':""}>${v??"—"}${inf?'<sup style="font-size:10px;font-weight:400">推</sup>':""}</td>`; }).join("")}
+            const v = r.answers[it.id], inf = r.inferred?.[it.id], adj = r.overridden?.[it.id]; return `<td class="${v?"v"+v:""}"${adj?' title="組長調整"':inf?' title="依志願排序推估，本人未逐題填寫"':""}>${v??"—"}${adj?'<sup style="font-size:10px;font-weight:400">調</sup>':inf?'<sup style="font-size:10px;font-weight:400">推</sup>':""}</td>`; }).join("")}
           <td class="avg">${avg.toFixed(1)}</td><td>${want}</td><td>${no}</td>
           <td>${g.elig ? (elig + (elig<=1?'<span class="flag">人數過少</span>':"")) : "—"}</td></tr>`).join("");
     }).join("")}</tbody></table>`;
