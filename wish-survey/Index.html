@@ -403,6 +403,12 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
   </section>
 
   <section class="block">
+    <div class="block-head"><h2>半年輪替方案</h2>
+      <span class="need">人少時每項工作至少要有兩個人會做：上半年照上面的試排，下半年盡量換成沒做過的人</span></div>
+    <div class="scroll" id="rotbox"><div class="empty">載入回覆後會排出輪替方案。</div></div>
+  </section>
+
+  <section class="block">
     <div class="block-head"><h2>週班表試排</h2>
       <span class="need">照上面的分配結果，排出週一到週五每個時段、每間治療室由誰負責</span>
       <button class="btn ghost sm" id="btn-copyweek" style="display:block;margin-top:10px">複製班表（可貼到試算表）</button></div>
@@ -1257,9 +1263,38 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   WEEK_TSV = rows.map(r => r.join("\t")).join("\n");
 }
 
+/* ── 下半年輪替：每項盡量換成上半年沒做過的人（聯評、分評各算同一類），讓每項工作至少兩個人會 ── */
+const rotKey = id => id.startsWith("EA-U") ? "聯評" : id.startsWith("EA-S") ? "分評" : id;
+function rotationPlan(sections){
+  const box = $("#rotbox");
+  if (sections.some(x => !x.plan)) { box.innerHTML = '<div class="empty">上面的試排都算出來之後，才會排輪替方案。</div>'; return; }
+  let moved = 0, total = 0;
+  const stuck = [];
+  const html = sections.map(({title, roles, plan, opts}) => {
+    const did = {};   /* 上半年每人做過的類別 */
+    roles.forEach((ro,r) => { (did[plan.map[r]] = did[plan.map[r]] || new Set()).add(rotKey(ro.id)); });
+    const same = s => roles.filter((ro,r) => did[s.map[r]]?.has(rotKey(ro.id))).length;
+    let h2 = solve(roles, {...opts, rank:s => opts.rank(s) - same(s) * 1e9})[0];
+    if (!h2) h2 = solve(roles, {...opts, allowOne:true, rank:s => opts.rank(s) - same(s) * 1e9})[0];
+    if (!h2) return `<h3 style="margin:18px 0 8px;font-size:16px">${esc(title)}</h3><p style="color:#7A2A39">找不到可輪替的方案。</p>`;
+    return `<h3 style="margin:18px 0 8px;font-size:16px">${esc(title)}</h3>
+      <table class="mx"><thead><tr><th class="item">項目</th><th>上半年</th><th>下半年</th></tr></thead><tbody>
+      ${roles.map((ro,r) => {
+        const a = plan.map[r], b = h2.map[r], v = RES[b].answers[ro.id], kept = did[b]?.has(rotKey(ro.id));
+        total++; if (!kept) moved++; else stuck.push(`${ro.code ? ro.code + " " : ""}${ro.label.replace(/\s+/g," ")}`);
+        return `<tr><td class="item">${ro.code ? esc(ro.code) + "　" : ""}${esc(ro.label)}</td>
+          <td>${esc(nameOf(a))}</td>
+          <td>${esc(nameOf(b))}<span style="color:var(--ink-3);font-size:12.5px">（${v === undefined ? "未填" : v + " 分"}）</span>${kept ? '<span class="flag warm">沒有人可換</span>' : v === 1 ? '<span class="flag">違反意願</span>' : v === 2 ? '<span class="flag warm">意願低</span>' : ""}</td></tr>`;
+      }).join("")}</tbody></table>`;
+  }).join("");
+  box.innerHTML = `<p style="margin:0 0 6px;font-size:15px">${total} 項中有 <b>${moved}</b> 項下半年換人，一年下來這些工作都至少有兩個人做過。` +
+    (stuck.length ? `<br><span style="color:var(--ink-2);font-size:14px">沒辦法換的：${stuck.map(esc).join("、")}（其他人打 1 分或不符合條件）。</span>` : "") + `</p>` + html +
+    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：下半年每一項盡量交給上半年沒做過這類工作的人（聯評、分評各算一類），在這個前提下照樣避開 1 分、照意願排。標「意願低」的是本人打 2 分，換班前最好先談。週班表試排用的是上半年的分配。</p>`;
+}
+
 function render(){
   if (!RES.length) {
-    ["#planbox","#eiabox","#adminbox","#extrabox","#weekbox","#conflictbox","#textbox"].forEach(s => $(s).innerHTML = '<div class="empty">尚無資料。</div>');
+    ["#planbox","#eiabox","#adminbox","#extrabox","#weekbox","#rotbox","#conflictbox","#textbox"].forEach(s => $(s).innerHTML = '<div class="empty">尚無資料。</div>');
     $("#matrixbox").innerHTML = '<div class="empty">還沒有載入任何回覆。</div>';
     $("#personbox").innerHTML = '<div class="empty">尚無資料。</div>';
     $("#loadedbox").innerHTML = ""; return;
@@ -1311,12 +1346,19 @@ function render(){
   addLoad(ADMIN, adminPlan);
 
   /* 附加工作：保最低分 → 優先給累計時數低的人 */
-  renderSolve($("#extrabox"), EXTRA,
-    { skipLead:true, rank:s => s.min*100000 + s.total*100 - s.map.reduce((a,p) => a + (load[p]||0), 0)/100 },
+  const extraOpts = { skipLead:true, rank:s => s.min*100000 + s.total*100 - s.map.reduce((a,p) => a + (load[p]||0), 0)/100 };
+  const extraPlan = renderSolve($("#extrabox"), EXTRA, extraOpts,
     (eiPlan||adminPlan) ? "同意願分數時，優先分給早療與主要行政累計時數較低的人。組長不納入分配。"
                         : "前兩段還沒試排出來，這裡只依意願分配。組長不納入分配。", false);
 
   weekPlan(soloPlan, eiPlan, adminPlan);
+
+  rotationPlan([
+    {title:"臨床專責區", roles:SOLO, plan:soloPlan, opts:{rank:s => s.min*1000 + s.total}},
+    {title:"早療評估診", roles:EIA, plan:eiPlan, opts:{checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 + s.total}},
+    {title:"主要行政工作", roles:ADMIN, plan:adminPlan, opts:{checkElig:true, skipLead:true, rank:s => s.min*100000 + s.total}},
+    {title:"附加工作", roles:EXTRA, plan:extraPlan, opts:extraOpts}
+  ]);
 
   /* 意願矩陣（分區塊） */
   $("#matrixbox").innerHTML = `<table class="mx">
