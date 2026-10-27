@@ -388,6 +388,7 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
     <div class="block-head"><h2>早療評估診試排</h2>
       <span class="need">聯評 3 個時段＋分評 4 個時段，一人一時段。做評估與寫報告同一人，時數一起算</span></div>
     <div class="block-body" id="eiabox"><div class="empty">載入回覆後會算出方案。</div></div>
+    <div class="block-body" id="eipairbox" style="display:none"></div>
   </section>
 
   <section class="block">
@@ -892,6 +893,8 @@ google.script.run
 const RES = [];
 /* 試排假設：勾選「明年不在」的人不納入試排（只影響這台電腦的畫面） */
 const ALLRES = [];
+/* 試排假設：早療聯評每個時段兩人隔週輪流（勾選才用，未勾選是一人一時段） */
+let EI_PAIR = (() => { try { return localStorage.getItem("wish-eipair") === "1"; } catch (e) { return false; } })();
 const ABSENT = new Set((() => { try { return JSON.parse(localStorage.getItem("wish-absent") || "[]"); } catch (e) { return []; } })());
 function applyScenario(){
   RES.length = 0;
@@ -954,9 +957,16 @@ function renderScenario(){
     <div style="font-size:14.5px;color:var(--ink-2);margin-bottom:8px">勾選明年可能不在的人，下面所有試排會馬上重算（不影響大家的回覆）：</div>
     <div class="loaded" style="margin-top:0">${MEMBERS.map(m => `<label class="chip" style="cursor:pointer;padding-right:12px">
       <input type="checkbox" data-absent="${esc(m.name)}" ${ABSENT.has(m.name) ? "checked" : ""}> ${esc(m.name)} 明年不在</label>`).join("")}</div>
+    <label class="chip" style="cursor:pointer;padding-right:12px;margin-top:10px;display:inline-flex">
+      <input type="checkbox" data-eipair="1" ${EI_PAIR ? "checked" : ""}> 早療聯評每個時段兩人隔週輪流</label>
     ${adj.length ? `<div style="font-size:14px;color:var(--ink-2);margin-top:14px"><b>組長調整（優先於本人填的分數，意願矩陣標「調」）</b><br>${adj.join("<br>")}</div>` : ""}`;
 }
 document.addEventListener("change", e => {
+  if (e.target.dataset?.eipair) {
+    EI_PAIR = e.target.checked;
+    try { localStorage.setItem("wish-eipair", EI_PAIR ? "1" : "0"); } catch (err) {}
+    applyScenario(); return;
+  }
   const n = e.target.dataset?.absent;
   if (!n) return;
   if (e.target.checked) ABSENT.add(n); else ABSENT.delete(n);
@@ -1090,7 +1100,7 @@ function renderSolve(box, roles, opts, note, showHours){
 
 /* ── 週班表自動排 ─────────────────────────────────────────────────── */
 let WEEK_TSV = "";
-function weekPlan(soloPlan, eiPlan, adminPlan){
+function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = null){
   const box = $("#weekbox");
   if (!soloPlan) { box.innerHTML = '<div class="empty">要等「臨床專責區試排」算出方案之後，才會排週班表。</div>'; WEEK_TSV = ""; return; }
   const SLOTS = WEEK_DAYS.flatMap(d => HALVES.map(([h]) => d + h));
@@ -1134,7 +1144,8 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
       });
     });
   };
-  fix(EIA, eiPlan, () => "ei", ro => ro.code);
+  fix(EIR, eiPlan, () => "ei", ro => ro.code);
+  fix(PAIR, pairPlan, () => "ei", ro => ro.code);
 
   /* 病房、護家：每區排滿所需半天數，同一區分散在不同天，挑當下其他人力最寬裕的時段；同一人盡量固定上午或下午 */
   const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid")).length;
@@ -1413,12 +1424,27 @@ function render(){
     ...fixedBusy(p)
   ];
 
-  /* 早療評估診：聯評 3 + 分評 4，一人一時段 */
+  /* 早療評估診：聯評 3 + 分評 4，一人一時段；勾選「兩人隔週輪流」時，聯評每個時段再配第二個人，時數各半 */
+  const isU = ro => ro.id.startsWith("EA-U");
+  const EIR = EI_PAIR ? EIA.map(ro => isU(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro) : EIA;
   const eiTotal = EIA.reduce((a,b)=>a+b.mins,0);
-  const eiPlan = renderSolve($("#eiabox"), EIA,
-    { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 - spreadOf(EIA,s)*10 + s.total },
-    `聯評 3 個時段與分評 4 個時段共 ${EIA.length} 項，一人一時段，做評估與寫報告是同一人。合計 ${eiTotal} 分／月（約 ${hrm(eiTotal)} 小時／月）——★ 標示的時數是暫定值，確認後改設定區。${LEAD_JOINS_EI ? "組長納入此區分配。" : "組長不納入此區分配。"}`, true);
-  addLoad(EIA, eiPlan);
+  const eiPlan = renderSolve($("#eiabox"), EIR,
+    { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 - spreadOf(EIR,s)*10 + s.total },
+    `聯評 3 個時段與分評 4 個時段共 ${EIA.length} 項，一人一時段，做評估與寫報告是同一人。合計 ${eiTotal} 分／月（約 ${hrm(eiTotal)} 小時／月）——★ 標示的時數是暫定值，確認後改設定區。${LEAD_JOINS_EI ? "組長納入此區分配。" : "組長不納入此區分配。"}${EI_PAIR ? "聯評改成兩人隔週輪流，這裡是每個時段的第一個人，時數各算一半。" : ""}`, true);
+  addLoad(EIR, eiPlan);
+  let PAIR = [], pairPlan = null;
+  const pairBox = $("#eipairbox");
+  pairBox.style.display = EI_PAIR ? "" : "none";
+  if (EI_PAIR) {
+    PAIR = EIR.filter(isU).map(ro => ({...ro, code:ro.code.replace("①", "②")}));
+    /* 第二個人：同一時段不能已經有早療（自己就是第一個人也算） */
+    const pairBusy = p => [...soloBusy(p), ...EIR.flatMap((ro,r) => eiPlan && eiPlan.map[r] === p ? slotsOfItem(ro.id) : [])];
+    pairBox.innerHTML = '<h4 style="margin:0 0 10px;font-size:15px">聯評隔週輪流的第二個人</h4><div></div>';
+    pairPlan = renderSolve(pairBox.lastElementChild, PAIR,
+      { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:pairBusy, rank:s => s.min*100000 - spreadOf(PAIR,s)*10 + s.total },
+      "每個聯評時段兩個人隔週輪流：輪到的人做聯評，另一個人同時段在兒童室看個案，兩人各算一半時數。第二個人可以已經有分評或其他聯評，只要不是同一個時段。", true);
+    addLoad(PAIR, pairPlan);
+  }
 
   /* 主要行政：保最低分 → 時數差距小 → 意願總分 */
   const admTotal = ADMIN.reduce((a,b)=>a+b.mins,0);
@@ -1433,11 +1459,11 @@ function render(){
     (eiPlan||adminPlan) ? "同意願分數時，優先分給早療與主要行政累計時數較低的人。組長不納入分配。"
                         : "前兩段還沒試排出來，這裡只依意願分配。組長不納入分配。", false);
 
-  weekPlan(soloPlan, eiPlan, adminPlan);
+  weekPlan(soloPlan, eiPlan, adminPlan, EIR, PAIR, pairPlan);
 
   rotationPlan([
     {title:"臨床專責區", roles:SOLO, plan:soloPlan, opts:{rank:s => s.min*1000 + s.total}},
-    {title:"早療評估診", roles:EIA, plan:eiPlan, opts:{checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 + s.total}},
+    {title:"早療評估診", roles:EIR, plan:eiPlan, opts:{checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 + s.total}},
     {title:"主要行政工作", roles:ADMIN, plan:adminPlan, opts:{checkElig:true, skipLead:true, rank:s => s.min*100000 + s.total}},
     {title:"附加工作", roles:EXTRA, plan:extraPlan, opts:extraOpts}
   ]);
