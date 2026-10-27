@@ -501,6 +501,10 @@ const WEEK_DAYS = ["一","二","三","四","五"];
 const HALVES = [["AM","上午"],["PM","下午"]];
 /* 病房、護家每區每週要幾個半天。不綁固定時段，白天哪個時段都可以（不排晚上），由程式挑人力最寬裕的時段 */
 const AREA_HALF_DAYS = { "BS-A":3, "BS-B":3, "BS-C":3, "BS-D":3, "BS-E":3, "NH-213":3, "NH-215":3 };
+/* 組長指定某人的病房時段（不管分到哪一區）：寫幾個就排幾個半天 */
+const BS_FIXED = { "彥妤": ["二AM", "五AM"] };
+/* 組長指定某人每週要留的行政半天（時段由試排挑） */
+const PERSON_ADMIN = { "彥妤": {n:1, txt:"教學負責人行政"} };
 /* 早療評估診各時段（組長確認），會占用一間兒童治療室。聯評：週二下午、週四上午、週四下午；分評：週二上午 11:00 兩個、週二下午 13:20、週四下午 15:30 */
 const EI_SLOTS = {
   "EA-U-A":"二PM", "EA-U-B":"四AM", "EA-U-C":"四PM",
@@ -1147,6 +1151,17 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   fix(EIR, eiPlan, () => "ei", ro => ro.code);
   fix(PAIR, pairPlan, () => "ei", ro => ro.code);
 
+  /* 組長指定的病房時段先放 */
+  const areaTxt = ro => ro.label.replace("病房","").replace(/\s+/g,"").replace("護理之家","護家");
+  SOLO.forEach((ro,r) => {
+    const i = P.findIndex(p => p.name === RES[soloPlan.map[r]].name), t = ro.id.startsWith("NH") ? "nh" : "bs";
+    if (i < 0) return;
+    (BS_FIXED[P[i].name] || []).forEach(s => {
+      if (job[i][s]) { warn.push(`${P[i].name}：指定的${areaTxt(ro)}（${slotName(s)}）和${job[i][s].txt}撞時段`); return; }
+      job[i][s] = {t, txt:areaTxt(ro), id:ro.id}; tally[i][t]++;
+    });
+  });
+
   /* 實習生盡量整天跟同一位督導：先替督導保留整天（兒童兩天、成人兩天），剩下一天放教學門診和 Bedside */
   let clinicSlot = null;
   const bsPref = {};
@@ -1191,7 +1206,8 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const areas = SOLO.map((ro,r) => ({ro, i:P.findIndex(p => p.name === RES[soloPlan.map[r]].name)}))
     .sort((a,b) => SLOTS.filter(s => !job[a.i][s]).length - SLOTS.filter(s => !job[b.i][s]).length);
   areas.forEach(({ro, i}) => {
-    const t = ro.id.startsWith("NH") ? "nh" : "bs", txt = ro.label.replace("病房","").replace(/\s+/g,"").replace("護理之家","護家");
+    const t = ro.id.startsWith("NH") ? "nh" : "bs", txt = areaTxt(ro);
+    if (BS_FIXED[P[i].name]) return;   /* 指定時段的人只排指定的半天 */
     const days = [];
     for (let k = 0; k < (AREA_HALF_DAYS[ro.id] || 3); k++) {
       let best = null, bestSc = -1e9;
@@ -1203,6 +1219,22 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
       });
       if (!best) { warn.push(`${P[i].name}：${txt}排不滿 ${AREA_HALF_DAYS[ro.id] || 3} 個半天（可用時段不夠）`); break; }
       job[i][best] = {t, txt, id:ro.id}; tally[i][t]++; days.push(best[0]);
+    }
+  });
+
+  /* 組長指定的個人行政半天：挑人力最寬裕、又不在同一天的時段 */
+  Object.entries(PERSON_ADMIN).forEach(([name, q]) => {
+    const i = P.findIndex(p => p.name === name);
+    if (i < 0) return;
+    for (let k = 0; k < q.n; k++) {
+      let best = null, bestSc = -1e9;
+      SLOTS.forEach(s => {
+        if (job[i][s]) return;
+        const sc = freeAt(s) * 10 - kidGap(s) * 5 - (SLOTS.some(x => x[0] === s[0] && job[i][x]?.t === "adm") ? 50 : 0);
+        if (sc > bestSc) { bestSc = sc; best = s; }
+      });
+      if (!best) { warn.push(`${name}：排不到${q.txt}時段`); break; }
+      job[i][best] = {t:"adm", txt:q.txt}; tally[i].adm++;
     }
   });
 
@@ -1338,7 +1370,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
 
   /* 各時段外出（病房、護家）與留白的人 */
   const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS "+j.txt:j.txt}）` : null; }).filter(Boolean);
-  const freeOf = s => P.map((p,i) => !job[i][s] ? p.name : (job[i][s].t === "adm" ? p.name + "（行政）" : null)).filter(Boolean);
+  const freeOf = s => P.map((p,i) => !job[i][s] ? p.name : (job[i][s].t === "adm" ? p.name + `（${job[i][s].txt}）` : null)).filter(Boolean);
   const kidHoles = SLOTS.flatMap(s => KID_ROOMS.filter(r => !grid.kid[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const adultHoles = SLOTS.flatMap(s => ADULT_ROOMS.filter(r => !grid.adult[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const eveName = P.find(p => p.evening)?.name || EVENING_NAME;
