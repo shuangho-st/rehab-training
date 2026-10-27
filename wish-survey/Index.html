@@ -1310,7 +1310,23 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
         return c.gap ? '<td><span class="flag">沒人帶</span></td>' : `<td>${esc(c.who)}<span style="color:var(--ink-3);font-size:12px">（${esc(c.what)}）</span></td>`; }).join("")}</tr>`).join("")).join("")}
     </tbody></table>` : "";
 
-  box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + intern + sum +
+  /* 每人一週班表 */
+  const short = r => r.replace("語言治療室", "").replace(/\(.*\)|（.*）/g, "");
+  const myCell = (i, s) => {
+    const j = job[i][s];
+    if (!j) return '<span style="color:var(--ink-3)">彈性</span>';
+    let t = j.t === "bs" ? "BS " + j.txt : j.t === "kid" || j.t === "adult" ? short(j.txt) : j.txt;
+    if (j.t === "kid" || j.t === "adult") { const c = grid[j.t][s + "|" + j.txt]; if (c && c.txt) t += `（${c.txt}）`; }
+    if (j.t === "ei") t = "早療" + t;
+    return esc(t);
+  };
+  const mine = `<h3 style="margin:22px 0 8px;font-size:16px">每人班表</h3>
+    <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
+    ${P.map((p,i) => `<tr class="sec"><td colspan="6">${esc(p.name)}${p.lead ? "（組長）" : ""}${p.evening ? "（晚班：每天晚上兒童語言治療室）" : ""}</td></tr>` +
+      HALVES.map(([h, hn]) => `<tr><td class="item">${hn}</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px">${myCell(i, d + h)}</td>`).join("")}</tr>`).join("")).join("")}
+    </tbody></table>`;
+
+  box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + intern + mine + sum +
     `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著放兒童教學門診，並替兩位實習生的督導錯開排出兒童／成人時段（每個半天都有人帶），再把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午；週三下午支援分評由組長負責。</p>`;
 
   /* 複製到試算表用（Tab 分隔） */
