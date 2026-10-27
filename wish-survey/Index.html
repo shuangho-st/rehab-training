@@ -1147,6 +1147,44 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   fix(EIR, eiPlan, () => "ei", ro => ro.code);
   fix(PAIR, pairPlan, () => "ei", ro => ro.code);
 
+  /* 實習生盡量整天跟同一位督導：先替督導保留整天（兒童兩天、成人兩天），剩下一天放教學門診和 Bedside */
+  let clinicSlot = null;
+  const bsPref = {};
+  const ti0 = P.findIndex(p => p.name === TEACH_CLINIC.name);
+  const IV0 = INTERNS.map(it => ({...it, k:P.findIndex(p => p.name === it.kid), a:P.findIndex(p => p.name === it.adult)})).filter(it => it.k >= 0 && it.a >= 0);
+  const fits = (i, s, kind) => !job[i][s] || (kind === "kid" ? ["kid","ei"] : ["adult"]).includes(job[i][s].t);
+  const dayFit = (i, d, kind) => (n => n === 2 ? 10 : n * 2)(HALVES.filter(([h]) => fits(i, d + h, kind)).length);
+  if (IV0.length && ti0 >= 0) {
+    let best = null;
+    SLOTS.forEach(c => {
+      if (job[ti0][c]) return;
+      const rest = WEEK_DAYS.filter(d => d !== c[0]), oh = c[0] + (c.slice(1) === "AM" ? "PM" : "AM");
+      let total = 0;
+      const picks = IV0.map(it => {
+        let bp = null, bs = -1e9;
+        for (let x = 0; x < rest.length; x++) for (let y = x + 1; y < rest.length; y++) {
+          const kd = [rest[x], rest[y]], ad = rest.filter(d => !kd.includes(d));
+          const sc = kd.reduce((n, d) => n + dayFit(it.k, d, "kid"), 0) + ad.reduce((n, d) => n + dayFit(it.a, d, "adult"), 0)
+            + ([it.k, it.a].some(i => !job[i][oh]) ? 3 : 0);
+          if (sc > bs) { bs = sc; bp = {kd, ad}; }
+        }
+        total += bs; return bp;
+      });
+      if (!best || total > best.total) best = {c, oh, total, picks};
+    });
+    if (best) {
+      clinicSlot = best.c;
+      job[ti0][best.c] = {t:"hold", kind:"kid"};
+      IV0.forEach((it, n) => {
+        const {kd, ad} = best.picks[n];
+        [[it.k, kd, "kid"], [it.a, ad, "adult"]].forEach(([i, ds, kind]) => ds.forEach(d => HALVES.forEach(([h]) => {
+          if (!job[i][d + h]) job[i][d + h] = {t:"hold", kind, intern:it.name};
+        })));
+        [it.k, it.a].forEach(i => bsPref[i] = best.oh);
+      });
+    }
+  }
+
   /* 病房、護家：每區排滿所需半天數，同一區分散在不同天，挑當下其他人力最寬裕的時段；同一人盡量固定上午或下午 */
   const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid")).length;
   const freeAt = s => P.filter((p,i) => !job[i][s]).length;
@@ -1160,7 +1198,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
       SLOTS.forEach(s => {
         if (job[i][s] || days.includes(s[0])) return;
         const sameHalf = SLOTS.some(x => job[i][x] && ["bs","nh"].includes(job[i][x].t) && x.slice(1) === s.slice(1));
-        const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0);
+        const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0) + (bsPref[i] === s ? 30 : 0);
         if (sc > bestSc) { bestSc = sc; best = s; }
       });
       if (!best) { warn.push(`${P[i].name}：${txt}排不滿 ${AREA_HALF_DAYS[ro.id] || 3} 個半天（可用時段不夠）`); break; }
@@ -1220,9 +1258,20 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
     job[i][s] = {t:kind, txt:room}; tally[i][kind]++; used[i]++; home[kind + s.slice(1) + i] = room;
     grid[kind][s + "|" + room] = {is:[i], txt};
   };
+  /* 把先前替督導保留的整天換成治療室 */
+  P.forEach((p,i) => SLOTS.forEach(s => {
+    const j = job[i][s];
+    if (j?.t !== "hold") return;
+    delete job[i][s]; cap[i]++;
+    const it = IV.find(x => x.name === j.intern);
+    if (it && roomFor(i, s, j.kind)) {
+      takeRoom(i, s, j.kind, "實習 " + it.name);
+      it.cov[s] = {who:p.name, what:j.kind === "kid" ? "兒童" : "成人"}; it.n[j.kind]++;
+    }
+  }));
   const ti = P.findIndex(p => p.name === TEACH_CLINIC.name);
   if (IV.length && ti >= 0) {
-    let best = null, bestSc = -1e9;
+    let best = clinicSlot && !job[ti][clinicSlot] && roomFor(ti, clinicSlot, "kid") ? clinicSlot : null, bestSc = best ? 1e9 : -1e9;
     SLOTS.forEach(s => {
       if (job[ti][s] || !roomFor(ti, s, "kid")) return;
       /* 挑督導本來就有別的事的時段，實習生剛好去教學門診 */
@@ -1248,7 +1297,11 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
       const s = left.reduce((x, y) => opts(y).length < opts(x).length ? y : x);
       const o = opts(s);
       if (!o.length) { it.cov[s] = {gap:true}; continue; }
-      const sc = c => (it.need[c.t] - it.n[c.t]) * 10 + (c.have ? 5 : 0) - (c.t === "bs" && it.n.bs >= it.need.bs ? 30 : 0) + (c.t === "bs" && c.i === it.a ? 3 : 0);
+      /* 同一天上午、下午盡量跟同一位督導，不要每半天換人 */
+      const whoOf = c => c.t === "kid" ? it.kid : c.t === "adult" ? it.adult : P[c.i].name;
+      const other = s[0] + (s.slice(1) === "AM" ? "PM" : "AM"), oc = it.cov[other];
+      const sameDay = c => oc ? (oc.who === whoOf(c) ? 12 : 0) : (opts(other).some(o => whoOf(o) === whoOf(c)) ? 4 : 0);
+      const sc = c => (it.need[c.t] - it.n[c.t]) * 10 + (c.have ? 5 : 0) - (c.t === "bs" && it.n.bs >= it.need.bs ? 30 : 0) + (c.t === "bs" && c.i === it.a ? 3 : 0) + sameDay(c);
       const c = o.reduce((x, y) => sc(y) > sc(x) ? y : x);
       it.n[c.t]++;
       if (c.t === "bs") { it.cov[s] = {who:P[c.i].name, what:c.txt}; continue; }
