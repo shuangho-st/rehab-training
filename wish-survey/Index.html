@@ -899,7 +899,9 @@ const RES = [];
 const ALLRES = [];
 /* 試排假設：早療聯評每個時段兩人隔週輪流（勾選才用，未勾選是一人一時段） */
 let EI_PAIR = (() => { try { return localStorage.getItem("wish-eipair") === "1"; } catch (e) { return false; } })();
-const ABSENT = new Set((() => { try { return JSON.parse(localStorage.getItem("wish-absent") || "[]"); } catch (e) { return []; } })());
+/* 預設明年不在的人（品樺確定只做到 116 年 1 月）；組長在頁面上勾選後以勾選為準 */
+const DEFAULT_ABSENT = ["品樺"];
+const ABSENT = new Set((() => { try { const v = localStorage.getItem("wish-absent2"); return v ? JSON.parse(v) : DEFAULT_ABSENT; } catch (e) { return DEFAULT_ABSENT; } })());
 function applyScenario(){
   RES.length = 0;
   ALLRES.filter(r => !ABSENT.has(r.name)).forEach(r => RES.push(r));
@@ -974,7 +976,7 @@ document.addEventListener("change", e => {
   const n = e.target.dataset?.absent;
   if (!n) return;
   if (e.target.checked) ABSENT.add(n); else ABSENT.delete(n);
-  try { localStorage.setItem("wish-absent", JSON.stringify([...ABSENT])); } catch (err) {}
+  try { localStorage.setItem("wish-absent2", JSON.stringify([...ABSENT])); } catch (err) {}
   applyScenario();
 });
 $("#btn-copyweek").onclick = () => {
