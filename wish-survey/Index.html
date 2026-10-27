@@ -1271,7 +1271,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   fill("kid", KID_ROOMS, "KD-DAY", false);
 
   /* 各時段外出（病房、護家）與留白的人 */
-  const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS":j.t==="nh"?"護家":j.txt}）` : null; }).filter(Boolean);
+  const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS "+j.txt:j.txt}）` : null; }).filter(Boolean);
   const freeOf = s => P.map((p,i) => !job[i][s] ? p.name : (job[i][s].t === "adm" ? p.name + "（行政）" : null)).filter(Boolean);
   const kidHoles = SLOTS.flatMap(s => KID_ROOMS.filter(r => !grid.kid[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const adultHoles = SLOTS.flatMap(s => ADULT_ROOMS.filter(r => !grid.adult[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
