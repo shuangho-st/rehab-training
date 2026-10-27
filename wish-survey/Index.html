@@ -527,6 +527,8 @@ const LEAD_OVERRIDES = {
   "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5 }      /* 請書寧協助早療聯評 */
 };
 /* 每週先保留的兒童時段數（排成人之前就先放）。園菁：兒童自費個案，組長定一週 3 個，其餘兒童時段不排給她 */
+/* 組長指定早療聯評由誰負責：寫一人＝固定給她；寫兩人＝兩人隔週輪流（不管有沒有勾「兩人隔週輪流」） */
+const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
 const KID_LEAN = ["彥妤", "宛宜", "林寧"];
@@ -961,7 +963,8 @@ function loadAll(){
 $("#btn-refresh").onclick = loadAll;
 function renderScenario(){
   const adj = Object.entries(LEAD_OVERRIDES).flatMap(([name, o]) => Object.entries(o).map(([id, v]) =>
-    `${esc(name)}：${esc((byId(id)?.code ? byId(id).code + "　" : "") + (byId(id)?.label || id).replace(/\s+/g," "))} → ${v === 1 ? "不排給她" : v + " 分"}`));
+    `${esc(name)}：${esc((byId(id)?.code ? byId(id).code + "　" : "") + (byId(id)?.label || id).replace(/\s+/g," "))} → ${v === 1 ? "不排給她" : v + " 分"}`))
+    .concat(Object.entries(EI_PINS).map(([id, ns]) => `${esc(byId(id)?.code || id)}：固定 ${ns.map(esc).join("、")}${ns.length > 1 ? " 隔週輪流" : ""}`));
   $("#scenariobox").innerHTML = `
     <div style="font-size:14.5px;color:var(--ink-2);margin-bottom:8px">勾選明年可能不在的人，下面所有試排會馬上重算（不影響大家的回覆）：</div>
     <div class="loaded" style="margin-top:0">${MEMBERS.map(m => `<label class="chip" style="cursor:pointer;padding-right:12px">
@@ -1034,6 +1037,7 @@ function solve(roles, {allowOne=false, checkElig=false, skipLead=false, busy, ra
     if (checkElig && !isElig(RES[p].name, id)) return null;
     if (RES[p].evening && eveningClash(id)) return null;
     if (partClash(RES[p].name, id)) return null;
+    if (roles[r].pin && RES[p].name !== roles[r].pin) return null;
     if (busy && slotsOfItem(id).some(sl => busy(p).includes(sl))) return null;
     const v = RES[p].answers[id];
     if (v === undefined) return 3;
@@ -1521,17 +1525,29 @@ function render(){
 
   /* 早療評估診：聯評 3 + 分評 4，一人一時段；勾選「兩人隔週輪流」時，聯評每個時段再配第二個人，時數各半 */
   const isU = ro => ro.id.startsWith("EA-U");
-  const EIR = EI_PAIR ? EIA.map(ro => isU(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro) : EIA;
+  const pins = id => (EI_PINS[id] || []).filter(n => RES.some(r => r.name === n));
+  const paired = ro => isU(ro) && (EI_PAIR || pins(ro.id).length >= 2);
+  /* 早療排完後，負責病房／護家的人還要剩得出那一區要的半天數（晚班、半職能排的半天比較少） */
+  const ALL_SLOTS = WEEK_DAYS.flatMap(d => HALVES.map(([h]) => d + h));
+  const workHalves = p => ALL_SLOTS.filter(sl => !(RES[p].evening && !EVENING_FREE.includes(sl.slice(1))) &&
+    !(PART_TIME[RES[p].name] && !PART_TIME[RES[p].name].includes(sl.slice(1))) && !fixedBusy(p).includes(sl));
+  const areaNeed = p => { const r = soloPlan ? soloPlan.map.indexOf(p) : -1; return r < 0 ? 0 : (BS_FIXED[RES[p].name]?.length || AREA_HALF_DAYS[SOLO[r].id] || 3); };
+  const pinBusy = p => EIA.filter(ro => (EI_PINS[ro.id] || []).slice(1).includes(RES[p].name)).flatMap(ro => slotsOfItem(ro.id));
+  const shortOf = (roles, sol) => RES.reduce((n, _, p) => {
+    const ei = new Set([...pinBusy(p), ...roles.flatMap((ro,r) => sol.map[r] === p ? slotsOfItem(ro.id) : [])]);
+    return n + Math.max(0, areaNeed(p) - workHalves(p).filter(sl => !ei.has(sl)).length);
+  }, 0);
+  const EIR = EIA.map(ro => ({...(paired(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro), pin:pins(ro.id)[0]}));
   const eiTotal = EIA.reduce((a,b)=>a+b.mins,0);
   const eiPlan = renderSolve($("#eiabox"), EIR,
-    { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 - spreadOf(EIR,s)*10 + s.total },
-    `聯評 3 個時段與分評 4 個時段共 ${EIA.length} 項，一人一時段，做評估與寫報告是同一人。合計 ${eiTotal} 分／月（約 ${hrm(eiTotal)} 小時／月）——★ 標示的時數是暫定值，確認後改設定區。${LEAD_JOINS_EI ? "組長納入此區分配。" : "組長不納入此區分配。"}${EI_PAIR ? "聯評改成兩人隔週輪流，這裡是每個時段的第一個人，時數各算一半。" : ""}`, true);
+    { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:p => [...soloBusy(p), ...pinBusy(p)], rank:s => s.min*100000 - shortOf(EIR,s)*1e7 - spreadOf(EIR,s)*10 + s.total },
+    `聯評 3 個時段與分評 4 個時段共 ${EIA.length} 項，一人一時段，做評估與寫報告是同一人。合計 ${eiTotal} 分／月（約 ${hrm(eiTotal)} 小時／月）——★ 標示的時數是暫定值，確認後改設定區。${LEAD_JOINS_EI ? "組長納入此區分配。" : "組長不納入此區分配。"}${EIA.some(paired) ? "標「隔週」的聯評由兩人隔週輪流，這裡是第一個人，時數各算一半。" : ""}`, true);
   addLoad(EIR, eiPlan);
   let PAIR = [], pairPlan = null;
   const pairBox = $("#eipairbox");
-  pairBox.style.display = EI_PAIR ? "" : "none";
-  if (EI_PAIR) {
-    PAIR = EIR.filter(isU).map(ro => ({...ro, code:ro.code.replace("①", "②")}));
+  PAIR = EIR.filter(paired).map(ro => ({...ro, code:ro.code.replace("①", "②"), pin:pins(ro.id)[1]}));
+  pairBox.style.display = PAIR.length ? "" : "none";
+  if (PAIR.length) {
     /* 第二個人：同一時段不能已經有早療（自己就是第一個人也算） */
     const pairBusy = p => [...soloBusy(p), ...EIR.flatMap((ro,r) => eiPlan && eiPlan.map[r] === p ? slotsOfItem(ro.id) : [])];
     pairBox.innerHTML = '<h4 style="margin:0 0 10px;font-size:15px">聯評隔週輪流的第二個人</h4><div></div>';
