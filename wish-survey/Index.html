@@ -541,6 +541,8 @@ const TEACH_CLINIC = {name:"園菁", txt:"教學門診"};
 const LEAD_ADMIN_SLOTS = ["四AM"];
 /* 晚班人員白天只排下午（上午為晚班補休） */
 const EVENING_FREE = ["PM"];
+/* 半職人員只排這些半天（書寧半職，只上早上班） */
+const PART_TIME = { "書寧": ["AM"] };
 /* 沒有填問卷、但明年仍在組內排班的人（意願當 3 分）。不在組內就刪掉名字 */
 const EXTRA_STAFF = [];
 /* 行政時數換算成每週要留的半天數：分／月 ÷ 60 ÷ 4.33 週 ÷ 每個半天 3.5 小時 */
@@ -550,6 +552,7 @@ const RESERVE_ADMIN_TIME = false;
 const slotsOfItem = id => [].concat(EI_SLOTS[id] || []);
 /* 晚班人員排不到上午的早療時段 */
 const eveningClash = id => slotsOfItem(id).some(s => !EVENING_FREE.includes(s.slice(1)));
+const partClash = (name, id) => !!PART_TIME[name] && slotsOfItem(id).some(s => !PART_TIME[name].includes(s.slice(1)));
 
 /* 身分由專屬連結決定（伺服器端 Code.gs 的 ROSTER 與「名單」工作表），這裡不用改 */
 const BOOT = <?!= boot ?>;
@@ -1030,6 +1033,7 @@ function solve(roles, {allowOne=false, checkElig=false, skipLead=false, busy, ra
     if (skipLead && RES[p].lead) return null;
     if (checkElig && !isElig(RES[p].name, id)) return null;
     if (RES[p].evening && eveningClash(id)) return null;
+    if (partClash(RES[p].name, id)) return null;
     if (busy && slotsOfItem(id).some(sl => busy(p).includes(sl))) return null;
     const v = RES[p].answers[id];
     if (v === undefined) return 3;
@@ -1122,6 +1126,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const adminHalf = P.map(() => 0), tally = P.map(() => ({kid:0, adult:0, bs:0, nh:0, ei:0, adm:0}));
   P.forEach((p,i) => {
     if (p.evening) SLOTS.filter(s => !EVENING_FREE.includes(s.slice(1))).forEach(s => job[i][s] = {t:"off", txt:"晚班補休"});
+    if (PART_TIME[p.name]) SLOTS.filter(s => !PART_TIME[p.name].includes(s.slice(1))).forEach(s => job[i][s] = {t:"off", txt:"半職不上班"});
     if (p.lead) { LEAD_ADMIN_SLOTS.forEach(s => { job[i][s] = {t:"adm", txt:"行政"}; tally[i].adm++; }); }
   });
   const warn = [];
@@ -1392,7 +1397,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const sum = `<h3 style="margin:22px 0 8px;font-size:16px">每人一週半天數</h3>
     <table class="mx"><thead><tr><th class="item">姓名</th><th>兒童</th><th>成人</th><th>病房</th><th>護家</th><th>早療</th><th>行政／彈性</th><th>行政約<br>（半天／週）</th><th>兒童意願</th><th>成人意願</th></tr></thead><tbody>
     ${P.map((p,i) => { const free = SLOTS.filter(s => !job[i][s] || job[i][s].t === "adm").length;
-      return `<tr><td class="item">${esc(p.name)}${p.lead?'<span class="flag warm">組長</span>':""}${p.evening?'<span class="flag warm">晚班</span>':""}${p.extra||p.pending?'<span class="flag warm">未回覆</span>':""}</td>
+      return `<tr><td class="item">${esc(p.name)}${p.lead?'<span class="flag warm">組長</span>':""}${p.evening?'<span class="flag warm">晚班</span>':""}${PART_TIME[p.name]?'<span class="flag warm">半職</span>':""}${p.extra||p.pending?'<span class="flag warm">未回覆</span>':""}</td>
       <td>${tally[i].kid}</td><td>${tally[i].adult}</td><td>${tally[i].bs}</td><td>${tally[i].nh}</td><td>${tally[i].ei}</td>
       <td>${free}</td><td>${adminHalf[i]}</td><td class="v${pref(p,"KD-DAY")}">${p.ans["KD-DAY"] ?? "—"}</td><td class="v${pref(p,"AD-DAY")}">${p.ans["AD-DAY"] ?? "—"}</td></tr>`; }).join("")}
     </tbody></table>`;
@@ -1422,8 +1427,11 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   };
   const mine = `<h3 style="margin:22px 0 8px;font-size:16px">每人班表</h3>
     <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
-    ${P.map((p,i) => `<tr class="sec"><td colspan="6">${esc(p.name)}${p.lead ? "（組長）" : ""}${p.evening ? "（晚班：每天晚上兒童語言治療室）" : ""}</td></tr>` +
-      HALVES.map(([h, hn]) => `<tr><td class="item">${hn}</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px">${myCell(i, d + h)}</td>`).join("")}</tr>`).join("")).join("")}
+    ${P.map((p,i) => `<tr class="sec"><td colspan="6">${esc(p.name)}${p.lead ? "（組長）" : ""}${p.evening ? "（晚班）" : ""}${PART_TIME[p.name] ? "（半職：只上早上班）" : ""}</td></tr>` +
+      /* 晚班只列下午＋晚上，半職只列上班的半天 */
+      HALVES.filter(([h]) => p.evening ? EVENING_FREE.includes(h) : !PART_TIME[p.name] || PART_TIME[p.name].includes(h))
+        .map(([h, hn]) => `<tr><td class="item">${hn}</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px">${myCell(i, d + h)}</td>`).join("")}</tr>`).join("") +
+      (p.evening ? `<tr><td class="item">晚上</td>${WEEK_DAYS.map(() => '<td style="font-size:13px">兒童晚班</td>').join("")}</tr>` : "")).join("")}
     </tbody></table>`;
 
   box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + intern + mine + sum +
