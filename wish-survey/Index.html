@@ -514,7 +514,7 @@ const FIXED_SLOTS = [
   {name:"婉瑜", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
   {name:"郁方", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
   /* 週三下午 13:20 分評（支援評估），不在問卷分配內，先由組長支援，和今年一樣 */
-  {lead:true, slot:"三PM", room:"兒童語言治療室3", txt:"支援分評"}
+  {lead:true, slot:"三PM", room:"兒童語言治療室3", txt:"門診＋支援分評"}
 ];
 /* 組長調整：把某人某一項的分數改成這裡的值，優先於本人填的分數（1＝不排給這個人） */
 const LEAD_OVERRIDES = {
@@ -1169,7 +1169,9 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   SLOTS.forEach(s => P.forEach((p,i) => {
     if (job[i][s]?.t !== "ei") return;
     const room = KID_ROOMS.find(r => !grid.kid[s + "|" + r]);
-    if (room) grid.kid[s + "|" + room] = {is:[i], txt:job[i][s].txt};
+    /* 分評只占一小段，那個半天其餘時間照常看兒童門診 */
+    const sub = job[i][s].id?.startsWith("EA-S");
+    if (room) { grid.kid[s + "|" + room] = {is:[i], txt:(sub ? "門診＋" : "") + job[i][s].txt}; job[i][s].room = room; }
   }));
   /* 一間一間房排：每一輪先排人手最緊的時段，空格才會分散，不會集中在週末前 */
   const fill = (kind, rooms, itemId, must) => {
@@ -1317,7 +1319,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
     if (!j) return '<span style="color:var(--ink-3)">彈性</span>';
     let t = j.t === "bs" ? "BS " + j.txt : j.t === "kid" || j.t === "adult" ? short(j.txt) : j.txt;
     if (j.t === "kid" || j.t === "adult") { const c = grid[j.t][s + "|" + j.txt]; if (c && c.txt) t += `（${c.txt}）`; }
-    if (j.t === "ei") t = "早療" + t;
+    if (j.t === "ei") t = j.id?.startsWith("EA-S") && j.room ? `${short(j.room)}（門診＋${j.txt}）` : "早療" + t;
     return esc(t);
   };
   const mine = `<h3 style="margin:22px 0 8px;font-size:16px">每人班表</h3>
@@ -1327,7 +1329,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
     </tbody></table>`;
 
   box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + intern + mine + sum +
-    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著放兒童教學門診，並替兩位實習生的督導錯開排出兒童／成人時段（每個半天都有人帶），再把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午；週三下午支援分評由組長負責。</p>`;
+    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著放兒童教學門診，並替兩位實習生的督導錯開排出兒童／成人時段（每個半天都有人帶），再把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午（分評在兒童門診中間做，負責的人那個半天照常看兒童個案）；週三下午支援分評由組長負責。</p>`;
 
   /* 複製到試算表用（Tab 分隔） */
   const rows = [];
