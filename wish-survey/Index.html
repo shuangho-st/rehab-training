@@ -540,8 +540,8 @@ const INTERNS = [
   {name:"品妤", kid:"宛宜", adult:"慈芯", need:{kid:4, adult:4, bs:1}}
 ];
 /* 兒童教學門診：實習生一起參加，每週 1 個半天 */
-/* 116 年起不排：組長希望實習生只跟自己的兒童、成人督導（10/28）。要恢復就改回 {name:"園菁", txt:"教學門診"} */
-const TEACH_CLINIC = null;
+/* 兒童教學門診：兩位實習生一起參加，組長指定週二下午（slot 不寫就由試排挑）；不排就改成 null */
+const TEACH_CLINIC = {name:"園菁", txt:"教學門診", slot:"二PM"};
 /* 組長固定行政時段 */
 const LEAD_ADMIN_SLOTS = ["四AM"];
 /* 晚班人員白天只排下午（上午為晚班補休） */
@@ -1192,12 +1192,14 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const bsPref = {}, bsDay = {};
   const ti0 = TEACH_CLINIC ? P.findIndex(p => p.name === TEACH_CLINIC.name) : -1;
   const IV0 = INTERNS.map(it => ({...it, k:P.findIndex(p => p.name === it.kid), a:P.findIndex(p => p.name === it.adult)})).filter(it => it.k >= 0 && it.a >= 0);
-  const fits = (i, s, kind) => !job[i][s] || (kind === "kid" ? ["kid","ei"] : ["adult"]).includes(job[i][s].t);
+  /* 實習生的兒童時段只算一般兒童門診（不跟聯評、分評），Bedside 只算病房（不跟護家） */
+  const kidFull = s => P.filter((p,j) => job[j][s] && ["ei","kid"].includes(job[j][s].t)).length >= KID_ROOMS.length;
+  const fits = (i, s, kind) => job[i][s] ? job[i][s].t === kind : !(kind === "kid" && kidFull(s));
   const dayFit = (i, d, kind) => (n => n === 2 ? 10 : n * 2)(HALVES.filter(([h]) => fits(i, d + h, kind)).length);
   /* 有教學門診：剩下那天一半教學門診、一半 Bedside；沒有教學門診：剩下那天跟督導上 Bedside 和其他時段 */
   if (IV0.length) {
     let best = null;
-    (ti0 >= 0 ? SLOTS : WEEK_DAYS.map(d => d + "AM")).forEach(c => {
+    (ti0 >= 0 ? (TEACH_CLINIC.slot ? [TEACH_CLINIC.slot] : SLOTS) : WEEK_DAYS.map(d => d + "AM")).forEach(c => {
       if (ti0 >= 0 && job[ti0][c]) return;
       const rest = WEEK_DAYS.filter(d => d !== c[0]), oh = ti0 >= 0 ? c[0] + (c.slice(1) === "AM" ? "PM" : "AM") : c;
       let total = 0;
@@ -1239,7 +1241,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
       SLOTS.forEach(s => {
         if (job[i][s] || days.includes(s[0])) return;
         const sameHalf = SLOTS.some(x => job[i][x] && ["bs","nh"].includes(job[i][x].t) && x.slice(1) === s.slice(1));
-        const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0) + (bsPref[i] === s || bsDay[i] === s[0] ? 30 : 0);
+        const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0) + (t === "bs" && (bsPref[i] === s || bsDay[i] === s[0]) ? 30 : 0) - (t === "nh" && (bsPref[i] === s || bsDay[i] === s[0]) ? 30 : 0);
         if (sc > bestSc) { bestSc = sc; best = s; }
       });
       if (!best) { warn.push(`${P[i].name}：${txt}排不滿 ${AREA_HALF_DAYS[ro.id] || 3} 個半天（可用時段不夠）`); break; }
@@ -1330,24 +1332,27 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   }));
   const ti = TEACH_CLINIC ? P.findIndex(p => p.name === TEACH_CLINIC.name) : -1;
   if (IV.length && ti >= 0) {
-    let best = clinicSlot && !job[ti][clinicSlot] && roomFor(ti, clinicSlot, "kid") ? clinicSlot : null, bestSc = best ? 1e9 : -1e9;
-    SLOTS.forEach(s => {
+    const fixedTC = TEACH_CLINIC.slot && !job[ti][TEACH_CLINIC.slot] ? TEACH_CLINIC.slot : null;
+    let best = fixedTC || (clinicSlot && !job[ti][clinicSlot] && roomFor(ti, clinicSlot, "kid") ? clinicSlot : null), bestSc = best ? 1e9 : -1e9;
+    /* 指定時段的兒童室都被早療占滿時，借一間成人治療室 */
+    const tcKind = best && !roomFor(ti, best, "kid") && roomFor(ti, best, "adult") ? "adult" : "kid";
+    if (!TEACH_CLINIC.slot) SLOTS.forEach(s => {
       if (job[ti][s] || !roomFor(ti, s, "kid")) return;
       /* 挑督導本來就有別的事的時段，實習生剛好去教學門診 */
       const sc = IV.reduce((n, it) => n + [it.k, it.a].filter(i => job[i][s]).length, 0) * 10 + freeAt(s);
       if (sc > bestSc) { bestSc = sc; best = s; }
     });
-    if (best) { takeRoom(ti, best, "kid", TEACH_CLINIC.txt); IV.forEach(it => it.cov[best] = {who:TEACH_CLINIC.name, what:TEACH_CLINIC.txt}); }
+    if (best && roomFor(ti, best, tcKind)) { takeRoom(ti, best, tcKind, TEACH_CLINIC.txt); IV.forEach(it => it.cov[best] = {who:TEACH_CLINIC.name, what:TEACH_CLINIC.txt}); }
     else warn.push(`${TEACH_CLINIC.name}：排不到兒童${TEACH_CLINIC.txt}`);
   }
   IV.forEach(it => {
     const opts = s => {
       const o = [], jk = job[it.k][s], ja = job[it.a][s];
-      if (jk && ["kid","ei"].includes(jk.t)) o.push({t:"kid", have:true});
+      if (jk && jk.t === "kid") o.push({t:"kid", have:true});
       else if (!jk && roomFor(it.k, s, "kid")) o.push({t:"kid"});
       if (ja && ja.t === "adult") o.push({t:"adult", have:true});
       else if (!ja && roomFor(it.a, s, "adult")) o.push({t:"adult"});
-      [[it.k, jk], [it.a, ja]].forEach(([i, j]) => { if (j && ["bs","nh"].includes(j.t)) o.push({t:"bs", i, txt:j.txt}); });
+      [[it.k, jk], [it.a, ja]].forEach(([i, j]) => { if (j && j.t === "bs") o.push({t:"bs", i, txt:j.txt}); });
       return o;
     };
     for (;;) {
@@ -1516,7 +1521,8 @@ function render(){
   const fixedBusy = p => [
     ...FIXED_SLOTS.filter(f => f.name === RES[p].name || (f.lead && RES[p].lead)).map(f => f.slot),
     ...(RES[p].lead ? LEAD_ADMIN_SLOTS : []),
-    ...(PERSON_FIXED[RES[p].name] || []).map(f => f.slot)
+    ...(PERSON_FIXED[RES[p].name] || []).map(f => f.slot),
+    ...(TEACH_CLINIC?.slot && TEACH_CLINIC.name === RES[p].name ? [TEACH_CLINIC.slot] : [])
   ];
   const soloPlan = renderSolve($("#planbox"), SOLO, {rank:s => s.min*1000 + s.total},
     `排序方式：先讓最不情願的那個人分數盡量高，同樣情況下再比意願總分。未分配到專責區的人，時段全部投入共同時段池與早療評估診。${EVENING_NAME}固定兒童晚班，上午補休，負責的病房或護家會排在下午。`, false);
@@ -1557,7 +1563,11 @@ function render(){
     return n + Math.max(0, areaNeed(p) - workHalves(p).filter(sl => !ei.has(sl)).length);
   }, 0);
   /* 帶實習生的成人督導盡量不排早療（實習生只跟她看成人，排了早療那個半天實習生就沒人帶） */
-  const adultSupEI = (roles, sol) => roles.filter((ro,r) => INTERNS.some(it => it.adult === RES[sol.map[r]]?.name)).length;
+  const tcOther = TEACH_CLINIC?.slot ? TEACH_CLINIC.slot[0] + (TEACH_CLINIC.slot.slice(1) === "AM" ? "PM" : "AM") : null;
+  /* 成人督導排早療的代價：教學門診時段實習生不用跟她（0）；門診那天的另一個半天，除非兒童督導那時固定 BS 可帶，否則實習生要跟她（3）；其他時段（1） */
+  const supCost = (it, sl) => sl === TEACH_CLINIC?.slot ? 0 : sl === tcOther ? (BS_FIXED[it.kid]?.includes(tcOther) ? 0 : 3) : 1;
+  const adultSupEI = (roles, sol) => roles.reduce((n, ro, r) => n + INTERNS.filter(it => it.adult === RES[sol.map[r]]?.name)
+    .reduce((m, it) => m + Math.max(0, ...slotsOfItem(ro.id).map(sl => supCost(it, sl))), 0), 0);
   const EIR = EIA.map(ro => ({...(paired(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro), pin:pins(ro.id)[0]}));
   const eiTotal = EIA.reduce((a,b)=>a+b.mins,0);
   const eiPlan = renderSolve($("#eiabox"), EIR,
