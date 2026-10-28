@@ -1151,12 +1151,15 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
       if (c) c.is.push(i); else grid[kind][key] = {is:[i], txt:f.txt};
     }
   });
+  /* 分評：負責的人那個半天照常看門診（成人或兒童），中間抽空去做分評，不另外占治療室 */
+  const subEval = P.map(() => ({}));
   const fix = (roles, plan, typeOf, txtOf) => {
     if (!plan) return;
     roles.forEach((ro, r) => {
       const name = RES[plan.map[r]].name, i = P.findIndex(p => p.name === name), t = typeOf(ro);
       slotsOfItem(ro.id).forEach(s => {
         if (job[i][s]) { warn.push(`${name}：${txtOf(ro)}（${slotName(s)}）和${job[i][s].txt}撞時段`); return; }
+        if (ro.id.startsWith("EA-S")) { subEval[i][s] = txtOf(ro); tally[i].ei++; return; }
         job[i][s] = {t, txt:txtOf(ro), id:ro.id};
         tally[i][t]++;
       });
@@ -1239,7 +1242,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
     for (let k = 0; k < (AREA_HALF_DAYS[ro.id] || 3); k++) {
       let best = null, bestSc = -1e9;
       SLOTS.forEach(s => {
-        if (job[i][s] || days.includes(s[0])) return;
+        if (job[i][s] || subEval[i][s] || days.includes(s[0])) return;
         const sameHalf = SLOTS.some(x => job[i][x] && ["bs","nh"].includes(job[i][x].t) && x.slice(1) === s.slice(1));
         const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0) + (t === "bs" && (bsPref[i] === s || bsDay[i] === s[0]) ? 30 : 0) - (t === "nh" && (bsPref[i] === s || bsDay[i] === s[0]) ? 30 : 0);
         if (sc > bestSc) { bestSc = sc; best = s; }
@@ -1256,7 +1259,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
     for (let k = 0; k < q.n; k++) {
       let best = null, bestSc = -1e9;
       SLOTS.forEach(s => {
-        if (job[i][s]) return;
+        if (job[i][s] || subEval[i][s]) return;
         /* 避開帶實習生的那一天（實習生那天要跟著她） */
         const sc = freeAt(s) * 10 - kidGap(s) * 5 - (SLOTS.some(x => x[0] === s[0] && job[i][x]?.t === "adm") ? 50 : 0) - (bsDay[i] === s[0] || bsPref[i] === s ? 200 : 0);
         if (sc > bestSc) { bestSc = sc; best = s; }
@@ -1402,17 +1405,18 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
 
   /* 各時段外出（病房、護家）與留白的人 */
   const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS "+j.txt:j.txt}）` : null; }).filter(Boolean);
-  const freeOf = s => P.map((p,i) => !job[i][s] ? p.name : (job[i][s].t === "adm" ? p.name + `（${job[i][s].txt}）` : null)).filter(Boolean);
+  const freeOf = s => P.map((p,i) => !job[i][s] ? p.name + (subEval[i][s] ? `（${subEval[i][s]}）` : "") : (job[i][s].t === "adm" ? p.name + `（${job[i][s].txt}）` : null)).filter(Boolean);
   const kidHoles = SLOTS.flatMap(s => KID_ROOMS.filter(r => !grid.kid[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const adultHoles = SLOTS.flatMap(s => ADULT_ROOMS.filter(r => !grid.adult[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const eveName = P.find(p => p.evening)?.name || EVENING_NAME;
 
   const who = c => c.is.map(i => P[i].name).join("＋");
-  const cell = c => c ? esc(who(c)) + (c.txt ? `<span style="color:var(--ink-3);font-size:12px">（${esc(c.txt)}）</span>` : "") : '<span style="color:var(--ink-3)">—</span>';
+  const evalTag = (c, s) => c.is.map(i => subEval[i][s]).filter(Boolean).map(x => `<span style="color:var(--ink-3);font-size:12px">（＋${esc(x)}）</span>`).join("");
+  const cell = (c, s) => c ? esc(who(c)) + evalTag(c, s) + (c.txt ? `<span style="color:var(--ink-3);font-size:12px">（${esc(c.txt)}）</span>` : "") : '<span style="color:var(--ink-3)">—</span>';
   const table = (title, kind, rooms) => `<h3 style="margin:18px 0 8px;font-size:16px">${title}</h3>
     <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
     ${HALVES.map(([h, hn]) => `<tr class="sec"><td colspan="6">${hn}</td></tr>` +
-      rooms.map(room => `<tr><td class="item">${esc(room)}</td>${WEEK_DAYS.map(d => `<td>${cell(grid[kind][d+h+"|"+room])}</td>`).join("")}</tr>`).join("") +
+      rooms.map(room => `<tr><td class="item">${esc(room)}</td>${WEEK_DAYS.map(d => `<td>${cell(grid[kind][d+h+"|"+room], d+h)}</td>`).join("")}</tr>`).join("") +
       (kind === "adult" ? `<tr><td class="item" style="color:var(--ink-2)">病房／護家／其他</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px">${outOf(d+h).map(esc).join("<br>") || "—"}</td>`).join("")}</tr>
         <tr><td class="item" style="color:var(--ink-2)">行政／彈性</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px;color:var(--ink-2)">${freeOf(d+h).map(esc).join("<br>") || "—"}</td>`).join("")}</tr>` : "")
     ).join("")}
@@ -1444,11 +1448,12 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const short = r => r.replace("語言治療室", "").replace(/\(.*\)|（.*）/g, "");
   const myCell = (i, s) => {
     const j = job[i][s];
-    if (!j) return '<span style="color:var(--ink-3)">彈性</span>';
+    const ev = subEval[i][s] ? "＋" + subEval[i][s] : "";
+    if (!j) return '<span style="color:var(--ink-3)">彈性</span>' + esc(ev);
     let t = j.t === "bs" ? "BS " + j.txt : j.t === "kid" || j.t === "adult" ? short(j.txt) : j.txt;
     if (j.t === "kid" || j.t === "adult") { const c = grid[j.t][s + "|" + j.txt]; if (c && c.txt) t += `（${c.txt}）`; }
-    if (j.t === "ei") t = j.id?.startsWith("EA-S") && j.room ? `${short(j.room)}（門診＋${j.txt}）` : "早療" + t;
-    return esc(t);
+    if (j.t === "ei") t = "早療" + t;
+    return esc(t + ev);
   };
   const mine = `<h3 style="margin:22px 0 8px;font-size:16px">每人班表</h3>
     <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
@@ -1460,14 +1465,14 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
     </tbody></table>`;
 
   box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + intern + mine + sum +
-    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著替兩位實習生的督導錯開排出兒童／成人整天（實習生只跟自己的督導，每個半天都有人帶），再把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午（分評在兒童門診中間做，負責的人那個半天照常看兒童個案）；週三下午支援分評由彥妤負責。</p>`;
+    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著替兩位實習生的督導錯開排出兒童／成人整天（實習生只跟自己的督導，每個半天都有人帶），再把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午（分評由負責的人從那個半天的門診抽空去做，成人或兒童門診都可以，不另外占治療室）；週三下午支援分評由彥妤負責。</p>`;
 
   /* 複製到試算表用（Tab 分隔） */
   const rows = [];
   [["成人","adult",ADULT_ROOMS],["兒童","kid",KID_ROOMS]].forEach(([t,kind,rooms]) => {
     HALVES.forEach(([h,hn]) => {
       rows.push([`${t}　${hn}`, ...WEEK_DAYS]);
-      rooms.forEach(room => rows.push([room, ...WEEK_DAYS.map(d => { const c = grid[kind][d+h+"|"+room]; return c ? who(c) + (c.txt ? `(${c.txt})` : "") : ""; })]));
+      rooms.forEach(room => rows.push([room, ...WEEK_DAYS.map(d => { const c = grid[kind][d+h+"|"+room]; return c ? who(c) + c.is.map(i => subEval[i][d+h] ? `(+${subEval[i][d+h]})` : "").join("") + (c.txt ? `(${c.txt})` : "") : ""; })]));
       if (kind === "adult") rows.push(["病房／護家／其他", ...WEEK_DAYS.map(d => outOf(d+h).join("、"))]);
       rows.push([]);
     });
@@ -1567,7 +1572,7 @@ function render(){
   /* 成人督導排早療的代價：教學門診時段實習生不用跟她（0）；門診那天的另一個半天，除非兒童督導那時固定 BS 可帶，否則實習生要跟她（3）；其他時段（1） */
   const supCost = (it, sl) => sl === TEACH_CLINIC?.slot ? 0 : sl === tcOther ? (BS_FIXED[it.kid]?.includes(tcOther) ? 0 : 3) : 1;
   const adultSupEI = (roles, sol) => roles.reduce((n, ro, r) => n + INTERNS.filter(it => it.adult === RES[sol.map[r]]?.name)
-    .reduce((m, it) => m + Math.max(0, ...slotsOfItem(ro.id).map(sl => supCost(it, sl))), 0), 0);
+    .reduce((m, it) => m + Math.max(0, ...slotsOfItem(ro.id).map(sl => isU(ro) || sl === tcOther ? supCost(it, sl) : 0)), 0), 0);
   const EIR = EIA.map(ro => ({...(paired(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro), pin:pins(ro.id)[0]}));
   const eiTotal = EIA.reduce((a,b)=>a+b.mins,0);
   const eiPlan = renderSolve($("#eiabox"), EIR,
