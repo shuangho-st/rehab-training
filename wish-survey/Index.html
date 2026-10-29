@@ -532,6 +532,8 @@ const LEAD_OVERRIDES = {
 /* 每週先保留的兒童時段數（排成人之前就先放）。園菁：兒童自費個案，組長定一週 3 個，其餘兒童時段不排給她 */
 /* 組長指定早療聯評由誰負責：寫一人＝固定給她；寫兩人＝兩人隔週輪流（不管有沒有勾「兩人隔週輪流」） */
 const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
+/* 隔週輪流的兩人共用同一間兒童室（組長 10/29：週四下午彥妤、郁方用同一間） */
+const EI_SHARE_ROOM = ["EA-U-C"];
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
 const KID_LEAN = ["品樺", "彥妤", "宛宜", "林寧"];
@@ -1201,7 +1203,9 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const ti0 = TEACH_CLINIC ? P.findIndex(p => p.name === TEACH_CLINIC.name) : -1;
   const IV0 = INTERNS.map(it => ({...it, k:P.findIndex(p => p.name === it.kid), a:P.findIndex(p => p.name === it.adult)})).filter(it => it.k >= 0 && it.a >= 0);
   /* 實習生的兒童時段只算一般兒童門診（不跟聯評、分評），Bedside 只算病房（不跟護家） */
-  const kidFull = s => P.filter((p,j) => job[j][s] && ["ei","kid"].includes(job[j][s].t)).length >= KID_ROOMS.length;
+  /* 共用房間的隔週聯評，第二個人不另外占一間 */
+  const sharer = (i, s) => job[i][s]?.t === "ei" && EI_SHARE_ROOM.includes(job[i][s].id) && P.some((p,j) => j !== i && job[j][s]?.id === job[i][s].id && j < i);
+  const kidFull = s => P.filter((p,j) => job[j][s] && ["ei","kid"].includes(job[j][s].t) && !sharer(j, s)).length >= KID_ROOMS.length;
   const fits = (i, s, kind) => job[i][s] ? job[i][s].t === kind : !(kind === "kid" && kidFull(s));
   const dayFit = (i, d, kind) => (n => n === 2 ? 10 : n * 2)(HALVES.filter(([h]) => fits(i, d + h, kind)).length);
   /* 有教學門診：剩下那天一半教學門診、一半 Bedside；沒有教學門診：剩下那天跟督導上 Bedside 和其他時段 */
@@ -1243,7 +1247,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   }));
 
   /* 病房、護家：每區排滿所需半天數，同一區分散在不同天，挑當下其他人力最寬裕的時段；同一人盡量固定上午或下午 */
-  const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid")).length;
+  const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid") && !sharer(i, s)).length;
   const freeAt = s => P.filter((p,i) => !job[i][s]).length;
   const areas = SOLO.map((ro,r) => ({ro, i:P.findIndex(p => p.name === RES[soloPlan.map[r]].name)}))
     .sort((a,b) => SLOTS.filter(s => !job[a.i][s]).length - SLOTS.filter(s => !job[b.i][s]).length);
@@ -1292,6 +1296,10 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   /* 早療先放進兒童治療室 */
   SLOTS.forEach(s => P.forEach((p,i) => {
     if (job[i][s]?.t !== "ei") return;
+    if (EI_SHARE_ROOM.includes(job[i][s].id)) {
+      const k = P.findIndex((q,j) => j !== i && job[j][s]?.id === job[i][s].id && job[j][s].room);
+      if (k >= 0) { const r = job[k][s].room, c = grid.kid[s + "|" + r]; c.is.push(i); c.txt = job[i][s].txt.replace(/ 隔週[①②]/, "") + " 隔週輪流"; job[i][s].room = r; return; }
+    }
     const room = KID_ROOMS.find(r => !grid.kid[s + "|" + r]);
     /* 分評只占一小段，那個半天其餘時間照常看兒童門診 */
     const sub = job[i][s].id?.startsWith("EA-S");
