@@ -502,11 +502,11 @@ const HALVES = [["AM","上午"],["PM","下午"]];
 /* 病房、護家每區每週要幾個半天。不綁固定時段，白天哪個時段都可以（不排晚上），由程式挑人力最寬裕的時段 */
 const AREA_HALF_DAYS = { "BS-A":3, "BS-B":3, "BS-C":3, "BS-D":3, "BS-E":3, "NH-213":3, "NH-215":3 };
 /* 組長指定某人的病房時段（不管分到哪一區）：寫幾個就排幾個半天 */
-const BS_FIXED = { "彥妤": ["二AM", "五AM"] };
+const BS_FIXED = { "彥妤": ["二AM", "五AM"], "書寧": ["一AM", "三AM", "五AM"] };
 /* 組長指定某人每週要留的行政半天（時段由試排挑） */
 const PERSON_ADMIN = {};
 /* 組長指定某人某個半天做什麼（kind：adult＝成人治療室、kid＝兒童治療室、adm＝行政） */
-const PERSON_FIXED = { "慈芯": [{slot:"三PM", kind:"adult"}], "彥妤": [{slot:"二PM", kind:"adult"}, {slot:"四AM", kind:"adm", txt:"教學負責人行政"}] };
+const PERSON_FIXED = { "慈芯": [{slot:"三PM", kind:"adult"}], "書寧": [{slot:"二AM", kind:"kid"}], "彥妤": [{slot:"二PM", kind:"adult"}, {slot:"四AM", kind:"adm", txt:"教學負責人行政"}] };
 /* 早療評估診各時段（組長確認），會占用一間兒童治療室。聯評：週二下午、週四上午、週四下午；分評：週二上午 11:00 兩個、週二下午 13:20、週四下午 15:30 */
 const EI_SLOTS = {
   "EA-U-A":"二PM", "EA-U-B":"四AM", "EA-U-C":"四PM",
