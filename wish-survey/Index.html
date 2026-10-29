@@ -539,11 +539,11 @@ const KID_LEAN = ["品樺", "彥妤", "宛宜", "林寧"];
 const KID_ONLY = [];
 /* 實習生（115/11/23–116/04/09）：每個半天都要跟著一位督導。時段不鎖死，但督導要排到足夠的兒童／成人時段，而且兩位督導彼此錯開 */
 const INTERNS = [
-  {name:"筱凡", kid:"彥妤", adult:"婉瑜", need:{kid:4, adult:4, bs:1}},
+  {name:"筱凡", kid:"彥妤", adult:"婉瑜", need:{kid:4, adult:4, bs:0}},
   {name:"品妤", kid:"宛宜", adult:"慈芯", need:{kid:4, adult:4, bs:0}}
 ];
-/* 組長指定實習生某個半天跟誰（who：督導，kind：adult＝成人、kid＝兒童）。品妤週二上午跟婉瑜成人（10/29） */
-const INTERN_SLOTS = { "品妤": { "二AM": {who:"婉瑜", kind:"adult"} } };
+/* 組長指定實習生某個半天跟誰（who：督導，kind：adult＝成人、kid＝兒童）。週二上午：品妤跟慈芯成人、筱凡跟婉瑜成人（10/29） */
+const INTERN_SLOTS = { "品妤": { "二AM": {who:"慈芯", kind:"adult"} }, "筱凡": { "二AM": {who:"婉瑜", kind:"adult"} } };
 /* 兒童教學門診：實習生一起參加，每週 1 個半天 */
 /* 兒童教學門診：兩位實習生一起參加，組長指定週二下午（slot 不寫就由試排挑）；不排就改成 null */
 const TEACH_CLINIC = {name:"園菁", txt:"教學門診", slot:"二PM"};
