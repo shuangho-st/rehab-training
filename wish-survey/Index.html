@@ -534,6 +534,8 @@ const LEAD_OVERRIDES = {
 const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
 /* 隔週輪流的兩人共用同一間兒童室（組長 10/29：週四下午彥妤、郁方用同一間） */
 const EI_SHARE_ROOM = ["EA-U-C"];
+/* 組長指定主要行政由誰負責 */
+const ADMIN_PINS = { "AM-D": "婉瑜" };   /* 成人負責人＋拿單：婉瑜（10/29） */
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
 /* 組長指定某人固定用哪一間（kid＝兒童、adult＝成人）。彥妤、園菁兒童都在兒童室 3（10/29） */
@@ -1667,7 +1669,8 @@ function render(){
 
   /* 主要行政：保最低分 → 時數差距小 → 意願總分 */
   const admTotal = ADMIN.reduce((a,b)=>a+b.mins,0);
-  const adminPlan = renderSolve($("#adminbox"), ADMIN,
+  const ADMIN_R = ADMIN.map(ro => ({...ro, pin:RES.some(r => r.name === ADMIN_PINS[ro.id]) ? ADMIN_PINS[ro.id] : undefined}));
+  const adminPlan = renderSolve($("#adminbox"), ADMIN_R,
     { checkElig:true, skipLead:true, rank:s => s.min*100000 - spreadOf(ADMIN,s)*10 + s.total },
     `排序方式：先排除組長與不符合條件的人，再讓最不情願的人分數盡量高，接著把早療評估診已經分掉的時數一起算進來、壓低同一人身上的集中度，最後才比意願總分。這 ${ADMIN.length} 項合計 ${admTotal} 分／月（約 ${hrm(admTotal)} 小時／月），另有技術組長 1380 分／月已固定。G（2000 分，約 33 小時）與 C（1328 分，約 22 小時）本身量就重，完全打平不可能，這裡只避免一個人同時吃下兩個大項。`, true);
   addLoad(ADMIN, adminPlan);
