@@ -238,6 +238,40 @@ const SECTIONS=[
  {k:"couns",n:"諮詢（衛教指示）",special:"couns"}
 ];
 
+/* ===== 病人類型模板 =====
+   secs：要顯示的區塊（其他區塊收起來，按「顯示其他項目」可展開）
+   preset：只填入目前是空的欄位，不會蓋掉已經寫的內容；表現（％）一律留給治療師填 */
+const TEMPLATES=[
+ {k:"sev",n:"吞嚥障礙（較重）",d:"冰酸刺激、口腔按摩、口腔動作訓練；課程外不可由口進食",
+  secs:["om","sw","beh","couns"],
+  preset:{
+   sw_o:"給予冰酸刺激（thermal stimulation）及口腔按摩（oral massage）",
+   om_o:"進行口腔動作訓練（oral motor training）",
+   c_mode:"不可由口進食（僅可鼻胃管灌食，請勿由口餵食任何食物與水）",
+   c_train:["每天刷牙及舌頭，保持口腔潔淨與口唇濕潤","口腔動作練習（嘴唇、舌頭）","口面部按摩"]}},
+ {k:"feed",n:"吞嚥障礙（開始練習由口進食）",d:"由口進食質地、吞嚥紀錄、姿勢與吞嚥手法、進食衛教",
+  secs:["om","sw","beh","couns"],
+  preset:{
+   c_mode:"練習由口進食（進食時照顧者務必在旁監督或協助）",
+   c_pos:["坐直"],
+   c_strat:["每口吞完後，清喉嚨再吞一次","吞完發ㄚ檢查是否有濁水聲","進食完後至少坐著超過 30 分鐘"],
+   c_train:["每天刷牙及舌頭，保持口腔潔淨與口唇濕潤","口腔動作練習（嘴唇、舌頭）"]}},
+ {k:"aph",n:"失語症",d:"聽覺理解、口語表達、閱讀書寫",
+  secs:["lang","rw","beh"],preset:{}},
+ {k:"dys",n:"Dysarthria（吶吃）",d:"口腔動作、輪替動作、呼吸發聲、語速與清晰度",
+  secs:["om","sp","voice","beh"],preset:{}}
+];
+const tplOf=()=>TEMPLATES.find(t=>t.k===D.tpl)||null;
+const secShown=s=>{const t=tplOf();return !t||D.showAll||t.secs.includes(s.k)||secHas(s)};
+function applyTemplate(k){
+  // 換模板時，上一個模板帶入、而且沒被改過的內容先拿掉，避免殘留到別種病人的紀錄
+  const prev=tplOf(), same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  if(prev) Object.entries(prev.preset).forEach(([key,v])=>{ if(same(D[key],v)) delete D[key]; });
+  D.tpl=k||""; D.showAll=false;
+  const t=tplOf(); if(!t) return;
+  Object.entries(t.preset).forEach(([key,v])=>{ if(!has(D[key])) D[key]=Array.isArray(v)?[...v]:v; });
+}
+
 const TEX=["水","花蜜狀","稠狀物","布丁狀","粥","細碎飲食","軟質飲食","正常飲食"];
 const RESIDUE=["前溝","外側溝","口底","嘴巴右側","嘴巴左側","舌","硬顎"];
 const POSTURE=["下巴上抬","低頭","頭轉向右邊","頭轉向左邊","頭向右傾斜","頭向左傾斜"];
@@ -299,6 +333,13 @@ function swallowBlock(){
   [{k:"w1",t:"改善吞嚥反射",p:"%"},
    {k:"w2",t:"冰刺激後吞嚥（＜　秒）",p:"sec"},
    {k:"w3",t:"自發吞口水",p:"%"}].forEach(i=>h+=itemRow(i));
+
+  const oralKeys=["w_residue","w_residue_o","w_posture","w_maneuver","w_maneuver_o","w_diet_date","w_diet_iddsi","w_diet_type","t1_rec","t2_rec"];
+  const showOral=D.tpl!=="sev"||D.showAll||done("w_tex1")||done("w_tex2")||oralKeys.some(k=>has(D[k]));
+  if(!showOral) return h
+   + text("w_vfss","吞嚥攝影時間","如 2026/09/20")
+   + text("w_ng","個案移除鼻胃管日期","如 2026/09/25")
+   + `<div class="hint" style="margin:-4px 0 12px">目前為「吞嚥障礙（較重）」模板，由口進食質地、殘留、姿勢等欄位已收起；按下方「顯示其他項目」可展開。</div>`;
 
   [1,2].forEach(n=>{
     const pre="t"+n;
@@ -400,7 +441,16 @@ function view(){
     ${radio("setting","門診／住院",["住院","門診"])}
   </fieldset>`;
 
+  const T=tplOf();
+  h+=`<fieldset><legend>病人類型模板</legend>
+    <div class="chips">`+[{k:"",n:"不使用（顯示全部）"},...TEMPLATES].map(t=>
+      `<button type="button" class="chip ${(D.tpl||"")===t.k?"on":""}" data-tpl="${t.k}">${esc(t.n)}</button>`).join("")+`</div>
+    <div class="hint" style="margin:6px 0 0">${T?esc(T.d)+"。只顯示相關區塊，常用的衛教與說明已預先帶入（不會蓋掉已填內容），表現％仍需自行填寫。":"選一種類型，只顯示相關區塊並帶入常用內容；寫下一位時會保留這個選擇。"}</div>
+  </fieldset>`;
+
+  const hidden=[];
   SECTIONS.forEach(s=>{
+    if(!secShown(s)){ hidden.push(s.n.split("：")[0]); return; }
     h+=`<fieldset id="sec_${s.k}"><legend>${esc(s.n)}</legend>`;
     if(s.special==="swallow") h+=swallowBlock();
     else if(s.special==="couns") h+=counsBlock();
@@ -408,6 +458,11 @@ function view(){
     if(s.other) h+=area(s.other,"其他","可直接寫治療師觀察，如「給予臉部按摩，左臉下垂幅度稍改善」");
     h+=`</fieldset>`;
   });
+
+  if(T&&(hidden.length||D.tpl==="sev")&&!D.showAll)
+    h+=`<div class="row" style="margin-top:-8px"><button type="button" class="btn ghost" data-showall="1">顯示其他項目${hidden.length?"（"+esc(hidden.join("、"))+"）":""}</button></div>`;
+  else if(T&&D.showAll)
+    h+=`<div class="row" style="margin-top:-8px"><button type="button" class="btn ghost" data-showall="0">只顯示「${esc(T.n)}」相關項目</button></div>`;
 
   h+=`<div class="meter"><div class="track"><div class="fill" id="fill"></div></div>
       <small id="pct">尚未填寫</small></div>
@@ -531,7 +586,7 @@ function renderOuts(){
 /* ---------------- 進度／導覽 ---------------- */
 function renderJump(){
   const ul=document.getElementById("jump");
-  ul.innerHTML=SECTIONS.map(s=>
+  ul.innerHTML=SECTIONS.filter(secShown).map(s=>
     `<li><button data-jump="${s.k}" class="${secHas(s)?"has":""}">${esc(s.n)}</button></li>`).join("");
   const n=SECTIONS.filter(secHas).length;
   const f=document.getElementById("fill"), t=document.getElementById("pct");
@@ -598,6 +653,13 @@ document.addEventListener("click",e=>{
     if(x) copy(outEdited[x.k]!==undefined?outEdited[x.k]:x.t,"已複製「"+x.n+"」");
     return;
   }
+  if(b.dataset.tpl!==undefined){
+    const k=b.dataset.tpl;
+    if(k===(D.tpl||"")) return;
+    applyTemplate(k); outEdited={}; render(false);
+    toast(k?"已套用「"+tplOf().n+"」模板":"已顯示全部項目"); return;
+  }
+  if(b.dataset.showall!==undefined){ D.showAll=b.dataset.showall==="1"; render(true); return; }
   if(b.id==="print"){
     const all=blocks().map(x=>outEdited[x.k]!==undefined?outEdited[x.k]:x.t).join("\n\n");
     if(!all){ toast("沒有可列印的內容"); return; }
@@ -636,9 +698,10 @@ function loadRecord(i){
 }
 function clearForm(ask){
   if(ask&&!confirm("確定清空目前內容？未存入清單的資料會消失。")) return;
-  const keep={date:D.date,setting:D.setting};
+  const keep={date:D.date,setting:D.setting,tpl:D.tpl};
   Object.keys(D).forEach(k=>delete D[k]); Object.assign(D,keep);
   Object.keys(V).forEach(k=>delete V[k]);
+  applyTemplate(D.tpl);
   outEdited={}; render(false);
 }
 
