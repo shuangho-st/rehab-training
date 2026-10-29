@@ -536,6 +536,8 @@ const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
 const EI_SHARE_ROOM = ["EA-U-C"];
 /* 組長指定主要行政由誰負責 */
 const ADMIN_PINS = { "AM-D": "婉瑜" };   /* 成人負責人＋拿單：婉瑜（10/29） */
+/* 組長指定附加工作由誰負責（同一人可以多項，指定的項目不再試排） */
+const EXTRA_PINS = { "AX-J": "郁方", "AX-K": "郁方", "AX-M": "郁方" };   /* 工作服、衛材、盤點：郁方（10/29） */
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
 /* 組長指定某人固定用哪一間（kid＝兒童、adult＝成人）。彥妤、園菁兒童都在兒童室 3（10/29） */
@@ -1677,9 +1679,20 @@ function render(){
 
   /* 附加工作：保最低分 → 優先給累計時數低的人 */
   const extraOpts = { skipLead:true, rank:s => s.min*100000 + s.total*100 - s.map.reduce((a,p) => a + (load[p]||0), 0)/100 };
-  const extraPlan = renderSolve($("#extrabox"), EXTRA, extraOpts,
+  const pinnedExtra = EXTRA.filter(ro => RES.some(r => r.name === EXTRA_PINS[ro.id]));
+  const EXTRA_FREE = EXTRA.filter(ro => !pinnedExtra.includes(ro));
+  const extraPlan = renderSolve($("#extrabox"), EXTRA_FREE, extraOpts,
     (eiPlan||adminPlan) ? "同意願分數時，優先分給早療與主要行政累計時數較低的人。組長不納入分配。"
                         : "前兩段還沒試排出來，這裡只依意願分配。組長不納入分配。", false);
+
+  /* 組長指定的附加工作放在每個方案最上面 */
+  $("#extrabox").querySelectorAll(".plan table tbody").forEach(tb => pinnedExtra.slice().reverse().forEach(ro => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${esc(ro.code)}　${esc(ro.label)}</td><td>${esc(EXTRA_PINS[ro.id])}（組長指定）</td>`;
+    tb.prepend(tr);
+  }));
+  $("#extrabox").querySelectorAll(".plan tr").forEach(tr => { const c = tr.cells;
+    if (c.length > 1 && c[0].textContent.trim() === "未分配") c[1].textContent = c[1].textContent.split("、").filter(n => !Object.values(EXTRA_PINS).includes(n.trim())).join("、") || "—"; });
 
   weekPlan(soloPlan, eiPlan, adminPlan, EIR, PAIR, pairPlan);
 
@@ -1687,7 +1700,7 @@ function render(){
     {title:"臨床專責區", roles:SOLO, plan:soloPlan, opts:{rank:s => s.min*1000 + s.total}},
     {title:"早療評估診", roles:EIR, plan:eiPlan, opts:{checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 + s.total}},
     {title:"主要行政工作", roles:ADMIN, plan:adminPlan, opts:{checkElig:true, skipLead:true, rank:s => s.min*100000 + s.total}},
-    {title:"附加工作", roles:EXTRA, plan:extraPlan, opts:extraOpts}
+    {title:"附加工作", roles:EXTRA_FREE, plan:extraPlan, opts:extraOpts}
   ]);
 
   /* 意願矩陣（分區塊） */
