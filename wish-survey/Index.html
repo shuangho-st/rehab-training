@@ -525,20 +525,25 @@ const FIXED_SLOTS = [
 ];
 /* 組長調整：把某人某一項的分數改成這裡的值，優先於本人填的分數（1＝不排給這個人） */
 const LEAD_OVERRIDES = {
-  "慈芯": { "BS-A":1, "KD-DAY":1 },                   /* 組長希望不負責 207／208，也不排兒童時段 */
-  "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5 }      /* 請書寧協助早療聯評 */
+  "慈芯": { "BS-A":1, "BS-B":1, "BS-C":1, "BS-D":1, "BS-E":1, "NH-213":1, "NH-215":1, "KD-DAY":1 },   /* 組長固定在成人門診：不負責病房、護家，也不排兒童時段（10/29） */
+  "品樺": { "AD-DAY":1, "BS-A":1, "BS-B":1, "BS-C":1, "BS-D":1, "BS-E":1, "NH-213":1, "NH-215":1 },   /* 品樺盡量都排兒童（10/29） */
+  "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5, "BS-B":5 }      /* 請書寧協助早療聯評；217／219 給書寧（10/29） */
 };
 /* 每週先保留的兒童時段數（排成人之前就先放）。園菁：兒童自費個案，組長定一週 3 個，其餘兒童時段不排給她 */
 /* 組長指定早療聯評由誰負責：寫一人＝固定給她；寫兩人＝兩人隔週輪流（不管有沒有勾「兩人隔週輪流」） */
 const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
-const KID_LEAN = ["彥妤", "宛宜", "林寧"];
+const KID_LEAN = ["品樺", "彥妤", "宛宜", "林寧"];
+/* 只排兒童、成人缺人也不補的人（寫進來成人可能會空格）。空的＝成人優先，必要時仍會排到成人 */
+const KID_ONLY = [];
 /* 實習生（115/11/23–116/04/09）：每個半天都要跟著一位督導。時段不鎖死，但督導要排到足夠的兒童／成人時段，而且兩位督導彼此錯開 */
 const INTERNS = [
   {name:"筱凡", kid:"彥妤", adult:"婉瑜", need:{kid:4, adult:4, bs:1}},
-  {name:"品妤", kid:"宛宜", adult:"慈芯", need:{kid:4, adult:4, bs:1}}
+  {name:"品妤", kid:"宛宜", adult:"慈芯", need:{kid:4, adult:4, bs:0}}
 ];
+/* 組長指定實習生某個半天跟誰（who：督導，kind：adult＝成人、kid＝兒童）。品妤週二上午跟婉瑜成人（10/29） */
+const INTERN_SLOTS = { "品妤": { "二AM": {who:"婉瑜", kind:"adult"} } };
 /* 兒童教學門診：實習生一起參加，每週 1 個半天 */
 /* 兒童教學門診：兩位實習生一起參加，組長指定週二下午（slot 不寫就由試排挑）；不排就改成 null */
 const TEACH_CLINIC = {name:"園菁", txt:"教學門診", slot:"二PM"};
@@ -908,8 +913,8 @@ const ALLRES = [];
 /* 試排假設：早療聯評每個時段兩人隔週輪流（勾選才用，未勾選是一人一時段） */
 let EI_PAIR = (() => { try { return localStorage.getItem("wish-eipair") === "1"; } catch (e) { return false; } })();
 /* 預設明年不在的人（品樺確定只做到 116 年 1 月）；組長在頁面上勾選後以勾選為準 */
-const DEFAULT_ABSENT = ["品樺"];
-const ABSENT = new Set((() => { try { const v = localStorage.getItem("wish-absent2"); return v ? JSON.parse(v) : DEFAULT_ABSENT; } catch (e) { return DEFAULT_ABSENT; } })());
+const DEFAULT_ABSENT = [];
+const ABSENT = new Set((() => { try { const v = localStorage.getItem("wish-absent3"); return v ? JSON.parse(v) : DEFAULT_ABSENT; } catch (e) { return DEFAULT_ABSENT; } })());
 function applyScenario(){
   RES.length = 0;
   ALLRES.filter(r => !ABSENT.has(r.name)).forEach(r => RES.push(r));
@@ -985,7 +990,7 @@ document.addEventListener("change", e => {
   const n = e.target.dataset?.absent;
   if (!n) return;
   if (e.target.checked) ABSENT.add(n); else ABSENT.delete(n);
-  try { localStorage.setItem("wish-absent2", JSON.stringify([...ABSENT])); } catch (err) {}
+  try { localStorage.setItem("wish-absent3", JSON.stringify([...ABSENT])); } catch (err) {}
   applyScenario();
 });
 $("#btn-copyweek").onclick = () => {
@@ -1229,6 +1234,13 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
       });
     }
   }
+  /* 組長指定的實習生半天：替那位督導保留 */
+  Object.entries(INTERN_SLOTS).forEach(([name, o]) => Object.entries(o).forEach(([sl, f]) => {
+    const i = P.findIndex(p => p.name === f.who);
+    if (i < 0 || !INTERNS.some(it => it.name === name)) return;
+    if (job[i][sl]) { warn.push(`實習生${name}：${slotName(sl)}指定跟${f.who}，但${f.who}那時是${job[i][sl].txt || "別的工作"}`); return; }
+    job[i][sl] = {t:"hold", kind:f.kind, intern:name};
+  }));
 
   /* 病房、護家：每區排滿所需半天數，同一區分散在不同天，挑當下其他人力最寬裕的時段；同一人盡量固定上午或下午 */
   const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid")).length;
@@ -1297,7 +1309,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
         P.forEach((p,i) => {
           if (job[i][s]) return;
           const v = pref(p, itemId);
-          if (v === 1 && !must) return;
+          if (v === 1 && (!must || KID_ONLY.includes(p.name))) return;
           let sc = v * 10 - tally[i][kind] * 2 + (cap[i] - used[i]) * 4;
           if (v === 1) sc -= 100;
           if (used[i] >= cap[i]) sc -= 40;
@@ -1439,9 +1451,12 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
 
   const intern = IV.length ? `<h3 style="margin:22px 0 8px;font-size:16px">實習生跟誰（115/11/23–116/04/09）</h3>
     <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
-    ${IV.map(it => `<tr class="sec"><td colspan="6">${esc(it.name)}　兒童 ${esc(it.kid)} ${it.n.kid} 個、成人 ${esc(it.adult)} ${it.n.adult} 個、Bedside ${it.n.bs} 個</td></tr>` +
+    ${IV.map(it => { const extra = Object.entries(INTERN_SLOTS[it.name] || {}).filter(([sl, f]) => it.cov[sl]?.who === f.who && f.who !== it.adult && f.who !== it.kid);
+      const ad = it.n.adult - extra.filter(([, f]) => f.kind === "adult").length, kd = it.n.kid - extra.filter(([, f]) => f.kind === "kid").length;
+      const ex = extra.map(([, f]) => `＋${esc(f.who)}${f.kind === "adult" ? "成人" : "兒童"} 1 個`).join("");
+      return `<tr class="sec"><td colspan="6">${esc(it.name)}　兒童 ${esc(it.kid)} ${kd} 個、成人 ${esc(it.adult)} ${ad} 個${ex}、Bedside ${it.n.bs} 個</td></tr>` +
       HALVES.map(([h, hn]) => `<tr><td class="item">${hn}</td>${WEEK_DAYS.map(d => { const c = it.cov[d + h];
-        return c.gap ? '<td><span class="flag">沒人帶</span></td>' : `<td>${esc(c.who)}<span style="color:var(--ink-3);font-size:12px">（${esc(c.what)}）</span></td>`; }).join("")}</tr>`).join("")).join("")}
+        return c.gap ? '<td><span class="flag">沒人帶</span></td>' : `<td>${esc(c.who)}<span style="color:var(--ink-3);font-size:12px">（${esc(c.what)}）</span></td>`; }).join("")}</tr>`).join(""); }).join("")}
     </tbody></table>` : "";
 
   /* 每人一週班表 */
@@ -1527,7 +1542,8 @@ function render(){
     ...FIXED_SLOTS.filter(f => f.name === RES[p].name || (f.lead && RES[p].lead)).map(f => f.slot),
     ...(RES[p].lead ? LEAD_ADMIN_SLOTS : []),
     ...(PERSON_FIXED[RES[p].name] || []).map(f => f.slot),
-    ...(TEACH_CLINIC?.slot && TEACH_CLINIC.name === RES[p].name ? [TEACH_CLINIC.slot] : [])
+    ...(TEACH_CLINIC?.slot && TEACH_CLINIC.name === RES[p].name ? [TEACH_CLINIC.slot] : []),
+    ...Object.values(INTERN_SLOTS).flatMap(o => Object.entries(o).filter(([, f]) => f.who === RES[p].name).map(([sl]) => sl))
   ];
   const soloPlan = renderSolve($("#planbox"), SOLO, {rank:s => s.min*1000 + s.total},
     `排序方式：先讓最不情願的那個人分數盡量高，同樣情況下再比意願總分。未分配到專責區的人，時段全部投入共同時段池與早療評估診。${EVENING_NAME}固定兒童晚班，上午補休，負責的病房或護家會排在下午。`, false);
@@ -1565,12 +1581,16 @@ function render(){
   const pinBusy = p => EIA.filter(ro => (EI_PINS[ro.id] || []).slice(1).includes(RES[p].name)).flatMap(ro => slotsOfItem(ro.id));
   const shortOf = (roles, sol) => RES.reduce((n, _, p) => {
     const ei = new Set([...pinBusy(p), ...roles.flatMap((ro,r) => sol.map[r] === p ? slotsOfItem(ro.id) : [])]);
-    return n + Math.max(0, areaNeed(p) - workHalves(p).filter(sl => !ei.has(sl)).length);
+    const free = workHalves(p).filter(sl => !ei.has(sl));
+    /* 病房、護家同一區要分在不同天：扣掉帶實習生的整天後，還要剩夠多天有空檔 */
+    const sup = INTERNS.filter(it => it.kid === RES[p].name || it.adult === RES[p].name).length * 2;
+    const area = areaNeed(p) - sup * 2, days = new Set(free.map(sl => sl[0])).size - sup;
+    return n + Math.max(0, areaNeed(p) - free.length) + (area > 0 ? Math.max(0, area - days) : 0);
   }, 0);
   /* 帶實習生的成人督導盡量不排早療（實習生只跟她看成人，排了早療那個半天實習生就沒人帶） */
   const tcOther = TEACH_CLINIC?.slot ? TEACH_CLINIC.slot[0] + (TEACH_CLINIC.slot.slice(1) === "AM" ? "PM" : "AM") : null;
   /* 成人督導排早療的代價：教學門診時段實習生不用跟她（0）；門診那天的另一個半天，除非兒童督導那時固定 BS 可帶，否則實習生要跟她（3）；其他時段（1） */
-  const supCost = (it, sl) => sl === TEACH_CLINIC?.slot ? 0 : sl === tcOther ? (BS_FIXED[it.kid]?.includes(tcOther) ? 0 : 3) : 1;
+  const supCost = (it, sl) => sl === TEACH_CLINIC?.slot || INTERN_SLOTS[it.name]?.[sl] ? 0 : sl === tcOther ? (BS_FIXED[it.kid]?.includes(tcOther) ? 0 : 3) : 1;
   const adultSupEI = (roles, sol) => roles.reduce((n, ro, r) => n + INTERNS.filter(it => it.adult === RES[sol.map[r]]?.name)
     .reduce((m, it) => m + Math.max(0, ...slotsOfItem(ro.id).map(sl => isU(ro) || sl === tcOther ? supCost(it, sl) : 0)), 0), 0);
   const EIR = EIA.map(ro => ({...(paired(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro), pin:pins(ro.id)[0]}));
