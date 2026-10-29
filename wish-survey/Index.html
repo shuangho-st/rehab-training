@@ -536,6 +536,10 @@ const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
 const EI_SHARE_ROOM = ["EA-U-C"];
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
+/* 組長指定某人固定用哪一間（kid＝兒童、adult＝成人）。彥妤、園菁兒童都在兒童室 3（10/29） */
+const ROOM_PREF = { "彥妤": {kid:"兒童語言治療室3"}, "園菁": {kid:"兒童語言治療室3"} };
+/* 每間治療室的電腦數（組長 10/29：成人室 3 兩台，其他各一台） */
+const COMPUTERS = { "成人語言治療室1":1, "成人語言治療室2":1, "成人語言治療室3":2, "兒童語言治療室1":1, "兒童語言治療室2":1, "兒童語言治療室3":1 };
 const KID_LEAN = ["品樺", "彥妤", "宛宜", "林寧"];
 /* 只排兒童、成人缺人也不補的人（寫進來成人可能會空格）。空的＝成人優先，必要時仍會排到成人 */
 const KID_ONLY = ["品樺"];   /* 品樺全部排兒童（10/29 組長） */
@@ -1335,7 +1339,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   /* 實習生：先放教學門診，再讓兩位督導錯開排兒童／成人，實習生每個半天都有人帶 */
   const IV = INTERNS.map(it => ({...it, k:P.findIndex(p => p.name === it.kid), a:P.findIndex(p => p.name === it.adult), cov:{}, n:{kid:0, adult:0, bs:0}}))
     .filter(it => { if (it.k < 0 || it.a < 0) { warn.push(`實習生${it.name}：督導不在這次排班名單內`); return false; } return true; });
-  const roomFor = (i, s, kind) => { const half = s.slice(1); return [home[kind + half + i], ...(kind === "kid" ? KID_ROOMS : ADULT_ROOMS)].find(r => r && !grid[kind][s + "|" + r]); };
+  const roomFor = (i, s, kind) => { const half = s.slice(1); return [ROOM_PREF[P[i].name]?.[kind], home[kind + half + i], ...(kind === "kid" ? KID_ROOMS : ADULT_ROOMS)].find(r => r && !grid[kind][s + "|" + r]); };
   const takeRoom = (i, s, kind, txt) => {
     const room = roomFor(i, s, kind);
     job[i][s] = {t:kind, txt:room}; tally[i][kind]++; used[i]++; home[kind + s.slice(1) + i] = room;
@@ -1423,6 +1427,45 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   fill("adult", ADULT_ROOMS, "AD-DAY", true);
   fill("kid", KID_ROOMS, "KD-DAY", false);
 
+  /* 換房間：同一時段內互換，讓指定的人用指定的房間、每個人不同天盡量待同一間 */
+  const isFixedCell = (s, room) => FIXED_SLOTS.some(f => f.slot === s && f.room === room);
+  const perms = a => a.length <= 1 ? [a] : a.flatMap((x, k) => perms([...a.slice(0, k), ...a.slice(k + 1)]).map(r => [x, ...r]));
+  [["kid", KID_ROOMS], ["adult", ADULT_ROOMS]].forEach(([kind, rooms]) => {
+    for (let round = 0; round < 4; round++) {
+      const freq = {};
+      SLOTS.forEach(s => rooms.forEach(r => { const c = grid[kind][s + "|" + r]; if (c && c.is.length === 1) { const k = c.is[0] + "|" + r; freq[k] = (freq[k] || 0) + 1; } }));
+      SLOTS.forEach(s => {
+        const pos = rooms.filter(r => !isFixedCell(s, r) && !(grid[kind][s + "|" + r]?.is.length > 1));
+        const cells = pos.map(r => grid[kind][s + "|" + r]);
+        const other = s[0] + (s.slice(1) === "AM" ? "PM" : "AM");
+        /* 空房留在最後一間（成人室 3、兒童室 3 以外的人才會往前排） */
+        const sc = (c, r) => { if (!c) return r === rooms[rooms.length - 1] ? 1 : 0; const i = c.is[0], pr = ROOM_PREF[P[i].name]?.[kind];
+          return (pr === r ? 100 : 0) + (freq[i + "|" + r] || 0) * 3 + (grid[kind][other + "|" + r]?.is.includes(i) ? 2 : 0); };
+        let best = null, bestSc = -1;
+        perms(cells).forEach(order => { const t = order.reduce((n, c, k) => n + sc(c, pos[k]), 0); if (t > bestSc) { bestSc = t; best = order; } });
+        pos.forEach((r, k) => {
+          const c = best[k];
+          if (c) { grid[kind][s + "|" + r] = c; const j = job[c.is[0]][s]; if (j.t === kind) j.txt = r; else j.room = r; }
+          else delete grid[kind][s + "|" + r];
+        });
+      });
+    }
+  });
+  /* 電腦：每個上班的人一台。有房間的人用房間那台，其他人（病房、護家、行政、彈性）用空房間或成人室 3 的第二台 */
+  const pcOf = s => {
+    const here = P.map((p, i) => i).filter(i => job[i][s]?.t !== "off");
+    const spare = [], seat = {};
+    [["adult", ADULT_ROOMS], ["kid", KID_ROOMS]].forEach(([kind, rooms]) => rooms.forEach(r => {
+      const c = grid[kind][s + "|" + r], n = COMPUTERS[r] || 0;
+      const users = c ? c.is.slice(0, n) : [];
+      users.forEach(i => seat[i] = r);
+      for (let k = users.length; k < n; k++) spare.push(r);
+    }));
+    const need = here.filter(i => !seat[i]);
+    need.forEach(i => { if (spare.length) seat[i] = spare.shift() + "（借）"; });
+    return {here:here.length, total:Object.values(COMPUTERS).reduce((a, b) => a + b, 0), none:here.filter(i => !seat[i]).map(i => P[i].name), seat};
+  };
+
   /* 各時段外出（病房、護家）與留白的人 */
   const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS "+j.txt:j.txt}）` : null; }).filter(Boolean);
   const freeOf = s => P.map((p,i) => !job[i][s] ? p.name + (subEval[i][s] ? `（${subEval[i][s]}）` : "") : (job[i][s].t === "adm" ? p.name + `（${job[i][s].txt}）` : null)).filter(Boolean);
@@ -1454,7 +1497,8 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const notes = [
     adultHoles.length ? `<div class="msg show warn" style="margin:0 0 10px">成人治療室有 ${adultHoles.length} 格排不到人：${adultHoles.map(esc).join("、")}</div>` : "",
     warn.length ? `<div class="msg show warn" style="margin:0 0 10px">${warn.map(esc).join("<br>")}</div>` : "",
-    kidHoles.length ? `<p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">兒童治療室空著的格子：${kidHoles.length} 格（成人優先，人力不夠時兒童留空）：${kidHoles.map(esc).join("、")}</p>` : ""
+    kidHoles.length ? `<p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">兒童治療室空著的格子：${kidHoles.length} 格（成人優先，人力不夠時兒童留空）：${kidHoles.map(esc).join("、")}</p>` : "",
+    (pcShort => `<p id="pcnote" style="margin:0 0 10px;color:var(--ink-2);font-size:14px">電腦：治療室共 ${pcOf(SLOTS[0]).total} 台（成人室 3 兩台，其他各一台），每個上班的人一台。${pcShort.length ? "不夠的時段：" + pcShort.map(s => `${slotName(s)} ${pcOf(s).here} 人，${esc(pcOf(s).none.join("、"))} 沒有電腦`).join("；") : "每個時段都夠。"}</p>`)(SLOTS.filter(s => pcOf(s).none.length))
   ].join("");
 
   const intern = IV.length ? `<h3 style="margin:22px 0 8px;font-size:16px">實習生跟誰（115/11/23–116/04/09）</h3>
