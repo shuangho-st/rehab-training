@@ -245,7 +245,7 @@ const TEMPLATES=[
  {k:"sev",n:"吞嚥障礙（較重）",d:"冰酸刺激、口腔按摩、口腔動作訓練；課程外不可由口進食",
   secs:["om","sw","beh","couns"],
   preset:{
-   sw_o:"給予冰酸刺激（thermal stimulation）及口腔按摩（oral massage）",
+   th_with:["口腔按摩（oral massage）"],
    om_o:"進行口腔動作訓練（oral motor training）",
    c_mode:"不可由口進食（僅可鼻胃管灌食，請勿由口餵食任何食物與水）",
    c_train:["每天刷牙及舌頭，保持口腔潔淨與口唇濕潤","口腔動作練習（嘴唇、舌頭）","口面部按摩"]}},
@@ -330,6 +330,16 @@ function itemRow(i){
 
 function swallowBlock(){
   let h="";
+  const thOn=["th_ok","th_n","th_delay","th_choke"].some(k=>has(D[k]))||has(D.th_with);
+  h+=`<div class="item ${thOn?"on":""}">
+    <div class="item-t">冰酸刺激（thermal stimulation）<span class="na">${thOn?"":"未填＝不適用"}</span></div>
+    <div class="perf" style="margin-bottom:8px">
+      <span class="lbl">thermal</span>${num("th_ok","成功",56)}<span class="lbl">／</span>${num("th_n","次數",56)}
+      <span class="lbl">咽部啟動延遲</span>${num("th_delay","秒",56)}<span class="lbl">秒</span>
+    </div>`
+   + radio("th_choke","嗆咳",["無","有"])
+   + check("th_with","同時給予",["口腔按摩（oral massage）"])
+   + `</div>`;
   [{k:"w1",t:"改善吞嚥反射",p:"%"},
    {k:"w2",t:"冰刺激後吞嚥（＜　秒）",p:"sec"},
    {k:"w3",t:"自發吞口水",p:"%"}].forEach(i=>h+=itemRow(i));
@@ -424,7 +434,7 @@ function counsBlock(){
 function secHas(s){
   if(s.special==="swallow")
     return ["w1","w2","w3","w_tex1","w_tex2"].some(done)||
-      ["w_residue","w_posture","w_maneuver","w_vfss","w_diet_date","w_ng","t1_rec","t2_rec","sw_o"].some(k=>has(D[k]));
+      ["w_residue","w_posture","w_maneuver","w_vfss","w_diet_date","w_ng","t1_rec","t2_rec","sw_o","th_ok","th_n","th_delay","th_choke","th_with"].some(k=>has(D[k]));
   if(s.special==="couns")
     return ["c_mode","c_tex","c_uten","c_pos","c_strat","c_train","c_train_o"].some(k=>has(D[k]));
   return (s.items||[]).some(i=>done(i.k))||has(D[s.other]);
@@ -439,6 +449,10 @@ function view(){
     <div class="grid2">${text("name","病人姓名")}${text("chart","病歷號")}</div>
     <div class="grid2">${text("birth","出生日期","如 0741219")}${text("sex","性別")}</div>
     ${radio("setting","門診／住院",["住院","門診"])}
+    ${radio("g_alert","精神狀態",["清醒","稍嗜睡","嗜睡","意識混亂"])}
+    ${radio("g_coop","配合度",["良好","尚可","不佳"])}
+    ${check("g_with","陪同者",["家屬","外籍看護","本國看護","護理師","無人陪同"])}
+    ${text("g_note","一般狀況　其他","如 情緒穩定、主訴喉嚨痰多、剛做完洗腎")}
   </fieldset>`;
 
   const T=tplOf();
@@ -484,8 +498,20 @@ function itemText(i){
   if(has(o.p)) t+=`　${o.p}${i.p&&i.p!=="%"?" "+i.p:""}`;
   return t.replace(/\s+/g," ").trim();
 }
+function thermalText(){
+  const th=["th_ok","th_n","th_delay","th_choke"].some(k=>has(D[k]));
+  const ms=(D.th_with||[]).includes("口腔按摩（oral massage）");
+  if(!th&&!ms) return "";
+  let t="給予"+[th?"冰酸刺激（thermal stimulation）":"",ms?"口腔按摩（oral massage）":""].filter(has).join("及");
+  const d=[];
+  if(has(D.th_ok)||has(D.th_n)) d.push(`thermal ${D.th_ok||"_"}/${D.th_n||"_"}`);
+  if(has(D.th_delay)) d.push(`咽部啟動延遲 ${String(D.th_delay).replace(/\s*(秒|sec)\s*$/i,"")} 秒`);
+  if(D.th_choke==="無") d.push("無嗆咳"); else if(D.th_choke==="有") d.push("有嗆咳");
+  return t+(d.length?"，"+d.join("，"):"");
+}
 function swText(){
   const L=[];
+  const th=thermalText(); if(th) L.push(th);
   [{k:"w1",t:"改善吞嚥反射",p:"%"},{k:"w2",t:"冰刺激後吞嚥",p:"sec"},
    {k:"w3",t:"自發吞口水",p:"%"}].forEach(i=>{
     const o=V[i.k]; if(!o||!done(i.k)) return;
@@ -565,9 +591,21 @@ function headerText(){
   if(!a.length&&!b.length) return "";
   return `【語言治療每日紀錄】${[a.join("｜"),b.join("｜")].filter(has).join("｜")}`;
 }
+/* 一般狀況：精神狀態、配合度、陪同者 */
+function generalText(){
+  const L=[];
+  if(has(D.g_alert)) L.push(`精神狀態${D.g_alert}`);
+  if(has(D.g_coop))  L.push(`配合度${D.g_coop}`);
+  const w=(D.g_with||[]);
+  if(w.includes("無人陪同")) L.push("無人陪同");
+  else if(w.length) L.push(`由${list(w,"、")}陪同`);
+  if(has(D.g_note)) L.push(D.g_note.trim().replace(/[。；]+$/,""));
+  return L.length?`【一般狀況】${L.join("，")}。`:"";
+}
 function blocks(){
   const out=[];
   const h=headerText(); if(h) out.push({k:"head",n:"基本資料",t:h});
+  const g=generalText(); if(g) out.push({k:"gen",n:"一般狀況",t:g});
   SECTIONS.forEach(s=>{const t=secText(s); if(t) out.push({k:s.k,n:s.n,t:`【${s.n}】${t}`});});
   return out;
 }
