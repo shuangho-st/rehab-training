@@ -388,6 +388,7 @@ table.mx td.v1{background:var(--s1-bg);color:var(--s1);font-weight:700}
     <div class="block-head"><h2>早療評估診試排</h2>
       <span class="need">聯評 3 個時段＋分評 4 個時段，一人一時段。做評估與寫報告同一人，時數一起算</span></div>
     <div class="block-body" id="eiabox"><div class="empty">載入回覆後會算出方案。</div></div>
+    <div class="block-body" id="eipairbox" style="display:none"></div>
   </section>
 
   <section class="block">
@@ -500,6 +501,12 @@ const WEEK_DAYS = ["一","二","三","四","五"];
 const HALVES = [["AM","上午"],["PM","下午"]];
 /* 病房、護家每區每週要幾個半天。不綁固定時段，白天哪個時段都可以（不排晚上），由程式挑人力最寬裕的時段 */
 const AREA_HALF_DAYS = { "BS-A":3, "BS-B":3, "BS-C":3, "BS-D":3, "BS-E":3, "NH-213":3, "NH-215":3 };
+/* 組長指定某人的病房時段（不管分到哪一區）：寫幾個就排幾個半天 */
+const BS_FIXED = { "彥妤": ["二AM", "五AM"], "書寧": ["一AM", "三AM", "五AM"], "婉瑜": ["一AM", "二PM", "三PM"] };   /* 婉瑜週三病房改下午（10/30） */
+/* 組長指定某人每週要留的行政半天（時段由試排挑） */
+const PERSON_ADMIN = {};
+/* 組長指定某人某個半天做什麼（kind：adult＝成人治療室、kid＝兒童治療室、adm＝行政） */
+const PERSON_FIXED = { "慈芯": [{slot:"三PM", kind:"adult"}], "書寧": [{slot:"二AM", kind:"kid"}], "彥妤": [{slot:"二PM", kind:"adult"}, {slot:"四AM", kind:"adm", txt:"教學負責人行政"}] };
 /* 早療評估診各時段（組長確認），會占用一間兒童治療室。聯評：週二下午、週四上午、週四下午；分評：週二上午 11:00 兩個、週二下午 13:20、週四下午 15:30 */
 const EI_SLOTS = {
   "EA-U-A":"二PM", "EA-U-B":"四AM", "EA-U-C":"四PM",
@@ -511,24 +518,52 @@ const ADULT_ROOMS = ["成人語言治療室1","成人語言治療室2","成人�
 /* 個人固定時段（問卷「固定行程」）。有寫 room 就占用那間治療室；同一間可以兩人一起帶團體 */
 const FIXED_SLOTS = [
   {name:"彥妤", slot:"五PM", room:"兒童語言治療室3", txt:"跨專業團課"},
-  {name:"婉瑜", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
   {name:"郁方", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
-  /* 週三下午 13:20 分評（支援評估），不在問卷分配內，先由組長支援，和今年一樣 */
-  {lead:true, slot:"三PM", room:"兒童語言治療室3", txt:"支援分評"}
+  /* 週三下午 13:20 分評（支援評估），不在問卷分配內；116 年改由彥妤（組長 10/28 指定） */
+  {name:"彥妤", slot:"三PM", room:"兒童語言治療室3", txt:"門診＋支援分評"}
 ];
 /* 組長調整：把某人某一項的分數改成這裡的值，優先於本人填的分數（1＝不排給這個人） */
 const LEAD_OVERRIDES = {
-  "慈芯": { "BS-A":1, "KD-DAY":1 },                   /* 組長希望不負責 207／208，也不排兒童時段 */
-  "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5 }      /* 請書寧協助早療聯評 */
+  "慈芯": { "BS-A":1, "BS-B":1, "BS-C":1, "BS-D":1, "BS-E":1, "NH-213":1, "NH-215":1, "KD-DAY":1 },   /* 組長固定在成人門診：不負責病房、護家，也不排兒童時段（10/29） */
+  "品樺": { "AD-DAY":1, "BS-A":1, "BS-B":1, "BS-C":1, "BS-D":1, "BS-E":1, "NH-213":1, "NH-215":1 },   /* 品樺盡量都排兒童（10/29） */
+  "書寧": { "EA-U-A":5, "EA-U-B":5, "EA-U-C":5, "BS-B":5 }      /* 請書寧協助早療聯評；217／219 給書寧（10/29） */
 };
 /* 每週先保留的兒童時段數（排成人之前就先放）。園菁：兒童自費個案，組長定一週 3 個，其餘兒童時段不排給她 */
+/* 組長指定早療聯評由誰負責：寫一人＝固定給她；寫兩人＝兩人隔週輪流（不管有沒有勾「兩人隔週輪流」） */
+const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
+/* 隔週輪流的兩人共用同一間兒童室（組長 10/29：週四下午彥妤、郁方用同一間） */
+const EI_SHARE_ROOM = ["EA-U-C"];
+/* 同一個半天另有主要工作，但也一起上團體課的人（不另外占時段）。婉瑜週三下午病房，一樣上成人團體（10/30 組長） */
+const GROUP_JOIN = [{name:"婉瑜", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"}];
+/* 組長指定主要行政由誰負責 */
+const ADMIN_PINS = { "AM-D": "婉瑜" };   /* 成人負責人＋拿單：婉瑜（10/29） */
+/* 組長指定附加工作由誰負責（同一人可以多項，指定的項目不再試排） */
+const EXTRA_PINS = { "AX-J": "郁方", "AX-K": "郁方", "AX-M": "郁方" };   /* 工作服、衛材、盤點：郁方（10/29） */
 const KID_QUOTA = { "園菁": {n:3, txt:"自費"} };
 /* 組長請這些人多接兒童：排成人時最後才找她們，排兒童時優先找她們 */
-const KID_LEAN = ["彥妤", "宛宜", "林寧"];
+/* 組長指定某人固定用哪一間（kid＝兒童、adult＝成人）。彥妤、園菁兒童都在兒童室 3（10/29） */
+const ROOM_PREF = { "彥妤": {kid:"兒童語言治療室3"}, "園菁": {kid:"兒童語言治療室3"}, "慈芯": {adult:"成人語言治療室3"}, "婉瑜": {adult:"成人語言治療室1"} };   /* 慈芯固定成人室 3、婉瑜固定成人室 1（10/29） */
+/* 每間治療室的電腦數（組長 10/29：成人室 3 兩台，其他各一台） */
+const COMPUTERS = { "成人語言治療室1":1, "成人語言治療室2":1, "成人語言治療室3":2, "兒童語言治療室1":1, "兒童語言治療室2":1, "兒童語言治療室3":1 };
+const KID_LEAN = ["品樺", "彥妤", "宛宜", "林寧"];
+/* 只排兒童、成人缺人也不補的人（寫進來成人可能會空格）。空的＝成人優先，必要時仍會排到成人 */
+const KID_ONLY = ["品樺"];   /* 品樺全部排兒童（10/29 組長） */
+/* 實習生（115/11/23–116/04/09）：每個半天都要跟著一位督導。時段不鎖死，但督導要排到足夠的兒童／成人時段，而且兩位督導彼此錯開 */
+const INTERNS = [
+  {name:"筱凡", kid:"彥妤", adult:"婉瑜", need:{kid:4, adult:4, bs:0}},
+  {name:"品妤", kid:"宛宜", adult:"慈芯", need:{kid:4, adult:4, bs:0}}
+];
+/* 組長指定實習生某個半天跟誰（who：督導，kind：adult＝成人、kid＝兒童）。週二上午：品妤跟慈芯成人、筱凡跟婉瑜成人（10/29） */
+const INTERN_SLOTS = { "品妤": { "二AM": {who:"慈芯", kind:"adult"} }, "筱凡": { "二AM": {who:"婉瑜", kind:"adult"} } };
+/* 兒童教學門診：實習生一起參加，每週 1 個半天 */
+/* 兒童教學門診：兩位實習生一起參加，組長指定週二下午（slot 不寫就由試排挑）；不排就改成 null */
+const TEACH_CLINIC = {name:"園菁", txt:"教學門診", slot:"二PM"};
 /* 組長固定行政時段 */
-const LEAD_ADMIN_SLOTS = ["四AM"];
+const LEAD_ADMIN_SLOTS = ["三AM", "四AM"];   /* 週三上午 10/29 組長加 */
 /* 晚班人員白天只排下午（上午為晚班補休） */
 const EVENING_FREE = ["PM"];
+/* 半職人員只排這些半天（書寧半職，只上早上班） */
+const PART_TIME = { "書寧": ["AM"] };
 /* 沒有填問卷、但明年仍在組內排班的人（意願當 3 分）。不在組內就刪掉名字 */
 const EXTRA_STAFF = [];
 /* 行政時數換算成每週要留的半天數：分／月 ÷ 60 ÷ 4.33 週 ÷ 每個半天 3.5 小時 */
@@ -538,6 +573,7 @@ const RESERVE_ADMIN_TIME = false;
 const slotsOfItem = id => [].concat(EI_SLOTS[id] || []);
 /* 晚班人員排不到上午的早療時段 */
 const eveningClash = id => slotsOfItem(id).some(s => !EVENING_FREE.includes(s.slice(1)));
+const partClash = (name, id) => !!PART_TIME[name] && slotsOfItem(id).some(s => !PART_TIME[name].includes(s.slice(1)));
 
 /* 身分由專屬連結決定（伺服器端 Code.gs 的 ROSTER 與「名單」工作表），這裡不用改 */
 const BOOT = <?!= boot ?>;
@@ -885,7 +921,11 @@ google.script.run
 const RES = [];
 /* 試排假設：勾選「明年不在」的人不納入試排（只影響這台電腦的畫面） */
 const ALLRES = [];
-const ABSENT = new Set((() => { try { return JSON.parse(localStorage.getItem("wish-absent") || "[]"); } catch (e) { return []; } })());
+/* 試排假設：早療聯評每個時段兩人隔週輪流（勾選才用，未勾選是一人一時段） */
+let EI_PAIR = (() => { try { return localStorage.getItem("wish-eipair") === "1"; } catch (e) { return false; } })();
+/* 預設明年不在的人（品樺確定只做到 116 年 1 月）；組長在頁面上勾選後以勾選為準 */
+const DEFAULT_ABSENT = [];
+const ABSENT = new Set((() => { try { const v = localStorage.getItem("wish-absent3"); return v ? JSON.parse(v) : DEFAULT_ABSENT; } catch (e) { return DEFAULT_ABSENT; } })());
 function applyScenario(){
   RES.length = 0;
   ALLRES.filter(r => !ABSENT.has(r.name)).forEach(r => RES.push(r));
@@ -942,18 +982,26 @@ function loadAll(){
 $("#btn-refresh").onclick = loadAll;
 function renderScenario(){
   const adj = Object.entries(LEAD_OVERRIDES).flatMap(([name, o]) => Object.entries(o).map(([id, v]) =>
-    `${esc(name)}：${esc((byId(id)?.code ? byId(id).code + "　" : "") + (byId(id)?.label || id).replace(/\s+/g," "))} → ${v === 1 ? "不排給她" : v + " 分"}`));
+    `${esc(name)}：${esc((byId(id)?.code ? byId(id).code + "　" : "") + (byId(id)?.label || id).replace(/\s+/g," "))} → ${v === 1 ? "不排給她" : v + " 分"}`))
+    .concat(Object.entries(EI_PINS).map(([id, ns]) => `${esc(byId(id)?.code || id)}：固定 ${ns.map(esc).join("、")}${ns.length > 1 ? " 隔週輪流" : ""}`));
   $("#scenariobox").innerHTML = `
     <div style="font-size:14.5px;color:var(--ink-2);margin-bottom:8px">勾選明年可能不在的人，下面所有試排會馬上重算（不影響大家的回覆）：</div>
     <div class="loaded" style="margin-top:0">${MEMBERS.map(m => `<label class="chip" style="cursor:pointer;padding-right:12px">
       <input type="checkbox" data-absent="${esc(m.name)}" ${ABSENT.has(m.name) ? "checked" : ""}> ${esc(m.name)} 明年不在</label>`).join("")}</div>
+    <label class="chip" style="cursor:pointer;padding-right:12px;margin-top:10px;display:inline-flex">
+      <input type="checkbox" data-eipair="1" ${EI_PAIR ? "checked" : ""}> 早療聯評每個時段兩人隔週輪流</label>
     ${adj.length ? `<div style="font-size:14px;color:var(--ink-2);margin-top:14px"><b>組長調整（優先於本人填的分數，意願矩陣標「調」）</b><br>${adj.join("<br>")}</div>` : ""}`;
 }
 document.addEventListener("change", e => {
+  if (e.target.dataset?.eipair) {
+    EI_PAIR = e.target.checked;
+    try { localStorage.setItem("wish-eipair", EI_PAIR ? "1" : "0"); } catch (err) {}
+    applyScenario(); return;
+  }
   const n = e.target.dataset?.absent;
   if (!n) return;
   if (e.target.checked) ABSENT.add(n); else ABSENT.delete(n);
-  try { localStorage.setItem("wish-absent", JSON.stringify([...ABSENT])); } catch (err) {}
+  try { localStorage.setItem("wish-absent3", JSON.stringify([...ABSENT])); } catch (err) {}
   applyScenario();
 });
 $("#btn-copyweek").onclick = () => {
@@ -1007,6 +1055,8 @@ function solve(roles, {allowOne=false, checkElig=false, skipLead=false, busy, ra
     if (skipLead && RES[p].lead) return null;
     if (checkElig && !isElig(RES[p].name, id)) return null;
     if (RES[p].evening && eveningClash(id)) return null;
+    if (partClash(RES[p].name, id)) return null;
+    if (roles[r].pin && RES[p].name !== roles[r].pin) return null;
     if (busy && slotsOfItem(id).some(sl => busy(p).includes(sl))) return null;
     const v = RES[p].answers[id];
     if (v === undefined) return 3;
@@ -1083,7 +1133,7 @@ function renderSolve(box, roles, opts, note, showHours){
 
 /* ── 週班表自動排 ─────────────────────────────────────────────────── */
 let WEEK_TSV = "";
-function weekPlan(soloPlan, eiPlan, adminPlan){
+function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = null){
   const box = $("#weekbox");
   if (!soloPlan) { box.innerHTML = '<div class="empty">要等「臨床專責區試排」算出方案之後，才會排週班表。</div>'; WEEK_TSV = ""; return; }
   const SLOTS = WEEK_DAYS.flatMap(d => HALVES.map(([h]) => d + h));
@@ -1099,6 +1149,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   const adminHalf = P.map(() => 0), tally = P.map(() => ({kid:0, adult:0, bs:0, nh:0, ei:0, adm:0}));
   P.forEach((p,i) => {
     if (p.evening) SLOTS.filter(s => !EVENING_FREE.includes(s.slice(1))).forEach(s => job[i][s] = {t:"off", txt:"晚班補休"});
+    if (PART_TIME[p.name]) SLOTS.filter(s => !PART_TIME[p.name].includes(s.slice(1))).forEach(s => job[i][s] = {t:"off", txt:"半職不上班"});
     if (p.lead) { LEAD_ADMIN_SLOTS.forEach(s => { job[i][s] = {t:"adm", txt:"行政"}; tally[i].adm++; }); }
   });
   const warn = [];
@@ -1116,37 +1167,136 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
       if (c) c.is.push(i); else grid[kind][key] = {is:[i], txt:f.txt};
     }
   });
+  /* 分評：負責的人那個半天照常看門診（成人或兒童），中間抽空去做分評，不另外占治療室 */
+  const subEval = P.map(() => ({}));
   const fix = (roles, plan, typeOf, txtOf) => {
     if (!plan) return;
     roles.forEach((ro, r) => {
       const name = RES[plan.map[r]].name, i = P.findIndex(p => p.name === name), t = typeOf(ro);
       slotsOfItem(ro.id).forEach(s => {
         if (job[i][s]) { warn.push(`${name}：${txtOf(ro)}（${slotName(s)}）和${job[i][s].txt}撞時段`); return; }
+        if (ro.id.startsWith("EA-S")) { subEval[i][s] = txtOf(ro); tally[i].ei++; return; }
         job[i][s] = {t, txt:txtOf(ro), id:ro.id};
         tally[i][t]++;
       });
     });
   };
-  fix(EIA, eiPlan, () => "ei", ro => ro.code);
+  fix(EIR, eiPlan, () => "ei", ro => ro.code);
+  fix(PAIR, pairPlan, () => "ei", ro => ro.code);
+  GROUP_JOIN.forEach(g => {
+    const i = P.findIndex(p => p.name === g.name), c = grid[kindOf(g.room)]?.[g.slot + "|" + g.room];
+    if (i < 0) return;
+    subEval[i][g.slot] = g.txt;
+    if (c && !c.is.includes(i)) c.is.unshift(i);
+  });
+
+  /* 組長指定的病房時段先放 */
+  const areaTxt = ro => ro.label.replace("病房","").replace(/\s+/g,"").replace("護理之家","護家");
+  SOLO.forEach((ro,r) => {
+    const i = P.findIndex(p => p.name === RES[soloPlan.map[r]].name), t = ro.id.startsWith("NH") ? "nh" : "bs";
+    if (i < 0) return;
+    (BS_FIXED[P[i].name] || []).forEach(s => {
+      if (job[i][s]) { warn.push(`${P[i].name}：指定的${areaTxt(ro)}（${slotName(s)}）和${job[i][s].txt}撞時段`); return; }
+      job[i][s] = {t, txt:areaTxt(ro), id:ro.id}; tally[i][t]++;
+    });
+  });
+
+  /* 組長指定的個人時段 */
+  Object.entries(PERSON_FIXED).forEach(([name, list]) => {
+    const i = P.findIndex(p => p.name === name);
+    if (i < 0) return;
+    list.forEach(f => {
+      if (job[i][f.slot]) { warn.push(`${name}：指定的${f.txt || (f.kind === "adult" ? "成人" : "兒童")}（${slotName(f.slot)}）和${job[i][f.slot].txt}撞時段`); return; }
+      if (f.kind === "adm") { job[i][f.slot] = {t:"adm", txt:f.txt || "行政"}; tally[i].adm++; }
+      else job[i][f.slot] = {t:"hold", kind:f.kind};
+    });
+  });
+
+  /* 實習生盡量整天跟同一位督導：先替督導保留整天（兒童兩天、成人兩天），剩下一天放教學門診和 Bedside */
+  let clinicSlot = null;
+  const bsPref = {}, bsDay = {};
+  const ti0 = TEACH_CLINIC ? P.findIndex(p => p.name === TEACH_CLINIC.name) : -1;
+  const IV0 = INTERNS.map(it => ({...it, k:P.findIndex(p => p.name === it.kid), a:P.findIndex(p => p.name === it.adult)})).filter(it => it.k >= 0 && it.a >= 0);
+  /* 實習生的兒童時段只算一般兒童門診（不跟聯評、分評），Bedside 只算病房（不跟護家） */
+  /* 共用房間的隔週聯評，第二個人不另外占一間 */
+  const sharer = (i, s) => job[i][s]?.t === "ei" && EI_SHARE_ROOM.includes(job[i][s].id) && P.some((p,j) => j !== i && job[j][s]?.id === job[i][s].id && j < i);
+  const kidFull = s => P.filter((p,j) => job[j][s] && ["ei","kid"].includes(job[j][s].t) && !sharer(j, s)).length >= KID_ROOMS.length;
+  const fits = (i, s, kind) => job[i][s] ? job[i][s].t === kind : !(kind === "kid" && kidFull(s));
+  const dayFit = (i, d, kind) => (n => n === 2 ? 10 : n * 2)(HALVES.filter(([h]) => fits(i, d + h, kind)).length);
+  /* 有教學門診：剩下那天一半教學門診、一半 Bedside；沒有教學門診：剩下那天跟督導上 Bedside 和其他時段 */
+  if (IV0.length) {
+    let best = null;
+    (ti0 >= 0 ? (TEACH_CLINIC.slot ? [TEACH_CLINIC.slot] : SLOTS) : WEEK_DAYS.map(d => d + "AM")).forEach(c => {
+      if (ti0 >= 0 && job[ti0][c]) return;
+      const rest = WEEK_DAYS.filter(d => d !== c[0]), oh = ti0 >= 0 ? c[0] + (c.slice(1) === "AM" ? "PM" : "AM") : c;
+      let total = 0;
+      const picks = IV0.map(it => {
+        let bp = null, bs = -1e9;
+        for (let x = 0; x < rest.length; x++) for (let y = x + 1; y < rest.length; y++) {
+          const kd = [rest[x], rest[y]], ad = rest.filter(d => !kd.includes(d));
+          const sc = kd.reduce((n, d) => n + dayFit(it.k, d, "kid"), 0) + ad.reduce((n, d) => n + dayFit(it.a, d, "adult"), 0)
+            + ([it.k, it.a].some(i => !job[i][oh]) ? 3 : 0);
+          if (sc > bs) { bs = sc; bp = {kd, ad}; }
+        }
+        total += bs; return bp;
+      });
+      if (!best || total > best.total) best = {c, oh, total, picks};
+    });
+    if (best) {
+      if (ti0 >= 0) { clinicSlot = best.c; job[ti0][best.c] = {t:"hold", kind:"kid", clinic:true}; }
+      IV0.forEach((it, n) => {
+        const {kd, ad} = best.picks[n];
+        [[it.k, kd, "kid"], [it.a, ad, "adult"]].forEach(([i, ds, kind]) => ds.forEach(d => HALVES.forEach(([h]) => {
+          if (!job[i][d + h]) job[i][d + h] = {t:"hold", kind, intern:it.name};
+        })));
+        [it.k, it.a].forEach(i => { if (ti0 >= 0) bsPref[i] = best.oh; else bsDay[i] = best.c[0]; });
+      });
+    }
+  }
+  /* 組長指定的實習生半天：替那位督導保留 */
+  Object.entries(INTERN_SLOTS).forEach(([name, o]) => Object.entries(o).forEach(([sl, f]) => {
+    const i = P.findIndex(p => p.name === f.who);
+    if (i < 0 || !INTERNS.some(it => it.name === name)) return;
+    if (job[i][sl]) { warn.push(`實習生${name}：${slotName(sl)}指定跟${f.who}，但${f.who}那時是${job[i][sl].txt || "別的工作"}`); return; }
+    job[i][sl] = {t:"hold", kind:f.kind, intern:name};
+  }));
 
   /* 病房、護家：每區排滿所需半天數，同一區分散在不同天，挑當下其他人力最寬裕的時段；同一人盡量固定上午或下午 */
-  const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid")).length;
+  const kidGap = s => KID_ROOMS.length - P.filter((p,i) => job[i][s] && (job[i][s].t === "ei" || job[i][s].t === "kid") && !sharer(i, s)).length;
   const freeAt = s => P.filter((p,i) => !job[i][s]).length;
   const areas = SOLO.map((ro,r) => ({ro, i:P.findIndex(p => p.name === RES[soloPlan.map[r]].name)}))
     .sort((a,b) => SLOTS.filter(s => !job[a.i][s]).length - SLOTS.filter(s => !job[b.i][s]).length);
   areas.forEach(({ro, i}) => {
-    const t = ro.id.startsWith("NH") ? "nh" : "bs", txt = ro.label.replace("病房","").replace(/\s+/g,"").replace("護理之家","護家");
+    const t = ro.id.startsWith("NH") ? "nh" : "bs", txt = areaTxt(ro);
+    if (BS_FIXED[P[i].name]) return;   /* 指定時段的人只排指定的半天 */
     const days = [];
     for (let k = 0; k < (AREA_HALF_DAYS[ro.id] || 3); k++) {
       let best = null, bestSc = -1e9;
       SLOTS.forEach(s => {
-        if (job[i][s] || days.includes(s[0])) return;
+        if (job[i][s] || subEval[i][s] || days.includes(s[0])) return;
         const sameHalf = SLOTS.some(x => job[i][x] && ["bs","nh"].includes(job[i][x].t) && x.slice(1) === s.slice(1));
-        const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0);
+        const sc = (freeAt(s) - kidGap(s) - ADULT_ROOMS.length / 2) * 10 + (sameHalf ? 6 : 0) + (t === "bs" && (bsPref[i] === s || bsDay[i] === s[0]) ? 30 : 0) - (t === "nh" && (bsPref[i] === s || bsDay[i] === s[0]) ? 30 : 0);
         if (sc > bestSc) { bestSc = sc; best = s; }
       });
       if (!best) { warn.push(`${P[i].name}：${txt}排不滿 ${AREA_HALF_DAYS[ro.id] || 3} 個半天（可用時段不夠）`); break; }
       job[i][best] = {t, txt, id:ro.id}; tally[i][t]++; days.push(best[0]);
+    }
+  });
+
+  /* 組長指定的個人行政半天：挑人力最寬裕、又不在同一天的時段 */
+  Object.entries(PERSON_ADMIN).forEach(([name, q]) => {
+    const i = P.findIndex(p => p.name === name);
+    if (i < 0) return;
+    for (let k = 0; k < q.n; k++) {
+      let best = null, bestSc = -1e9;
+      SLOTS.forEach(s => {
+        if (job[i][s] || subEval[i][s]) return;
+        /* 避開帶實習生的那一天（實習生那天要跟著她） */
+        const sc = freeAt(s) * 10 - kidGap(s) * 5 - (SLOTS.some(x => x[0] === s[0] && job[i][x]?.t === "adm") ? 50 : 0) - (bsDay[i] === s[0] || bsPref[i] === s ? 200 : 0);
+        if (sc > bestSc) { bestSc = sc; best = s; }
+      });
+      if (!best) { warn.push(`${name}：排不到${q.txt}時段`); break; }
+      job[i][best] = {t:"adm", txt:q.txt}; tally[i].adm++;
     }
   });
 
@@ -1161,8 +1311,14 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   /* 早療先放進兒童治療室 */
   SLOTS.forEach(s => P.forEach((p,i) => {
     if (job[i][s]?.t !== "ei") return;
+    if (EI_SHARE_ROOM.includes(job[i][s].id)) {
+      const k = P.findIndex((q,j) => j !== i && job[j][s]?.id === job[i][s].id && job[j][s].room);
+      if (k >= 0) { const r = job[k][s].room, c = grid.kid[s + "|" + r]; c.is.push(i); c.txt = job[i][s].txt.replace(/ 隔週[①②]/, "") + " 隔週輪流"; job[i][s].room = r; return; }
+    }
     const room = KID_ROOMS.find(r => !grid.kid[s + "|" + r]);
-    if (room) grid.kid[s + "|" + room] = {is:[i], txt:job[i][s].txt};
+    /* 分評只占一小段，那個半天其餘時間照常看兒童門診 */
+    const sub = job[i][s].id?.startsWith("EA-S");
+    if (room) { grid.kid[s + "|" + room] = {is:[i], txt:(sub ? "門診＋" : "") + job[i][s].txt}; job[i][s].room = room; }
   }));
   /* 一間一間房排：每一輪先排人手最緊的時段，空格才會分散，不會集中在週末前 */
   const fill = (kind, rooms, itemId, must) => {
@@ -1176,7 +1332,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
         P.forEach((p,i) => {
           if (job[i][s]) return;
           const v = pref(p, itemId);
-          if (v === 1 && !must) return;
+          if (v === 1 && (!must || KID_ONLY.includes(p.name))) return;
           let sc = v * 10 - tally[i][kind] * 2 + (cap[i] - used[i]) * 4;
           if (v === 1) sc -= 100;
           if (used[i] >= cap[i]) sc -= 40;
@@ -1191,6 +1347,75 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
       });
     });
   };
+  /* 實習生：先放教學門診，再讓兩位督導錯開排兒童／成人，實習生每個半天都有人帶 */
+  const IV = INTERNS.map(it => ({...it, k:P.findIndex(p => p.name === it.kid), a:P.findIndex(p => p.name === it.adult), cov:{}, n:{kid:0, adult:0, bs:0}}))
+    .filter(it => { if (it.k < 0 || it.a < 0) { warn.push(`實習生${it.name}：督導不在這次排班名單內`); return false; } return true; });
+  const roomFor = (i, s, kind) => { const half = s.slice(1); return [ROOM_PREF[P[i].name]?.[kind], home[kind + half + i], ...(kind === "kid" ? KID_ROOMS : ADULT_ROOMS)].find(r => r && !grid[kind][s + "|" + r]); };
+  const takeRoom = (i, s, kind, txt) => {
+    const room = roomFor(i, s, kind);
+    job[i][s] = {t:kind, txt:room}; tally[i][kind]++; used[i]++; home[kind + s.slice(1) + i] = room;
+    grid[kind][s + "|" + room] = {is:[i], txt};
+  };
+  /* 把先前替督導保留的整天換成治療室 */
+  P.forEach((p,i) => SLOTS.forEach(s => {
+    const j = job[i][s];
+    if (j?.t !== "hold") return;
+    delete job[i][s]; cap[i]++;
+    const it = IV.find(x => x.name === j.intern);
+    if (!j.intern && !j.clinic) { if (roomFor(i, s, j.kind)) takeRoom(i, s, j.kind); else warn.push(`${p.name}：${slotName(s)}指定的治療室已滿`); return; }
+    if (it && roomFor(i, s, j.kind)) {
+      takeRoom(i, s, j.kind, "實習 " + it.name);
+      it.cov[s] = {who:p.name, what:j.kind === "kid" ? "兒童" : "成人"}; it.n[j.kind]++;
+    }
+  }));
+  const ti = TEACH_CLINIC ? P.findIndex(p => p.name === TEACH_CLINIC.name) : -1;
+  if (IV.length && ti >= 0) {
+    const fixedTC = TEACH_CLINIC.slot && !job[ti][TEACH_CLINIC.slot] ? TEACH_CLINIC.slot : null;
+    let best = fixedTC || (clinicSlot && !job[ti][clinicSlot] && roomFor(ti, clinicSlot, "kid") ? clinicSlot : null), bestSc = best ? 1e9 : -1e9;
+    /* 指定時段的兒童室都被早療占滿時，借一間成人治療室 */
+    const tcKind = best && !roomFor(ti, best, "kid") && roomFor(ti, best, "adult") ? "adult" : "kid";
+    if (!TEACH_CLINIC.slot) SLOTS.forEach(s => {
+      if (job[ti][s] || !roomFor(ti, s, "kid")) return;
+      /* 挑督導本來就有別的事的時段，實習生剛好去教學門診 */
+      const sc = IV.reduce((n, it) => n + [it.k, it.a].filter(i => job[i][s]).length, 0) * 10 + freeAt(s);
+      if (sc > bestSc) { bestSc = sc; best = s; }
+    });
+    if (best && roomFor(ti, best, tcKind)) { takeRoom(ti, best, tcKind, TEACH_CLINIC.txt); IV.forEach(it => it.cov[best] = {who:TEACH_CLINIC.name, what:TEACH_CLINIC.txt}); }
+    else warn.push(`${TEACH_CLINIC.name}：排不到兒童${TEACH_CLINIC.txt}`);
+  }
+  IV.forEach(it => {
+    const opts = s => {
+      const o = [], jk = job[it.k][s], ja = job[it.a][s];
+      if (jk && jk.t === "kid") o.push({t:"kid", have:true});
+      else if (!jk && roomFor(it.k, s, "kid")) o.push({t:"kid"});
+      if (ja && ja.t === "adult") o.push({t:"adult", have:true});
+      else if (!ja && roomFor(it.a, s, "adult")) o.push({t:"adult"});
+      [[it.k, jk], [it.a, ja]].forEach(([i, j]) => { if (j && j.t === "bs") o.push({t:"bs", i, txt:j.txt}); });
+      return o;
+    };
+    for (;;) {
+      const left = SLOTS.filter(s => !it.cov[s]);
+      if (!left.length) break;
+      const s = left.reduce((x, y) => opts(y).length < opts(x).length ? y : x);
+      const o = opts(s);
+      if (!o.length) { it.cov[s] = {gap:true}; continue; }
+      /* 同一天上午、下午盡量跟同一位督導，不要每半天換人 */
+      const whoOf = c => c.t === "kid" ? it.kid : c.t === "adult" ? it.adult : P[c.i].name;
+      const other = s[0] + (s.slice(1) === "AM" ? "PM" : "AM"), oc = it.cov[other];
+      const sameDay = c => oc ? (oc.who === whoOf(c) ? 12 : 0) : (opts(other).some(o => whoOf(o) === whoOf(c)) ? 4 : 0);
+      const sc = c => (it.need[c.t] - it.n[c.t]) * 10 + (c.have ? 5 : 0) - (c.t === "bs" && it.n.bs >= it.need.bs ? 30 : 0) + (c.t === "bs" && c.i === it.a ? 3 : 0) + sameDay(c);
+      const c = o.reduce((x, y) => sc(y) > sc(x) ? y : x);
+      it.n[c.t]++;
+      if (c.t === "bs") { it.cov[s] = {who:P[c.i].name, what:c.txt}; continue; }
+      const i = c.t === "kid" ? it.k : it.a;
+      if (!c.have) takeRoom(i, s, c.t, "實習 " + it.name);
+      it.cov[s] = {who:P[i].name, what:c.t === "kid" ? "兒童" : "成人"};
+    }
+    const gaps = SLOTS.filter(s => it.cov[s].gap);
+    if (gaps.length) warn.push(`實習生${it.name}：${gaps.map(slotName).join("、")}沒有督導可以帶`);
+    ["kid","adult"].forEach(t => { if (it.n[t] < it.need[t]) warn.push(`實習生${it.name}：${t === "kid" ? it.kid + " 兒童" : it.adult + " 成人"}只排到 ${it.n[t]} 個半天（需要 ${it.need[t]} 個）`); });
+  });
+
   /* 保留固定兒童時段：盡量分在不同天，挑當下人力最寬裕的時段 */
   Object.entries(KID_QUOTA).forEach(([name, q]) => {
     const i = P.findIndex(p => p.name === name);
@@ -1213,19 +1438,59 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   fill("adult", ADULT_ROOMS, "AD-DAY", true);
   fill("kid", KID_ROOMS, "KD-DAY", false);
 
+  /* 換房間：同一時段內互換，讓指定的人用指定的房間、每個人不同天盡量待同一間 */
+  const isFixedCell = (s, room) => FIXED_SLOTS.some(f => f.slot === s && f.room === room);
+  const perms = a => a.length <= 1 ? [a] : a.flatMap((x, k) => perms([...a.slice(0, k), ...a.slice(k + 1)]).map(r => [x, ...r]));
+  [["kid", KID_ROOMS], ["adult", ADULT_ROOMS]].forEach(([kind, rooms]) => {
+    for (let round = 0; round < 4; round++) {
+      const freq = {};
+      SLOTS.forEach(s => rooms.forEach(r => { const c = grid[kind][s + "|" + r]; if (c && c.is.length === 1) { const k = c.is[0] + "|" + r; freq[k] = (freq[k] || 0) + 1; } }));
+      SLOTS.forEach(s => {
+        const pos = rooms.filter(r => !isFixedCell(s, r) && !(grid[kind][s + "|" + r]?.is.length > 1));
+        const cells = pos.map(r => grid[kind][s + "|" + r]);
+        const other = s[0] + (s.slice(1) === "AM" ? "PM" : "AM");
+        /* 空房留在最後一間（成人室 3、兒童室 3 以外的人才會往前排） */
+        const sc = (c, r) => { if (!c) return r === rooms[rooms.length - 1] ? 1 : 0; const i = c.is[0], pr = ROOM_PREF[P[i].name]?.[kind];
+          return (pr === r ? 100 : 0) + (freq[i + "|" + r] || 0) * 3 + (grid[kind][other + "|" + r]?.is.includes(i) ? 2 : 0); };
+        let best = null, bestSc = -1;
+        perms(cells).forEach(order => { const t = order.reduce((n, c, k) => n + sc(c, pos[k]), 0); if (t > bestSc) { bestSc = t; best = order; } });
+        pos.forEach((r, k) => {
+          const c = best[k];
+          if (c) { grid[kind][s + "|" + r] = c; const j = job[c.is[0]][s]; if (j.t === kind) j.txt = r; else j.room = r; }
+          else delete grid[kind][s + "|" + r];
+        });
+      });
+    }
+  });
+  /* 電腦：每個上班的人一台。有房間的人用房間那台，其他人（病房、護家、行政、彈性）用空房間或成人室 3 的第二台 */
+  const pcOf = s => {
+    const here = P.map((p, i) => i).filter(i => job[i][s]?.t !== "off");
+    const spare = [], seat = {};
+    [["adult", ADULT_ROOMS], ["kid", KID_ROOMS]].forEach(([kind, rooms]) => rooms.forEach(r => {
+      const c = grid[kind][s + "|" + r], n = COMPUTERS[r] || 0;
+      const users = c ? c.is.slice(0, n) : [];
+      users.forEach(i => seat[i] = r);
+      for (let k = users.length; k < n; k++) spare.push(r);
+    }));
+    const need = here.filter(i => !seat[i]);
+    need.forEach(i => { if (spare.length) seat[i] = spare.shift() + "（借）"; });
+    return {here:here.length, total:Object.values(COMPUTERS).reduce((a, b) => a + b, 0), none:here.filter(i => !seat[i]).map(i => P[i].name), seat};
+  };
+
   /* 各時段外出（病房、護家）與留白的人 */
-  const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS":j.t==="nh"?"護家":j.txt}）` : null; }).filter(Boolean);
-  const freeOf = s => P.map((p,i) => !job[i][s] ? p.name : (job[i][s].t === "adm" ? p.name + "（行政）" : null)).filter(Boolean);
+  const outOf = s => P.map((p,i) => { const j = job[i][s]; return j && ["bs","nh","fx"].includes(j.t) ? `${p.name}（${j.t==="bs"?"BS "+j.txt:j.txt}）` : null; }).filter(Boolean);
+  const freeOf = s => P.map((p,i) => !job[i][s] ? p.name + (subEval[i][s] ? `（${subEval[i][s]}）` : "") : (job[i][s].t === "adm" ? p.name + `（${job[i][s].txt}）` : null)).filter(Boolean);
   const kidHoles = SLOTS.flatMap(s => KID_ROOMS.filter(r => !grid.kid[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const adultHoles = SLOTS.flatMap(s => ADULT_ROOMS.filter(r => !grid.adult[s+"|"+r]).map(r => `${slotName(s)} ${r}`));
   const eveName = P.find(p => p.evening)?.name || EVENING_NAME;
 
   const who = c => c.is.map(i => P[i].name).join("＋");
-  const cell = c => c ? esc(who(c)) + (c.txt ? `<span style="color:var(--ink-3);font-size:12px">（${esc(c.txt)}）</span>` : "") : '<span style="color:var(--ink-3)">—</span>';
+  const evalTag = (c, s) => c.is.map(i => subEval[i][s]).filter(x => x && x !== c.txt).map(x => `<span style="color:var(--ink-3);font-size:12px">（＋${esc(x)}）</span>`).join("");
+  const cell = (c, s) => c ? esc(who(c)) + evalTag(c, s) + (c.txt ? `<span style="color:var(--ink-3);font-size:12px">（${esc(c.txt)}）</span>` : "") : '<span style="color:var(--ink-3)">—</span>';
   const table = (title, kind, rooms) => `<h3 style="margin:18px 0 8px;font-size:16px">${title}</h3>
     <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
     ${HALVES.map(([h, hn]) => `<tr class="sec"><td colspan="6">${hn}</td></tr>` +
-      rooms.map(room => `<tr><td class="item">${esc(room)}</td>${WEEK_DAYS.map(d => `<td>${cell(grid[kind][d+h+"|"+room])}</td>`).join("")}</tr>`).join("") +
+      rooms.map(room => `<tr><td class="item">${esc(room)}</td>${WEEK_DAYS.map(d => `<td>${cell(grid[kind][d+h+"|"+room], d+h)}</td>`).join("")}</tr>`).join("") +
       (kind === "adult" ? `<tr><td class="item" style="color:var(--ink-2)">病房／護家／其他</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px">${outOf(d+h).map(esc).join("<br>") || "—"}</td>`).join("")}</tr>
         <tr><td class="item" style="color:var(--ink-2)">行政／彈性</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px;color:var(--ink-2)">${freeOf(d+h).map(esc).join("<br>") || "—"}</td>`).join("")}</tr>` : "")
     ).join("")}
@@ -1235,7 +1500,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   const sum = `<h3 style="margin:22px 0 8px;font-size:16px">每人一週半天數</h3>
     <table class="mx"><thead><tr><th class="item">姓名</th><th>兒童</th><th>成人</th><th>病房</th><th>護家</th><th>早療</th><th>行政／彈性</th><th>行政約<br>（半天／週）</th><th>兒童意願</th><th>成人意願</th></tr></thead><tbody>
     ${P.map((p,i) => { const free = SLOTS.filter(s => !job[i][s] || job[i][s].t === "adm").length;
-      return `<tr><td class="item">${esc(p.name)}${p.lead?'<span class="flag warm">組長</span>':""}${p.evening?'<span class="flag warm">晚班</span>':""}${p.extra||p.pending?'<span class="flag warm">未回覆</span>':""}</td>
+      return `<tr><td class="item">${esc(p.name)}${p.lead?'<span class="flag warm">組長</span>':""}${p.evening?'<span class="flag warm">晚班</span>':""}${PART_TIME[p.name]?'<span class="flag warm">半職</span>':""}${p.extra||p.pending?'<span class="flag warm">未回覆</span>':""}</td>
       <td>${tally[i].kid}</td><td>${tally[i].adult}</td><td>${tally[i].bs}</td><td>${tally[i].nh}</td><td>${tally[i].ei}</td>
       <td>${free}</td><td>${adminHalf[i]}</td><td class="v${pref(p,"KD-DAY")}">${p.ans["KD-DAY"] ?? "—"}</td><td class="v${pref(p,"AD-DAY")}">${p.ans["AD-DAY"] ?? "—"}</td></tr>`; }).join("")}
     </tbody></table>`;
@@ -1243,18 +1508,49 @@ function weekPlan(soloPlan, eiPlan, adminPlan){
   const notes = [
     adultHoles.length ? `<div class="msg show warn" style="margin:0 0 10px">成人治療室有 ${adultHoles.length} 格排不到人：${adultHoles.map(esc).join("、")}</div>` : "",
     warn.length ? `<div class="msg show warn" style="margin:0 0 10px">${warn.map(esc).join("<br>")}</div>` : "",
-    kidHoles.length ? `<p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">兒童治療室空著的格子：${kidHoles.length} 格（成人優先，人力不夠時兒童留空）：${kidHoles.map(esc).join("、")}</p>` : ""
+    kidHoles.length ? `<p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">兒童治療室空著的格子：${kidHoles.length} 格（成人優先，人力不夠時兒童留空）：${kidHoles.map(esc).join("、")}</p>` : "",
+    (pcShort => `<p id="pcnote" style="margin:0 0 10px;color:var(--ink-2);font-size:14px">電腦：治療室共 ${pcOf(SLOTS[0]).total} 台（成人室 3 兩台，其他各一台），每個上班的人一台。${pcShort.length ? "不夠的時段：" + pcShort.map(s => `${slotName(s)} ${pcOf(s).here} 人，${esc(pcOf(s).none.join("、"))} 沒有電腦`).join("；") : "每個時段都夠。"}</p>`)(SLOTS.filter(s => pcOf(s).none.length))
   ].join("");
 
-  box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + sum +
-    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午；週三下午支援分評由組長負責。</p>`;
+  const intern = IV.length ? `<h3 style="margin:22px 0 8px;font-size:16px">實習生跟誰（115/11/23–116/04/09）</h3>
+    <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
+    ${IV.map(it => { const extra = Object.entries(INTERN_SLOTS[it.name] || {}).filter(([sl, f]) => it.cov[sl]?.who === f.who && f.who !== it.adult && f.who !== it.kid);
+      const ad = it.n.adult - extra.filter(([, f]) => f.kind === "adult").length, kd = it.n.kid - extra.filter(([, f]) => f.kind === "kid").length;
+      const ex = extra.map(([, f]) => `＋${esc(f.who)}${f.kind === "adult" ? "成人" : "兒童"} 1 個`).join("");
+      return `<tr class="sec"><td colspan="6">${esc(it.name)}　兒童 ${esc(it.kid)} ${kd} 個、成人 ${esc(it.adult)} ${ad} 個${ex}、Bedside ${it.n.bs} 個</td></tr>` +
+      HALVES.map(([h, hn]) => `<tr><td class="item">${hn}</td>${WEEK_DAYS.map(d => { const c = it.cov[d + h];
+        return c.gap ? '<td><span class="flag">沒人帶</span></td>' : `<td>${esc(c.who)}<span style="color:var(--ink-3);font-size:12px">（${esc(c.what)}）</span></td>`; }).join("")}</tr>`).join(""); }).join("")}
+    </tbody></table>` : "";
+
+  /* 每人一週班表 */
+  const short = r => r.replace("語言治療室", "").replace(/\(.*\)|（.*）/g, "");
+  const myCell = (i, s) => {
+    const j = job[i][s];
+    const ev = subEval[i][s] ? "＋" + subEval[i][s] : "";
+    if (!j) return '<span style="color:var(--ink-3)">彈性</span>' + esc(ev);
+    let t = j.t === "bs" ? "BS " + j.txt : j.t === "kid" || j.t === "adult" ? short(j.txt) : j.txt;
+    if (j.t === "kid" || j.t === "adult") { const c = grid[j.t][s + "|" + j.txt]; if (c && c.txt) t += `（${c.txt}）`; }
+    if (j.t === "ei") t = "早療" + t;
+    return esc(t + ev);
+  };
+  const mine = `<h3 style="margin:22px 0 8px;font-size:16px">每人班表</h3>
+    <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
+    ${P.map((p,i) => `<tr class="sec"><td colspan="6">${esc(p.name)}${p.lead ? "（組長）" : ""}${p.evening ? "（晚班）" : ""}${PART_TIME[p.name] ? "（半職：只上早上班）" : ""}</td></tr>` +
+      /* 晚班只列下午＋晚上，半職只列上班的半天 */
+      HALVES.filter(([h]) => p.evening ? EVENING_FREE.includes(h) : !PART_TIME[p.name] || PART_TIME[p.name].includes(h))
+        .map(([h, hn]) => `<tr><td class="item">${hn}</td>${WEEK_DAYS.map(d => `<td style="white-space:normal;font-size:13px">${myCell(i, d + h)}</td>`).join("")}</tr>`).join("") +
+      (p.evening ? `<tr><td class="item">晚上</td>${WEEK_DAYS.map(() => '<td style="font-size:13px">兒童晚班</td>').join("")}</tr>` : "")).join("")}
+    </tbody></table>`;
+
+  box.innerHTML = notes + table("成人", "adult", ADULT_ROOMS) + table("兒童", "kid", KID_ROOMS) + intern + mine + sum +
+    `<p style="margin:12px 0 0;color:var(--ink-3);font-size:13.5px">排法：先放早療評估診與固定行程，再替病房、護家挑人力最寬裕的時段（不排晚上，同一區分散在不同天），接著替兩位實習生的督導錯開排出兒童／成人整天（實習生只跟自己的督導，每個半天都有人帶），再把成人 3 間治療室每格排滿，最後排兒童治療室（兒童不排給打 1 分的人）。誰坐哪一格看成人下樓／兒童白班的意願分數、還剩多少可排時段（行政在臨床空檔做，不另外占時段），並盡量讓同一個人每天待同一間房。早療時段：聯評週二下午、週四上午、週四下午；分評週二上午兩個、週二下午、週四下午（分評由負責的人從那個半天的門診抽空去做，成人或兒童門診都可以，不另外占治療室）；週三下午支援分評由彥妤負責。</p>`;
 
   /* 複製到試算表用（Tab 分隔） */
   const rows = [];
   [["成人","adult",ADULT_ROOMS],["兒童","kid",KID_ROOMS]].forEach(([t,kind,rooms]) => {
     HALVES.forEach(([h,hn]) => {
       rows.push([`${t}　${hn}`, ...WEEK_DAYS]);
-      rooms.forEach(room => rows.push([room, ...WEEK_DAYS.map(d => { const c = grid[kind][d+h+"|"+room]; return c ? who(c) + (c.txt ? `(${c.txt})` : "") : ""; })]));
+      rooms.forEach(room => rows.push([room, ...WEEK_DAYS.map(d => { const c = grid[kind][d+h+"|"+room]; return c ? who(c) + c.is.map(i => subEval[i][d+h] ? `(+${subEval[i][d+h]})` : "").join("") + (c.txt ? `(${c.txt})` : "") : ""; })]));
       if (kind === "adult") rows.push(["病房／護家／其他", ...WEEK_DAYS.map(d => outOf(d+h).join("、"))]);
       rows.push([]);
     });
@@ -1307,7 +1603,10 @@ function render(){
   /* 已固定的個人時段與組長行政時段，病房、護家、早療都要避開 */
   const fixedBusy = p => [
     ...FIXED_SLOTS.filter(f => f.name === RES[p].name || (f.lead && RES[p].lead)).map(f => f.slot),
-    ...(RES[p].lead ? LEAD_ADMIN_SLOTS : [])
+    ...(RES[p].lead ? LEAD_ADMIN_SLOTS : []),
+    ...(PERSON_FIXED[RES[p].name] || []).map(f => f.slot),
+    ...(TEACH_CLINIC?.slot && TEACH_CLINIC.name === RES[p].name ? [TEACH_CLINIC.slot] : []),
+    ...Object.values(INTERN_SLOTS).flatMap(o => Object.entries(o).filter(([, f]) => f.who === RES[p].name).map(([sl]) => sl))
   ];
   const soloPlan = renderSolve($("#planbox"), SOLO, {rank:s => s.min*1000 + s.total},
     `排序方式：先讓最不情願的那個人分數盡量高，同樣情況下再比意願總分。未分配到專責區的人，時段全部投入共同時段池與早療評估診。${EVENING_NAME}固定兒童晚班，上午補休，負責的病房或護家會排在下午。`, false);
@@ -1331,33 +1630,84 @@ function render(){
     ...fixedBusy(p)
   ];
 
-  /* 早療評估診：聯評 3 + 分評 4，一人一時段 */
+  /* 早療評估診：聯評 3 + 分評 4，一人一時段；勾選「兩人隔週輪流」時，聯評每個時段再配第二個人，時數各半 */
+  const isU = ro => ro.id.startsWith("EA-U");
+  const pins = id => (EI_PINS[id] || []).filter(n => RES.some(r => r.name === n));
+  const paired = ro => isU(ro) && (EI_PAIR || pins(ro.id).length >= 2);
+  /* 早療排完後，負責病房／護家的人還要剩得出那一區要的半天數（晚班、半職能排的半天比較少） */
+  const ALL_SLOTS = WEEK_DAYS.flatMap(d => HALVES.map(([h]) => d + h));
+  const workHalves = p => ALL_SLOTS.filter(sl => !(RES[p].evening && !EVENING_FREE.includes(sl.slice(1))) &&
+    !(PART_TIME[RES[p].name] && !PART_TIME[RES[p].name].includes(sl.slice(1))) && !fixedBusy(p).includes(sl));
+  /* 帶實習生的督導另外要留 4 個半天給實習生 */
+  const areaNeed = p => { const r = soloPlan ? soloPlan.map.indexOf(p) : -1;
+    return (r < 0 ? 0 : (BS_FIXED[RES[p].name]?.length || AREA_HALF_DAYS[SOLO[r].id] || 3)) + INTERNS.filter(it => it.kid === RES[p].name || it.adult === RES[p].name).length * 4; };
+  const pinBusy = p => EIA.filter(ro => (EI_PINS[ro.id] || []).slice(1).includes(RES[p].name)).flatMap(ro => slotsOfItem(ro.id));
+  const shortOf = (roles, sol) => RES.reduce((n, _, p) => {
+    const ei = new Set([...pinBusy(p), ...roles.flatMap((ro,r) => sol.map[r] === p ? slotsOfItem(ro.id) : [])]);
+    const free = workHalves(p).filter(sl => !ei.has(sl));
+    /* 病房、護家同一區要分在不同天：扣掉帶實習生的整天後，還要剩夠多天有空檔 */
+    const sup = INTERNS.filter(it => it.kid === RES[p].name || it.adult === RES[p].name).length * 2;
+    const area = areaNeed(p) - sup * 2, days = new Set(free.map(sl => sl[0])).size - sup;
+    return n + Math.max(0, areaNeed(p) - free.length) + (area > 0 ? Math.max(0, area - days) : 0);
+  }, 0);
+  /* 帶實習生的成人督導盡量不排早療（實習生只跟她看成人，排了早療那個半天實習生就沒人帶） */
+  const tcOther = TEACH_CLINIC?.slot ? TEACH_CLINIC.slot[0] + (TEACH_CLINIC.slot.slice(1) === "AM" ? "PM" : "AM") : null;
+  /* 成人督導排早療的代價：教學門診時段實習生不用跟她（0）；門診那天的另一個半天，除非兒童督導那時固定 BS 可帶，否則實習生要跟她（3）；其他時段（1） */
+  const supCost = (it, sl) => sl === TEACH_CLINIC?.slot || INTERN_SLOTS[it.name]?.[sl] ? 0 : sl === tcOther ? (BS_FIXED[it.kid]?.includes(tcOther) ? 0 : 3) : 1;
+  const adultSupEI = (roles, sol) => roles.reduce((n, ro, r) => n + INTERNS.filter(it => it.adult === RES[sol.map[r]]?.name)
+    .reduce((m, it) => m + Math.max(0, ...slotsOfItem(ro.id).map(sl => isU(ro) || sl === tcOther ? supCost(it, sl) : 0)), 0), 0);
+  const EIR = EIA.map(ro => ({...(paired(ro) ? {...ro, mins:ro.mins / 2, code:ro.code + " 隔週①", label:ro.label + "（隔週輪流）"} : ro), pin:pins(ro.id)[0]}));
   const eiTotal = EIA.reduce((a,b)=>a+b.mins,0);
-  const eiPlan = renderSolve($("#eiabox"), EIA,
-    { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 - spreadOf(EIA,s)*10 + s.total },
-    `聯評 3 個時段與分評 4 個時段共 ${EIA.length} 項，一人一時段，做評估與寫報告是同一人。合計 ${eiTotal} 分／月（約 ${hrm(eiTotal)} 小時／月）——★ 標示的時數是暫定值，確認後改設定區。${LEAD_JOINS_EI ? "組長納入此區分配。" : "組長不納入此區分配。"}`, true);
-  addLoad(EIA, eiPlan);
+  const eiPlan = renderSolve($("#eiabox"), EIR,
+    { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:p => [...soloBusy(p), ...pinBusy(p)], rank:s => s.min*100000 - shortOf(EIR,s)*1e7 - adultSupEI(EIR,s)*1e6 - spreadOf(EIR,s)*10 + s.total },
+    `聯評 3 個時段與分評 4 個時段共 ${EIA.length} 項，一人一時段，做評估與寫報告是同一人。合計 ${eiTotal} 分／月（約 ${hrm(eiTotal)} 小時／月）——★ 標示的時數是暫定值，確認後改設定區。${LEAD_JOINS_EI ? "組長納入此區分配。" : "組長不納入此區分配。"}${EIA.some(paired) ? "標「隔週」的聯評由兩人隔週輪流，這裡是第一個人，時數各算一半。" : ""}`, true);
+  addLoad(EIR, eiPlan);
+  let PAIR = [], pairPlan = null;
+  const pairBox = $("#eipairbox");
+  PAIR = EIR.filter(paired).map(ro => ({...ro, code:ro.code.replace("①", "②"), pin:pins(ro.id)[1]}));
+  pairBox.style.display = PAIR.length ? "" : "none";
+  if (PAIR.length) {
+    /* 第二個人：同一時段不能已經有早療（自己就是第一個人也算） */
+    const pairBusy = p => [...soloBusy(p), ...EIR.flatMap((ro,r) => eiPlan && eiPlan.map[r] === p ? slotsOfItem(ro.id) : [])];
+    pairBox.innerHTML = '<h4 style="margin:0 0 10px;font-size:15px">聯評隔週輪流的第二個人</h4><div></div>';
+    pairPlan = renderSolve(pairBox.lastElementChild, PAIR,
+      { checkElig:true, skipLead:!LEAD_JOINS_EI, busy:pairBusy, rank:s => s.min*100000 - (eiPlan ? shortOf([...EIR, ...PAIR], {map:[...eiPlan.map, ...s.map]}) : 0)*1e7 - adultSupEI(PAIR,s)*1e6 - spreadOf(PAIR,s)*10 + s.total },
+      "每個聯評時段兩個人隔週輪流：輪到的人做聯評，另一個人同時段在兒童室看個案，兩人各算一半時數。第二個人可以已經有分評或其他聯評，只要不是同一個時段。", true);
+    addLoad(PAIR, pairPlan);
+  }
 
   /* 主要行政：保最低分 → 時數差距小 → 意願總分 */
   const admTotal = ADMIN.reduce((a,b)=>a+b.mins,0);
-  const adminPlan = renderSolve($("#adminbox"), ADMIN,
+  const ADMIN_R = ADMIN.map(ro => ({...ro, pin:RES.some(r => r.name === ADMIN_PINS[ro.id]) ? ADMIN_PINS[ro.id] : undefined}));
+  const adminPlan = renderSolve($("#adminbox"), ADMIN_R,
     { checkElig:true, skipLead:true, rank:s => s.min*100000 - spreadOf(ADMIN,s)*10 + s.total },
     `排序方式：先排除組長與不符合條件的人，再讓最不情願的人分數盡量高，接著把早療評估診已經分掉的時數一起算進來、壓低同一人身上的集中度，最後才比意願總分。這 ${ADMIN.length} 項合計 ${admTotal} 分／月（約 ${hrm(admTotal)} 小時／月），另有技術組長 1380 分／月已固定。G（2000 分，約 33 小時）與 C（1328 分，約 22 小時）本身量就重，完全打平不可能，這裡只避免一個人同時吃下兩個大項。`, true);
   addLoad(ADMIN, adminPlan);
 
   /* 附加工作：保最低分 → 優先給累計時數低的人 */
   const extraOpts = { skipLead:true, rank:s => s.min*100000 + s.total*100 - s.map.reduce((a,p) => a + (load[p]||0), 0)/100 };
-  const extraPlan = renderSolve($("#extrabox"), EXTRA, extraOpts,
+  const pinnedExtra = EXTRA.filter(ro => RES.some(r => r.name === EXTRA_PINS[ro.id]));
+  const EXTRA_FREE = EXTRA.filter(ro => !pinnedExtra.includes(ro));
+  const extraPlan = renderSolve($("#extrabox"), EXTRA_FREE, extraOpts,
     (eiPlan||adminPlan) ? "同意願分數時，優先分給早療與主要行政累計時數較低的人。組長不納入分配。"
                         : "前兩段還沒試排出來，這裡只依意願分配。組長不納入分配。", false);
 
-  weekPlan(soloPlan, eiPlan, adminPlan);
+  /* 組長指定的附加工作放在每個方案最上面 */
+  $("#extrabox").querySelectorAll(".plan table tbody").forEach(tb => pinnedExtra.slice().reverse().forEach(ro => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${esc(ro.code)}　${esc(ro.label)}</td><td>${esc(EXTRA_PINS[ro.id])}（組長指定）</td>`;
+    tb.prepend(tr);
+  }));
+  $("#extrabox").querySelectorAll(".plan tr").forEach(tr => { const c = tr.cells;
+    if (c.length > 1 && c[0].textContent.trim() === "未分配") c[1].textContent = c[1].textContent.split("、").filter(n => !Object.values(EXTRA_PINS).includes(n.trim())).join("、") || "—"; });
+
+  weekPlan(soloPlan, eiPlan, adminPlan, EIR, PAIR, pairPlan);
 
   rotationPlan([
     {title:"臨床專責區", roles:SOLO, plan:soloPlan, opts:{rank:s => s.min*1000 + s.total}},
-    {title:"早療評估診", roles:EIA, plan:eiPlan, opts:{checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 + s.total}},
+    {title:"早療評估診", roles:EIR, plan:eiPlan, opts:{checkElig:true, skipLead:!LEAD_JOINS_EI, busy:soloBusy, rank:s => s.min*100000 + s.total}},
     {title:"主要行政工作", roles:ADMIN, plan:adminPlan, opts:{checkElig:true, skipLead:true, rank:s => s.min*100000 + s.total}},
-    {title:"附加工作", roles:EXTRA, plan:extraPlan, opts:extraOpts}
+    {title:"附加工作", roles:EXTRA_FREE, plan:extraPlan, opts:extraOpts}
   ]);
 
   /* 意願矩陣（分區塊） */
