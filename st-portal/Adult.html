@@ -425,6 +425,30 @@ function langSug(){
   }
   return `依 WAB 分類邏輯推測：<b>${t}</b>（${f}、聽理解${a}、覆誦${r}）。僅供參考，請依臨床判斷選擇。`;
 }
+/* 口腔動作：FDA-2（Frenchay Dysarthria Assessment, 2nd ed.）a–e 五級 */
+const FDA5 = ["正常","輕度","中度","重度","無法"];
+const FDA5_H = ["a 正常","b 輕度","c 中度","d 重度","e 無法"];
+const FDA_DEF = {"正常":"正常","輕度":"輕微異常，僅有經驗的評估者可察覺",
+  "中度":"明顯異常，但能大致完成","重度":"僅能部分完成，品質差、無法維持或很費力",
+  "無法":"無法執行"};
+const FDA_HINT = "依 FDA-2 Frenchay 構音障礙評估 a–e 五級：a 正常｜b 輕度異常，僅有經驗的評估者可察覺｜c 明顯異常，但能大致完成｜d 僅能做出部分動作，品質差、無法維持或很費力｜e 無法執行";
+const OM_TG = [["l","左側移"],["r","右側移"],["u","上抬"],["d","下壓"],["alt","交替動作"]];
+const OM_LP = [["seal","閉唇"],["spread","展唇"],["round","圓唇"],["alt","交替動作"]];
+/* 舊草稿的值（輕度受限、異常…）轉成 FDA 五級 */
+function omMigrate(){
+  const OLD={"輕度受限":"輕度","中度受限":"中度","重度受限":"重度","完全受限":"無法"};
+  OM_TG.forEach(([k])=>{ const v=D["tg_"+k]; if(OLD[v]) D["tg_"+k]=OLD[v]; });
+  if(D.om_lip==="異常"&&!has(D.om_lip_d)) D.om_lip_d="嘴唇功能異常";
+  delete D.om_lip;
+  if(D.om_jaw==="異常"){ if(!has(D.om_jaw_d)) D.om_jaw_d="下顎／頰部功能異常"; delete D.om_jaw; }
+}
+/* 同一等級的動作併在一起，等級寫成 FDA 定義 */
+function fdaGroup(prefix,rows){
+  const by={};
+  rows.forEach(([k,n])=>{ const v=D[prefix+"_"+k]; if(has(v)) (by[v]=by[v]||[]).push(n); });
+  return FDA5.filter(v=>by[v]).map(v=>`${by[v].join("、")}${FDA_DEF[v]}`).join("；");
+}
+
 /* 語言細項的五點定義：依表現與所需協助判斷；報告直接寫成這些文字 */
 const LV_DEF = {"正常":"正確且即時反應","輕度受限":"偶有錯誤或延遲，可自我修正",
   "中度受限":"約一半正確，需提示才能完成","重度受限":"僅少數正確，給提示仍有困難",
@@ -620,12 +644,16 @@ function stepList(){
 /* Oral Motor 只出現一次：有選 Speech 放在 Speech，只選 Swallowing 就放在 Swallowing */
 const omHere = k => k==="sp" ? on("sp") : (k==="sw" && on("sw") && !on("sp"));
 function omFieldset(){
+  omMigrate();
+  const mx=(p,l,rows)=>matrix(p,l,rows.map(([k,n])=>({k,n})),FDA5,"",FDA5_H);
   return `<fieldset><legend>Oral Motor Function</legend>
-    ${matrix("tg","舌頭",[{k:"l",n:"左"},{k:"r",n:"右"},{k:"u",n:"上"},{k:"d",n:"下"}],LIMIT5,"",LIMIT5_H)}
+    <div class="note">${FDA_HINT}</div>
+    ${mx("tg","舌頭",OM_TG)}
+    <div class="note">舌頭交替動作：左右快速交替擺動（或重複 /ka la/）；嘴唇交替動作：/u/–/i/ 圓唇、展唇快速交替。</div>
     ${text("om_tongue_d","舌頭異常描述")}
-    ${radio("om_lip","嘴唇",["正常","異常"])}
+    ${mx("lp","嘴唇",OM_LP)}
     ${text("om_lip_d","嘴唇異常描述")}
-    ${radio("om_jaw","下顎／頰部",["正常","異常"])}
+    ${seg("om_jaw","下顎／頰部",FDA5)}
     ${text("om_jaw_d","下顎／頰部異常描述")}
     ${radio("om_palsy","Facial palsy",["無","右側","左側","雙側"])}
     ${text("om_amr","AMR","/pa/ /ta/ /ka/ 次數")}
@@ -1665,7 +1693,6 @@ function secSp(mode){
   if(!on("sp")) return "";
   if(D.sp_state==="無法評估")
     return blk("言語與口腔動作",[`目前無法進行言語評估${has(D.sp_state_why)?`，${D.sp_state_why}`:""}。`]);
-  const tg=[["左","tg_l"],["右","tg_r"],["上","tg_u"],["下","tg_d"]];
   if(mode==="list"){
     return blk("言語與口腔動作",[
       has(D.sp_imp)?`Speech Impression：${list(D.sp_imp)}`:"",
@@ -1691,26 +1718,29 @@ function secSp(mode){
 
 /* 口腔動作（Oral Motor Function）報告文字：Speech 與 Swallowing 共用 */
 function omLines(mode){
-  const tg=[["左","tg_l"],["右","tg_r"],["上","tg_u"],["下","tg_d"]];
+  omMigrate();
+  const tg=fdaGroup("tg",OM_TG), lp=fdaGroup("lp",OM_LP);
+  const jaw=has(D.om_jaw)?(FDA_DEF[D.om_jaw]||D.om_jaw):"";
   if(mode==="list") return [
-    tg.some(([,k])=>has(D[k]))?`舌頭：${tg.filter(([,k])=>has(D[k])).map(([n,k])=>`${n} ${D[k]}`).join("、")}`:"",
+    tg?`舌頭：${tg}`:"",
     has(D.om_tongue_d)?`舌頭異常描述：${D.om_tongue_d}`:"",
-    has(D.om_lip)?`嘴唇：${D.om_lip}${has(D.om_lip_d)?`（${D.om_lip_d}）`:""}`:"",
-    has(D.om_jaw)?`下顎／頰部：${D.om_jaw}${has(D.om_jaw_d)?`（${D.om_jaw_d}）`:""}`:"",
+    lp?`嘴唇：${lp}`:"",
+    has(D.om_lip_d)?`嘴唇異常描述：${D.om_lip_d}`:"",
+    jaw?`下顎／頰部：${jaw}`:"",
+    has(D.om_jaw_d)?`下顎／頰部異常描述：${D.om_jaw_d}`:"",
     has(D.om_palsy)?`Facial palsy：${D.om_palsy}`:"",
     has(D.om_amr)?`AMR：${D.om_amr}`:"",
     has(D.om_smr)?`SMR：${D.om_smr}`:"",
     has(D.om_note)?`口腔動作備註：${D.om_note}`:""].filter(has);
   const L=[];
-  const bad=tg.filter(([,k])=>has(D[k])&&D[k]!=="正常").map(([n,k])=>`${n}側${D[k]}`);
-  const om=[];
-  if(bad.length) om.push(`舌頭動作${bad.join("、")}`);
-  else if(tg.some(([,k])=>D[k]==="正常")) om.push("舌頭動作各方向均正常");
-  if(has(D.om_tongue_d)) om.push(D.om_tongue_d);
-  if(D.om_lip==="異常") om.push(`嘴唇功能異常${has(D.om_lip_d)?`（${D.om_lip_d}）`:""}`);
-  if(D.om_jaw==="異常") om.push(`下顎／頰部功能異常${has(D.om_jaw_d)?`（${D.om_jaw_d}）`:""}`);
+  const allN=(p,rows)=>rows.every(([k])=>!has(D[p+"_"+k])||D[p+"_"+k]==="正常");
+  const names=(p,rows)=>rows.filter(([k])=>has(D[p+"_"+k])).map(([,n])=>n).join("、");
+  const tgS=[tg?(allN("tg",OM_TG)?`舌頭${names("tg",OM_TG)}皆正常`:`舌頭${tg}`):"",D.om_tongue_d].filter(has).join("，");
+  const lpS=[lp?(allN("lp",OM_LP)?`嘴唇${names("lp",OM_LP)}皆正常`:`嘴唇${lp}`):"",D.om_lip_d].filter(has).join("，");
+  const jwS=[jaw?`下顎／頰部${jaw}`:"",D.om_jaw_d].filter(has).join("，");
+  const om=[tgS,lpS,jwS].filter(has);
   if(has(D.om_palsy)&&D.om_palsy!=="無") om.push(`合併${D.om_palsy}顏面神經麻痺`);
-  if(om.length) L.push(`口腔動作方面，${om.join("；")}。`);
+  if(om.length) L.push(`口腔動作（依 FDA-2 評估）：${om.join("。")}。`);
   const dd=[];
   if(has(D.om_amr)) dd.push(`AMR ${D.om_amr}`);
   if(has(D.om_smr)) dd.push(`SMR ${D.om_smr}`);
@@ -2194,7 +2224,7 @@ function gussVerdict(t){
 function progress(){
   const keys=["note_type","rec_date","name","chart","gender","age","dx","chief","modules"];
   if(on("lang")) keys.push("lang_imp","lang_flu","lgm_aud","lgm_exp","lang_func");
-  if(on("sp"))   keys.push("sp_imp","sp_intel","tg_l","tg_r","om_lip","om_jaw");
+  if(on("sp"))   keys.push("sp_imp","sp_intel","tg_l","tg_r","lp_seal","om_jaw");
   if(on("sw"))   keys.push("sw_imp","feed","sw_sys","guss_do");
   if(on("hnc"))  keys.push("h_imp","h_type","h_site","hs_tg");
   if(on("voice"))keys.push("v_imp","v_g");
