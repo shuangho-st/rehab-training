@@ -502,7 +502,7 @@ const HALVES = [["AM","上午"],["PM","下午"]];
 /* 病房、護家每區每週要幾個半天。不綁固定時段，白天哪個時段都可以（不排晚上），由程式挑人力最寬裕的時段 */
 const AREA_HALF_DAYS = { "BS-A":3, "BS-B":3, "BS-C":3, "BS-D":3, "BS-E":3, "NH-213":3, "NH-215":3 };
 /* 組長指定某人的病房時段（不管分到哪一區）：寫幾個就排幾個半天 */
-const BS_FIXED = { "彥妤": ["二AM", "五AM"], "書寧": ["一AM", "三AM", "五AM"] };
+const BS_FIXED = { "彥妤": ["二AM", "五AM"], "書寧": ["一AM", "三AM", "五AM"], "婉瑜": ["一AM", "二PM", "三PM"] };   /* 婉瑜週三病房改下午（10/30） */
 /* 組長指定某人每週要留的行政半天（時段由試排挑） */
 const PERSON_ADMIN = {};
 /* 組長指定某人某個半天做什麼（kind：adult＝成人治療室、kid＝兒童治療室、adm＝行政） */
@@ -518,7 +518,6 @@ const ADULT_ROOMS = ["成人語言治療室1","成人語言治療室2","成人�
 /* 個人固定時段（問卷「固定行程」）。有寫 room 就占用那間治療室；同一間可以兩人一起帶團體 */
 const FIXED_SLOTS = [
   {name:"彥妤", slot:"五PM", room:"兒童語言治療室3", txt:"跨專業團課"},
-  {name:"婉瑜", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
   {name:"郁方", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"},
   /* 週三下午 13:20 分評（支援評估），不在問卷分配內；116 年改由彥妤（組長 10/28 指定） */
   {name:"彥妤", slot:"三PM", room:"兒童語言治療室3", txt:"門診＋支援分評"}
@@ -534,6 +533,8 @@ const LEAD_OVERRIDES = {
 const EI_PINS = { "EA-U-A": ["宛宜"], "EA-U-C": ["彥妤", "郁方"] };
 /* 隔週輪流的兩人共用同一間兒童室（組長 10/29：週四下午彥妤、郁方用同一間） */
 const EI_SHARE_ROOM = ["EA-U-C"];
+/* 同一個半天另有主要工作，但也一起上團體課的人（不另外占時段）。婉瑜週三下午病房，一樣上成人團體（10/30 組長） */
+const GROUP_JOIN = [{name:"婉瑜", slot:"三PM", room:"成人語言治療室1", txt:"成人團體"}];
 /* 組長指定主要行政由誰負責 */
 const ADMIN_PINS = { "AM-D": "婉瑜" };   /* 成人負責人＋拿單：婉瑜（10/29） */
 /* 組長指定附加工作由誰負責（同一人可以多項，指定的項目不再試排） */
@@ -1182,6 +1183,12 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   };
   fix(EIR, eiPlan, () => "ei", ro => ro.code);
   fix(PAIR, pairPlan, () => "ei", ro => ro.code);
+  GROUP_JOIN.forEach(g => {
+    const i = P.findIndex(p => p.name === g.name), c = grid[kindOf(g.room)]?.[g.slot + "|" + g.room];
+    if (i < 0) return;
+    subEval[i][g.slot] = g.txt;
+    if (c && !c.is.includes(i)) c.is.unshift(i);
+  });
 
   /* 組長指定的病房時段先放 */
   const areaTxt = ro => ro.label.replace("病房","").replace(/\s+/g,"").replace("護理之家","護家");
@@ -1478,7 +1485,7 @@ function weekPlan(soloPlan, eiPlan, adminPlan, EIR = EIA, PAIR = [], pairPlan = 
   const eveName = P.find(p => p.evening)?.name || EVENING_NAME;
 
   const who = c => c.is.map(i => P[i].name).join("＋");
-  const evalTag = (c, s) => c.is.map(i => subEval[i][s]).filter(Boolean).map(x => `<span style="color:var(--ink-3);font-size:12px">（＋${esc(x)}）</span>`).join("");
+  const evalTag = (c, s) => c.is.map(i => subEval[i][s]).filter(x => x && x !== c.txt).map(x => `<span style="color:var(--ink-3);font-size:12px">（＋${esc(x)}）</span>`).join("");
   const cell = (c, s) => c ? esc(who(c)) + evalTag(c, s) + (c.txt ? `<span style="color:var(--ink-3);font-size:12px">（${esc(c.txt)}）</span>` : "") : '<span style="color:var(--ink-3)">—</span>';
   const table = (title, kind, rooms) => `<h3 style="margin:18px 0 8px;font-size:16px">${title}</h3>
     <table class="mx wk"><thead><tr><th class="item"></th>${WEEK_DAYS.map(d => `<th>${d}</th>`).join("")}</tr></thead><tbody>
