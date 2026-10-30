@@ -425,7 +425,11 @@ function langSug(){
   }
   return `依 WAB 分類邏輯推測：<b>${t}</b>（${f}、聽理解${a}、覆誦${r}）。僅供參考，請依臨床判斷選擇。`;
 }
-const LV_HINT = "依 ICF 限定值，以正確率對照：正常 ≥96%｜輕度 76–95%｜中度 51–75%｜重度 5–50%｜完全 <5%";
+/* 語言細項的五點定義：依表現與所需協助判斷；報告直接寫成這些文字 */
+const LV_DEF = {"正常":"正確且即時反應","輕度受限":"偶有錯誤或延遲，可自我修正",
+  "中度受限":"約一半正確，需提示才能完成","重度受限":"僅少數正確，給提示仍有困難",
+  "完全受限":"無法完成或無反應"};
+const LV_HINT = "五點定義：正常＝正確且即時反應｜輕度＝偶有錯誤或延遲，可自我修正｜中度＝約一半正確，需提示才能完成｜重度＝僅少數正確，給提示仍有困難｜完全＝無法完成或無反應（是非題僅達猜測機率也算）";
 const SEV4   = ["正常","輕度","中度","重度"];
 const GFP    = ["Good","Fair","Poor"];
 const SCORE5 = ["1","2","3","4","5"];
@@ -1533,11 +1537,11 @@ function secBasic(mode){
 }
 
 const arrOf=v=>Array.isArray(v)?v:(has(v)?[v]:[]);
-/* 把同一等級的細項併在一起：「是非問題、聽詞指認正常；多步驟指令重度受限」 */
+/* 把同一等級的細項併在一起，等級直接寫成定義：「是非問題、聽詞指認正確且即時反應；多步驟指令僅少數正確，給提示仍有困難」 */
 function lvGroup(prefix,rows){
   const by={};
   rows.forEach(([k,n])=>{ const v=D[prefix+"_"+k]; if(has(v)) (by[v]=by[v]||[]).push(n); });
-  return LIMIT5.filter(v=>by[v]).map(v=>`${by[v].join("、")}${v}`).join("；");
+  return LIMIT5.filter(v=>by[v]).map(v=>`${by[v].join("、")}${LV_DEF[v]}`).join("；");
 }
 const LANG_ROWS={
   la:[["yn","是非問題"],["word","聽詞指認"],["cmd1","一步驟指令"],["cmd2","二步驟指令"],["cmd3","多步驟指令"],["syn","複雜句"],["para","短文理解"]],
@@ -1625,11 +1629,10 @@ function secLang(mode){
   // 覆誦
   if(G("rp")||G("au")||has(D.rp_err)){
     const t=[];
-    const c=x=>x.replace(/；/g,"，");
-    if(G("rp")) t.push(`覆誦${c(G("rp"))}`);
+    if(G("rp")) t.push(`覆誦：${G("rp")}`);
     if(has(D.rp_err)) t.push(`覆誦錯誤為${list(D.rp_err)}`);
-    if(G("au")) t.push(`自動化言語${c(G("au"))}`);
-    L.push(`覆誦與自動化言語：${t.join("；")}。`);
+    if(G("au")) t.push(`自動化言語：${G("au")}`);
+    L.push(t.join("。")+"。");
   }
   // 命名
   if(G("nm")||has(D.nm_flu)||has(D.nm_err)||has(D.nm_cue)){
