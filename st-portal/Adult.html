@@ -11,12 +11,14 @@
 <title>語言治療組 成人評估紀錄</title>
 <style>
 :root{
-  --ink:#0E3B43; --ink-2:#4A6A70; --ink-3:#7C959A;
-  --paper:#F6F8F8; --surface:#FFFFFF;
-  --line:#D6E0E2; --line-2:#EAF0F1;
-  --pick:#0E7C86; --pick-bg:#E4F1F1; --pick-line:#7FBFC4;
-  --flag:#A85700; --flag-bg:#FDF3E4;
-  --r:10px;
+  /* 活潑但明亮：奶油白底、湖水綠主色、珊瑚橘點綴 */
+  --ink:#1F3A44; --ink-2:#4F6B74; --ink-3:#8AA0A6;
+  --paper:#FFF9F1; --surface:#FFFFFF;
+  --line:#EADFCF; --line-2:#F4ECE0;
+  --pick:#139C96; --pick-bg:#E3F6F3; --pick-line:#8BD3CD;
+  --pop:#FF8A5B; --pop-bg:#FFEDE3; --sun:#FFC94D; --sun-bg:#FFF6DA;
+  --flag:#C2601F; --flag-bg:#FFF1E4;
+  --r:14px;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
   --mono:"SFMono-Regular",Menlo,Consolas,"PingFang TC","Microsoft JhengHei",monospace;
 }
@@ -293,6 +295,37 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
   #printArea{display:block;font-family:var(--sans);font-size:11.5pt;line-height:1.75;color:#000;
     white-space:pre-wrap;word-break:break-word}
 }
+/* ---------- 活潑主題 ---------- */
+body{background:
+  radial-gradient(circle at 92% 6%,var(--sun-bg) 0 120px,transparent 121px),
+  radial-gradient(circle at 4% 96%,var(--pop-bg) 0 160px,transparent 161px),
+  var(--paper);background-attachment:fixed}
+.rail{background:linear-gradient(180deg,#FFFFFF 0%,#FDFBF7 100%);border-right:1px dashed var(--line)}
+.brand h1{font-size:16px;color:var(--pick)}
+.brand h1::before{content:"🗣️ "}
+.steps button{border-radius:12px}
+.steps button[aria-current="true"]{background:var(--pick-bg);box-shadow:inset 3px 0 0 var(--pick)}
+.dot.done{background:var(--sun);border-color:var(--sun);color:var(--ink)}
+.head h2{display:inline-block;background:linear-gradient(transparent 62%,var(--sun-bg) 62%);padding:0 4px}
+legend{color:var(--pick);border-bottom:2px dotted var(--pick-line)}
+legend::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pop);margin-right:7px;vertical-align:1px}
+.opt,.chip{border-radius:999px}
+.opt:hover{transform:translateY(-1px)}
+.opt.on{background:var(--pick-bg);box-shadow:0 2px 0 var(--pick-line)}
+.seg{border-radius:12px}
+.seg label.on{background:var(--pick)}
+.trial{border:1.5px solid var(--line);box-shadow:0 4px 0 var(--line-2);border-radius:18px}
+.trial-hd h4{color:var(--pop)}
+.trial .sub{color:var(--ink);background:var(--sun-bg);display:inline-block;padding:3px 10px;border-radius:999px;border-top:0;margin-top:10px}
+.trial .sub.first{margin-top:0}
+.add{border-radius:18px;background:var(--pop-bg);border-color:var(--pop);color:var(--flag)}
+.add:hover{background:#FFE1D1}
+.btn{border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+.bar{background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border-top:1px dashed var(--line)}
+.nav button{border-radius:999px}
+.nav button.pri{background:var(--pop);border-color:var(--pop)}
+.meter .fill{background:linear-gradient(90deg,var(--pick),var(--sun))}
+.note{border-radius:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -554,6 +587,23 @@ function stepList(){
   return s;
 }
 
+/* Oral Motor 只出現一次：有選 Speech 放在 Speech，只選 Swallowing 就放在 Swallowing */
+const omHere = k => k==="sp" ? on("sp") : (k==="sw" && on("sw") && !on("sp"));
+function omFieldset(){
+  return `<fieldset><legend>Oral Motor Function</legend>
+    ${matrix("tg","舌頭",[{k:"l",n:"左"},{k:"r",n:"右"},{k:"u",n:"上"},{k:"d",n:"下"}],LIMIT4)}
+    ${text("om_tongue_d","舌頭異常描述")}
+    ${radio("om_lip","嘴唇",["正常","異常"])}
+    ${text("om_lip_d","嘴唇異常描述")}
+    ${radio("om_jaw","下顎／頰部",["正常","異常"])}
+    ${text("om_jaw_d","下顎／頰部異常描述")}
+    ${radio("om_palsy","Facial palsy",["無","右側","左側","雙側"])}
+    ${text("om_amr","AMR","/pa/ /ta/ /ka/ 次數")}
+    ${text("om_smr","SMR","/pataka/ 次數")}
+    ${area("om_note","備註")}
+  </fieldset>`;
+}
+
 /* ---------- 各步驟畫面 ---------- */
 const VIEW = {
 
@@ -614,18 +664,7 @@ sp(){
     ${radio("sp_dys","Dysarthria 分型",["Spastic 痙攣型","Flaccid 鬆弛型","Ataxic 運動失調型","Hypokinetic 運動不及型","Hyperkinetic 運動過度型","Mixed 混合型"],"col")}
     ${radio("sp_intel","Speech Intelligibility",SEV4)}
   </fieldset>
-  <fieldset><legend>Oral Motor Function</legend>
-    ${matrix("tg","舌頭",[{k:"l",n:"左"},{k:"r",n:"右"},{k:"u",n:"上"},{k:"d",n:"下"}],LIMIT4)}
-    ${text("om_tongue_d","舌頭異常描述")}
-    ${radio("om_lip","嘴唇",["正常","異常"])}
-    ${text("om_lip_d","嘴唇異常描述")}
-    ${radio("om_jaw","下顎／頰部",["正常","異常"])}
-    ${text("om_jaw_d","下顎／頰部異常描述")}
-    ${radio("om_palsy","Facial palsy",["無","右側","左側","雙側"])}
-    ${text("om_amr","AMR","/pa/ /ta/ /ka/ 次數")}
-    ${text("om_smr","SMR","/pataka/ 次數")}
-    ${area("om_note","備註")}
-  </fieldset>
+  ${omFieldset()}
   <fieldset><legend>Speech Characteristics</legend>
     ${check("sp_ch","異常向度",["Pitch 過高","Pitch 過低","Pitch 不穩","音量過小","音量過大","Hoarseness","Breathiness","Strain","呼吸支持不足","鼻音過重","鼻音不足","語速過慢","語速過快","語調平板"])}
     ${area("sp_note","治療師觀察")}
@@ -644,6 +683,7 @@ sw(){
   <fieldset><legend>整體判斷</legend>
     ${radio("sw_imp","Impression",["無明顯異常","Dysphagia — Oral phase","Dysphagia — Pharyngeal phase","Dysphagia — Oral + Pharyngeal"],"col")}
   </fieldset>
+  ${omHere("sw")?omFieldset():""}
   <fieldset><legend>吞嚥相關因素</legend>
     ${check("sw_sys","目前狀況",["氣切","抽痰","氧氣：鼻導管","氧氣：面罩","肺炎","泌尿道感染"])}
     ${sys.includes("抽痰")?text("sw_suc","抽痰","如 3","次／天"):""}
@@ -737,7 +777,7 @@ trial(){
       <div class="sub first">測試內容</div>
       ${g("food","測試項目／質地",TRIAL_FOOD)}
       ${tx("amt","每口測試量","如 1cc、3cc、5cc、半茶匙")}
-      ${g("uten","使用工具",["湯匙","針筒","吸管","杯子","棉棒"])}
+      ${g("uten","使用工具",["湯匙","針筒","吸管","杯子","棉棒","滴管"])}
       <div class="pair">
         ${tx("total_g","共吃","如 30","g")}
         ${tx("dur","花多久時間","如 5 分鐘")}
@@ -746,6 +786,7 @@ trial(){
       <div class="sub">口腔期</div>
       ${solid?g("mast","Mastication",GFP):""}
       ${cs("oral_obs","口腔期觀察",ORAL_OBS)}
+      ${tx("oral_other","口腔期觀察　其他","自由填寫")}
       ${solid?`<div class="field" style="margin-bottom:6px"><span class="flabel">咀嚼表現<span class="hint">參考 TOMASS，整份固體吃完的總次數</span></span></div>
       <div class="pair3">
         ${tx("bites","咬口數","","次")}
@@ -756,9 +797,12 @@ trial(){
       <div class="sub">咽部期</div>
       ${g("laryn","喉部上抬（觸診）",["足夠","不足"])}
       ${solid?"":tx("perswallow","每口吞嚥次數","如 2","次")}
-      ${g("ctime","嗆咳時機",CTIME)}
       ${cs("phar_obs","咽部期觀察",PHAR_OBS)}
+      ${tx("phar_other","咽部期觀察　其他","自由填寫")}
+
+      <div class="sub">嗆咳／Choking signs</div>
       ${cs("sign","Choking signs",["咳嗽","濕潤音","清喉","口腔殘留","咽部殘留","鼻腔逆流","無法吞嚥","無明顯異常"])}
+      ${g("ctime","嗆咳時機",CTIME)}
 
       <div class="field"><span class="flabel">治療師觀察</span>
         <textarea data-ti="${i}" data-tk="note" data-t="ttext" placeholder="如 blue dye test 結果、吞後發 /a/ 音質">${t.note?esc(t.note):""}</textarea></div>
@@ -769,6 +813,7 @@ trial(){
     ${radio("tr_self","自我進食能力",["獨立","需部分協助","需完全協助"])}
     ${text("tr_posture","進食姿勢","如 床頭抬高 60 度、坐姿 90 度")}
     ${check("tr_obs","其他觀察",["進食後疲勞","注意力不集中影響進食","需口語提示放慢速度"])}
+    ${text("tr_obs_other","其他觀察　其他","自由填寫")}
   </fieldset>
   ${cards}<button class="add" id="addTrial">＋ 新增 Swallow Trial</button>`;
 },
@@ -1103,7 +1148,8 @@ function emrData(){
         const SG={"咳嗽":2,"清喉":2,"濕潤音":1,"口腔殘留":3,"咽部殘留":4,"鼻腔逆流":5,"無法吞嚥":6};
         (t.sign||[]).forEach(x=>{ if(SG[x]!==undefined) tick(id.sign[SG[x]]); });
         if(has(t.ctime)&&t.ctime!=="無") tick(id.sign[0]);
-        const note=[...(t.oral_obs||[]),...(t.phar_obs||[])];
+        const note=[...(t.oral_obs||[]),...(t.phar_obs||[]),t.oral_other,t.phar_other].filter(has);
+        if(t.uten==="滴管") note.unshift("以滴管餵食");
         if(has(t.laryn)) note.push("喉部上抬"+t.laryn);
         if(has(t.ctime)&&t.ctime!=="無") note.push("嗆咳時機："+t.ctime);
         if(has(t.note)) note.push(t.note);
@@ -1459,15 +1505,8 @@ function secSp(mode){
       has(D.sp_imp)?`Speech Impression：${list(D.sp_imp)}`:"",
       has(D.sp_dys)?`Dysarthria 分型：${D.sp_dys}`:"",
       has(D.sp_intel)?`Speech Intelligibility：${D.sp_intel}`:"",
-      tg.some(([,k])=>has(D[k]))?`舌頭：${tg.filter(([,k])=>has(D[k])).map(([n,k])=>`${n} ${D[k]}`).join("、")}`:"",
-      has(D.om_tongue_d)?`舌頭異常描述：${D.om_tongue_d}`:"",
-      has(D.om_lip)?`嘴唇：${D.om_lip}${has(D.om_lip_d)?`（${D.om_lip_d}）`:""}`:"",
-      has(D.om_jaw)?`下顎／頰部：${D.om_jaw}${has(D.om_jaw_d)?`（${D.om_jaw_d}）`:""}`:"",
-      has(D.om_palsy)?`Facial palsy：${D.om_palsy}`:"",
-      has(D.om_amr)?`AMR：${D.om_amr}`:"",
-      has(D.om_smr)?`SMR：${D.om_smr}`:"",
+      ...omLines("list"),
       has(D.sp_ch)?`Speech characteristics：${list(D.sp_ch)}`:"",
-      has(D.om_note)?`口腔動作備註：${D.om_note}`:"",
       has(D.sp_note)?`治療師觀察：${D.sp_note}`:""
     ]);
   }
@@ -1478,6 +1517,25 @@ function secSp(mode){
     if(has(D.sp_intel)) s+=`，言語清晰度為${D.sp_intel}`;
     L.push(s+"。");
   }
+  L.push(...omLines("prose"));
+  if(has(D.sp_ch)) L.push(`言語特徵可觀察到${list(D.sp_ch)}。`);
+  if(has(D.sp_note)) L.push(D.sp_note);
+  return blk("言語與口腔動作",L);
+}
+
+/* 口腔動作（Oral Motor Function）報告文字：Speech 與 Swallowing 共用 */
+function omLines(mode){
+  const tg=[["左","tg_l"],["右","tg_r"],["上","tg_u"],["下","tg_d"]];
+  if(mode==="list") return [
+    tg.some(([,k])=>has(D[k]))?`舌頭：${tg.filter(([,k])=>has(D[k])).map(([n,k])=>`${n} ${D[k]}`).join("、")}`:"",
+    has(D.om_tongue_d)?`舌頭異常描述：${D.om_tongue_d}`:"",
+    has(D.om_lip)?`嘴唇：${D.om_lip}${has(D.om_lip_d)?`（${D.om_lip_d}）`:""}`:"",
+    has(D.om_jaw)?`下顎／頰部：${D.om_jaw}${has(D.om_jaw_d)?`（${D.om_jaw_d}）`:""}`:"",
+    has(D.om_palsy)?`Facial palsy：${D.om_palsy}`:"",
+    has(D.om_amr)?`AMR：${D.om_amr}`:"",
+    has(D.om_smr)?`SMR：${D.om_smr}`:"",
+    has(D.om_note)?`口腔動作備註：${D.om_note}`:""].filter(has);
+  const L=[];
   const bad=tg.filter(([,k])=>has(D[k])&&D[k]!=="正常").map(([n,k])=>`${n}側${D[k]}`);
   const om=[];
   if(bad.length) om.push(`舌頭動作${bad.join("、")}`);
@@ -1491,10 +1549,8 @@ function secSp(mode){
   if(has(D.om_amr)) dd.push(`AMR ${D.om_amr}`);
   if(has(D.om_smr)) dd.push(`SMR ${D.om_smr}`);
   if(dd.length) L.push(`輪替動作速率：${dd.join("、")}。`);
-  if(has(D.sp_ch)) L.push(`言語特徵可觀察到${list(D.sp_ch)}。`);
   if(has(D.om_note)) L.push(D.om_note);
-  if(has(D.sp_note)) L.push(D.sp_note);
-  return blk("言語與口腔動作",L);
+  return L;
 }
 
 function trialText(t,i,mode){
@@ -1510,7 +1566,7 @@ function trialText(t,i,mode){
   if(has(t.dur))     qty.push(`花費 ${t.dur}`);
   const abil=(solid?[["Mastication","mast"]]:[])
     .filter(([,k])=>has(t[k])).map(([n2,k])=>`${n2} ${t[k]}`);
-  const oral=(t.oral_obs||[]);
+  const oral=[...(t.oral_obs||[]),has(t.oral_other)?t.oral_other.trim():""].filter(has);
   const tom=[];
   if(solid){
     if(has(t.bites)) tom.push(`咬口 ${num(t.bites)} 次`);
@@ -1520,8 +1576,9 @@ function trialText(t,i,mode){
   const phar=[];
   if(has(t.laryn)) phar.push(`喉部上抬${t.laryn}`);
   if(!solid&&has(t.perswallow)) phar.push(`每口吞嚥 ${num(t.perswallow)} 次`);
-  if(has(t.ctime)&&t.ctime!=="無") phar.push(`嗆咳時機為${t.ctime}`);
+  const ct=has(t.ctime)&&t.ctime!=="無"?t.ctime:"";
   phar.push(...(t.phar_obs||[]));
+  if(has(t.phar_other)) phar.push(t.phar_other.trim());
 
   if(mode==="list"){
     return [`Swallow Trial ${n}：`,
@@ -1531,7 +1588,7 @@ function trialText(t,i,mode){
       oral.length?`  口腔期觀察：${list(oral)}`:"",
       tom.length?`  咀嚼表現：${tom.join("、")}`:"",
       phar.length?`  咽部期觀察：${phar.join("、")}`:"",
-      has(t.sign)?`  Choking signs：${list(t.sign)}`:"",
+      has(t.sign)||ct?`  Choking signs：${[list(t.sign),ct?`嗆咳時機 ${ct}`:""].filter(has).join("；")}`:"",
       has(t.note)?`  治療師觀察：${t.note}`:""
     ].filter(has).join("\n");
   }
@@ -1544,7 +1601,8 @@ function trialText(t,i,mode){
   else s+="進行吞嚥測試";
   if(qty.length) s+=`，${qty.join("、")}`;
   const sign=(t.sign||[]).filter(v=>v!=="無明顯異常");
-  if(sign.length) s+=`，觀察到${sign.join("、")}`;
+  if(sign.length) s+=`，觀察到${sign.join("、")}${ct?`（嗆咳時機：${ct}）`:""}`;
+  else if(ct) s+=`，嗆咳時機為${ct}`;
   else if((t.sign||[]).includes("無明顯異常")) s+=`，未觀察到明顯嗆咳徵象`;
   if(abil.length) s+=`；${abil.join("、")}`;
   if(oral.length) s+=`；口腔期可見${list(oral)}`;
@@ -1560,7 +1618,8 @@ function trialOverall(mode){
   const o=[];
   if(has(D.tr_self))    o.push(mode==="list"?`自我進食能力：${D.tr_self}`:`自我進食能力${D.tr_self}`);
   if(has(D.tr_posture)) o.push(mode==="list"?`進食姿勢：${D.tr_posture}`:`進食姿勢為${D.tr_posture}`);
-  if(has(D.tr_obs))     o.push(mode==="list"?`其他觀察：${list(D.tr_obs)}`:`另可見${list(D.tr_obs)}`);
+  const ob=[...(D.tr_obs||[]),has(D.tr_obs_other)?D.tr_obs_other.trim():""].filter(has);
+  if(ob.length)         o.push(mode==="list"?`其他觀察：${list(ob)}`:`另可見${list(ob)}`);
   return o;
 }
 
@@ -1611,6 +1670,7 @@ function secSw(mode){
       has(D.sw_imp)?`Impression：${D.sw_imp}`:"",
       sys.length?`吞嚥相關因素：${list(sys)}`:"",
       has(D.sw_sys_note)?`相關說明：${D.sw_sys_note}`:"",
+      ...(omHere("sw")?omLines("list"):[]),
       has(D.feed)?`進食方式：${D.feed}`:"",
       has(D.sw_tube)||has(D.sw_tube_other)?`管路：${[list(D.sw_tube),D.sw_tube_other].filter(has).join("、")}`:"",
       has(D.meal)?`食物質地（IDDSI）：${list(D.meal)}${has(D.meal_other)?`（${D.meal_other}）`:""}`:"",
@@ -1629,6 +1689,7 @@ function secSw(mode){
       ? `${P()}吞嚥功能未見明顯異常。`
       : `${P()}目前呈現${D.sw_imp.replace("Dysphagia — ","").replace("Oral phase","口腔期").replace("Pharyngeal phase","咽部期").replace("Oral + Pharyngeal","口咽期")}吞嚥功能障礙。`);
   }
+  if(omHere("sw")) L.push(...omLines("prose"));
   if(sys.length) L.push(`吞嚥相關因素包括${list(sys)}。`);
   if(has(D.sw_sys_note)) L.push(D.sw_sys_note.replace(/。?$/,"。"));
   if(has(D.feed)){
