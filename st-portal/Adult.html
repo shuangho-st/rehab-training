@@ -58,7 +58,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .dot.done::after{content:"✓"}
 
 /* ---------- main ---------- */
-main{padding:34px 40px 140px;max-width:860px;min-width:0}
+main{padding:34px 48px 140px;max-width:1040px;width:100%;margin:0 auto;min-width:0}
 .head{margin-bottom:26px}
 .head h2{font-size:25px;margin:0 0 5px;letter-spacing:-.01em;font-weight:650}
 .head p{margin:0;color:var(--ink-2);font-size:14px}
@@ -399,7 +399,33 @@ let saving     = false;
 let lastSaved  = 0;
 let booted     = false;
 
-const LIMIT4 = ["正常","輕度受限","中度受限","重度受限"];
+/* 五點量表：依 WHO ICF 限定值 0–4（無／輕度／中度／重度／完全困難） */
+const LIMIT5 = ["正常","輕度受限","中度受限","重度受限","完全受限"];
+const LIMIT5_H = ["正常","輕度","中度","重度","完全"];
+const LANG_SEV = [
+  "0 — 無可用的口語表達或聽理解",
+  "1 — 溝通皆靠片段表達，需聽者大量推測、詢問與猜測",
+  "2 — 熟悉話題在聽者協助下可對話，但常無法傳達想法",
+  "3 — 少量或無協助下可談論大多日常話題，但部分對話仍困難",
+  "4 — 言語流暢度或理解有明顯但輕微的缺損，表達想法不受限",
+  "5 — 僅極輕微的言語障礙，個案自覺但聽者不易察覺"];
+/* 依 WAB 分類邏輯（流暢度 × 聽理解 × 覆誦）推測失語症類型，只做提示 */
+const LANG_SUG_KEYS = new Set(["lang_flu","lgm_aud","lgm_rep"]);
+function langSug(){
+  const f=D.lang_flu, a=D.lgm_aud, r=D.lgm_rep;
+  if(!has(f)||!has(a)||!has(r)) return "填好「流暢度」與總結的「聽理解」「覆誦」後，這裡會依 WAB 分類邏輯提示可能的類型（僅供參考）。";
+  const okR = r==="正常"||r==="輕度受限";
+  let t;
+  if(f==="流暢"){
+    const okA = a==="正常"||a==="輕度受限";
+    t = okA ? (okR?"命名型 (Anomic)":"傳導型 (Conduction)") : (okR?"經皮質感覺型 (TCS)":"流暢型 (Wernicke)");
+  }else{
+    const okA = a!=="重度受限"&&a!=="完全受限";
+    t = okA ? (okR?"經皮質運動型 (TCM)":"非流暢型 (Broca)") : (okR?"混合型經皮質 (Isolation)":"全失型 (Global)");
+  }
+  return `依 WAB 分類邏輯推測：<b>${t}</b>（${f}、聽理解${a}、覆誦${r}）。僅供參考，請依臨床判斷選擇。`;
+}
+const LV_HINT = "依 ICF 限定值，以正確率對照：正常 ≥96%｜輕度 76–95%｜中度 51–75%｜重度 5–50%｜完全 <5%";
 const SEV4   = ["正常","輕度","中度","重度"];
 const GFP    = ["Good","Fair","Poor"];
 const SCORE5 = ["1","2","3","4","5"];
@@ -521,8 +547,8 @@ function seg(k,label,opts,hint){
   }).join("");
   return `<div class="field"><span class="flabel">${label}${hint?`<span class="hint">${hint}</span>`:""}</span><div class="seg">${o}</div></div>`;
 }
-function matrix(prefix,label,rows,cols,hint){
-  const head=cols.map(c=>`<th>${esc(c)}</th>`).join("");
+function matrix(prefix,label,rows,cols,hint,heads){
+  const head=(heads||cols).map(c=>`<th>${esc(c)}</th>`).join("");
   const body=rows.map(r=>{
     const k=prefix+"_"+r.k;
     const tds=cols.map(c=>{
@@ -591,7 +617,7 @@ function stepList(){
 const omHere = k => k==="sp" ? on("sp") : (k==="sw" && on("sw") && !on("sp"));
 function omFieldset(){
   return `<fieldset><legend>Oral Motor Function</legend>
-    ${matrix("tg","舌頭",[{k:"l",n:"左"},{k:"r",n:"右"},{k:"u",n:"上"},{k:"d",n:"下"}],LIMIT4)}
+    ${matrix("tg","舌頭",[{k:"l",n:"左"},{k:"r",n:"右"},{k:"u",n:"上"},{k:"d",n:"下"}],LIMIT5,"",LIMIT5_H)}
     ${text("om_tongue_d","舌頭異常描述")}
     ${radio("om_lip","嘴唇",["正常","異常"])}
     ${text("om_lip_d","嘴唇異常描述")}
@@ -632,23 +658,64 @@ basic(){
 },
 
 lang(){
-  return `<div class="head"><h2>Language</h2><p>語言功能評估。</p></div>
+  if(typeof D.lang_tool==="string") D.lang_tool=[D.lang_tool];
+  const mx=(p,l,rows)=>matrix(p,l,rows,LIMIT5,"",LIMIT5_H);
+  return `<div class="head"><h2>Language</h2><p>語言功能評估。架構參考 WAB-R 西方失語症測驗、BDAE-3 波士頓失語症檢查與 CCAT 簡明失語症測驗：自發性言語、聽理解、覆誦、命名、閱讀、書寫。</p></div>
   <fieldset><legend>評估狀態</legend>
     ${radio("lang_state","狀態",["可評估","無法評估"])}
     ${text("lang_state_why","無法評估原因","如意識不清、配合度不佳")}
   </fieldset>
-  <fieldset><legend>Impression</legend>
-    ${radio("lang_imp","整體判斷",["無明顯問題","Aphasia — 非流暢型 (Broca)","Aphasia — 流暢型 (Wernicke)","Aphasia — 命名型 (Anomic)","Aphasia — 全失型 (Global)","Aphasia — 傳導型 (Conduction)","認知溝通障礙","右腦損傷語言問題"],"col")}
-    ${text("lang_imp_other","其他")}
-    ${radio("lang_tool","評估工具",["CCAT 簡明失語症測驗","CCC-2 中文溝通能力量表","BDAE 波士頓失語症檢查","床邊非標準化評估","口語敘事／對話樣本"],"col")}
+  <fieldset><legend>評估工具</legend>
+    ${check("lang_tool","評估工具",["CCAT 簡明失語症測驗","WAB 西方失語症測驗","BDAE 波士頓失語症檢查","BNT 波士頓命名測驗","CCC-2 中文溝通能力量表","床邊非標準化評估","口語敘事／對話樣本"],"col")}
+    ${text("lang_score","測驗分數","如 CCAT 總分 …／WAB AQ …")}
+    <div class="note">${LV_HINT}。未施測的項目留白即可。</div>
   </fieldset>
-  <fieldset><legend>各向度表現</legend>
+  <fieldset><legend>自發性言語 Spontaneous speech</legend>
+    ${check("lang_task","取樣方式",["對話／問答","圖片描述","敘事（如發病經過）"])}
+    ${radio("lang_flu","流暢度",["流暢","非流暢","幾乎無口語"])}
+    ${radio("lang_info","訊息量",["完整、切題","大致可傳達主要訊息","僅片段訊息","無法傳達訊息"],"col")}
+    ${text("lang_mlu","最長語句長度","如 5 字")}
+    ${check("lang_feat","言語特徵",["找詞停頓","迂迴描述","語意錯語","語音錯語","新語","空洞言語","電報式語法","語法錯誤","說話費力","持續言語","刻板言語","自我修正"])}
+    ${area("lang_sample","個案語料","一行一句，報告會寫成（個案語料：「…」、「…」）")}
+  </fieldset>
+  <fieldset><legend>聽理解 Auditory comprehension</legend>
+    ${mx("la","聽理解",[{k:"yn",n:"是非問題"},{k:"word",n:"聽詞指認"},{k:"cmd1",n:"一步驟指令"},
+      {k:"cmd2",n:"二步驟指令"},{k:"cmd3",n:"多步驟指令"},{k:"syn",n:"複雜句"},{k:"para",n:"短文理解"}])}
+    ${check("la_cue","有幫助的協助",["重複","放慢語速","手勢","書寫／圖片","無需協助"])}
+  </fieldset>
+  <fieldset><legend>覆誦與自動化言語 Repetition</legend>
+    ${mx("rp","覆誦",[{k:"word",n:"單詞"},{k:"short",n:"短句 4–6 字"},{k:"long",n:"長句 7 字以上"}])}
+    ${check("rp_err","覆誦錯誤",["語音錯語","語意錯語","遺漏","需多次示範"])}
+    ${mx("au","自動化言語",[{k:"count",n:"數數 1–10"},{k:"week",n:"星期／月份"},{k:"song",n:"唱歌／詩詞"}])}
+  </fieldset>
+  <fieldset><legend>命名與找詞 Naming</legend>
+    ${mx("nm","命名",[{k:"obj",n:"物品命名"},{k:"act",n:"動作命名"},{k:"resp",n:"回應式命名"},{k:"comp",n:"句子完成"}])}
+    <div class="note">回應式命名如「用什麼剪紙？」；句子完成如「下雨要撐＿」。</div>
+    ${text("nm_flu","類別流暢度（動物，1 分鐘）","如 6 個")}
+    ${check("nm_err","命名錯誤類型",["無反應","語意錯語","語音錯語","迂迴描述","新語","持續言語"])}
+    ${check("nm_cue","提示效果",["首音提示有效","語意提示有效","句子完成提示有效","選擇題有效","提示無效"])}
+  </fieldset>
+  <fieldset><legend>閱讀 Reading</legend>
+    ${mx("rd","閱讀",[{k:"wp",n:"字詞–圖配對"},{k:"aloud",n:"朗讀"},{k:"sent",n:"句子理解"},{k:"cmd",n:"書面指令"},{k:"para",n:"短文理解"}])}
+  </fieldset>
+  <fieldset><legend>書寫 Writing</legend>
+    ${mx("wr","書寫",[{k:"name",n:"寫姓名"},{k:"copy",n:"抄寫"},{k:"dict",n:"聽寫"},{k:"nam",n:"書寫命名"},{k:"sent",n:"自發書寫"}])}
+    ${text("rw_note","讀寫備註","如右側偏癱改以左手書寫、視力或教育程度影響")}
+  </fieldset>
+  <fieldset><legend>各向度總結</legend>
     ${matrix("lgm","語言各向度",[
       {k:"aud",n:"聽理解"},{k:"exp",n:"口語表達"},{k:"nam",n:"命名"},
-      {k:"rep",n:"覆誦"},{k:"read",n:"閱讀理解"},{k:"wri",n:"書寫"}],LIMIT4)}
+      {k:"rep",n:"覆誦"},{k:"read",n:"閱讀理解"},{k:"wri",n:"書寫"}],LIMIT5,"依上方細項整體判斷",LIMIT5_H)}
+  </fieldset>
+  <fieldset><legend>Impression</legend>
+    <div class="note" id="langSug">${langSug()}</div>
+    ${radio("lang_imp","整體判斷",["無明顯問題","Aphasia — 非流暢型 (Broca)","Aphasia — 經皮質運動型 (TCM)","Aphasia — 混合型經皮質 (Isolation)","Aphasia — 全失型 (Global)","Aphasia — 流暢型 (Wernicke)","Aphasia — 經皮質感覺型 (TCS)","Aphasia — 傳導型 (Conduction)","Aphasia — 命名型 (Anomic)","認知溝通障礙","右腦損傷語言問題"],"col")}
+    ${text("lang_imp_other","其他")}
+    ${radio("lang_sev","嚴重度（BDAE 失語症嚴重度評分）",LANG_SEV,"col")}
   </fieldset>
   <fieldset><legend>功能性溝通</legend>
     ${radio("lang_func","目前溝通方式",["可自發完整表達日常需求","需語意／語音提示始可表達","需以手勢、書寫或圖卡輔助","僅能以是非題回應","無法建立有效溝通"],"col")}
+    ${check("lang_strat","有效的溝通策略",["放慢語速","簡化句子","重複／換句話說","提供是非選擇","給予較長反應時間","手勢","書寫關鍵字","圖卡／溝通板"])}
     ${area("lang_note","治療師觀察")}
   </fieldset>`;
 },
@@ -1044,7 +1111,9 @@ function emrData(){
     else{
       f.DATA_017="1";
       const AP={"Aphasia — 全失型 (Global)":"1","Aphasia — 非流暢型 (Broca)":"2","Aphasia — 流暢型 (Wernicke)":"5",
-                "Aphasia — 傳導型 (Conduction)":"7","Aphasia — 命名型 (Anomic)":"8"};
+                "Aphasia — 傳導型 (Conduction)":"7","Aphasia — 命名型 (Anomic)":"8",
+                "Aphasia — 混合型經皮質 (Isolation)":"3","Aphasia — 經皮質運動型 (TCM)":"4",
+                "Aphasia — 經皮質感覺型 (TCS)":"6"};
       const imp=D.lang_imp, oth=[];
       if(imp==="無明顯問題") tick("DATA_639");
       else if(AP[imp]){ tick("DATA_019"); f.DATA_020=AP[imp]; }
@@ -1463,33 +1532,127 @@ function secBasic(mode){
   return blk("基本資料",lines);
 }
 
+const arrOf=v=>Array.isArray(v)?v:(has(v)?[v]:[]);
+/* 把同一等級的細項併在一起：「是非問題、聽詞指認正常；多步驟指令重度受限」 */
+function lvGroup(prefix,rows){
+  const by={};
+  rows.forEach(([k,n])=>{ const v=D[prefix+"_"+k]; if(has(v)) (by[v]=by[v]||[]).push(n); });
+  return LIMIT5.filter(v=>by[v]).map(v=>`${by[v].join("、")}${v}`).join("；");
+}
+const LANG_ROWS={
+  la:[["yn","是非問題"],["word","聽詞指認"],["cmd1","一步驟指令"],["cmd2","二步驟指令"],["cmd3","多步驟指令"],["syn","複雜句"],["para","短文理解"]],
+  rp:[["word","單詞"],["short","短句"],["long","長句"]],
+  au:[["count","數數"],["week","星期／月份"],["song","唱歌／詩詞"]],
+  nm:[["obj","物品命名"],["act","動作命名"],["resp","回應式命名"],["comp","句子完成"]],
+  rd:[["wp","字詞–圖配對"],["aloud","朗讀"],["sent","句子理解"],["cmd","書面指令"],["para","短文理解"]],
+  wr:[["name","寫姓名"],["copy","抄寫"],["dict","聽寫"],["nam","書寫命名"],["sent","自發書寫"]]
+};
+function langSample(){
+  const u=(D.lang_sample||"").split(/\n+/).map(x=>x.trim().replace(/^[「"]|[」"]$/g,"")).filter(Boolean);
+  return u.length?`（個案語料：${u.map(x=>`「${x}」`).join("、")}）`:"";
+}
 function secLang(mode){
   if(!on("lang")) return "";
   if(D.lang_state==="無法評估")
     return blk("語言功能",[`目前無法進行語言評估${has(D.lang_state_why)?`，${D.lang_state_why}`:""}。`]);
   const dims=[["聽理解","lgm_aud"],["口語表達","lgm_exp"],["命名","lgm_nam"],
               ["覆誦","lgm_rep"],["閱讀理解","lgm_read"],["書寫","lgm_wri"]];
+  const tools=arrOf(D.lang_tool);
+  const sev=has(D.lang_sev)?D.lang_sev.replace(" — ","級：")+"":"";
+  const G=k=>lvGroup(k,LANG_ROWS[k]);
   if(mode==="list"){
     return blk("語言功能",[
+      tools.length?`評估工具：${tools.join("、")}`:"",
+      has(D.lang_score)?`測驗分數：${D.lang_score}`:"",
+      ["lang_task","lang_flu","lang_info","lang_mlu","lang_feat","lang_sample"].some(k=>has(D[k]))?"自發性言語：":"",
+      has(D.lang_task)?`  取樣方式：${list(D.lang_task)}`:"",
+      has(D.lang_flu)?`  流暢度：${D.lang_flu}`:"",
+      has(D.lang_info)?`  訊息量：${D.lang_info}`:"",
+      has(D.lang_mlu)?`  最長語句長度：${D.lang_mlu}`:"",
+      has(D.lang_feat)?`  言語特徵：${list(D.lang_feat)}`:"",
+      has(D.lang_sample)?`  ${langSample()}`:"",
+      G("la")||has(D.la_cue)?"聽理解：":"",
+      G("la")?`  ${G("la")}`:"",
+      has(D.la_cue)?`  有幫助的協助：${list(D.la_cue)}`:"",
+      G("rp")||has(D.rp_err)||G("au")?"覆誦與自動化言語：":"",
+      G("rp")?`  覆誦：${G("rp")}`:"",
+      has(D.rp_err)?`  覆誦錯誤：${list(D.rp_err)}`:"",
+      G("au")?`  自動化言語：${G("au")}`:"",
+      G("nm")||has(D.nm_flu)||has(D.nm_err)||has(D.nm_cue)?"命名與找詞：":"",
+      G("nm")?`  ${G("nm")}`:"",
+      has(D.nm_flu)?`  類別流暢度（動物，1 分鐘）：${D.nm_flu}`:"",
+      has(D.nm_err)?`  錯誤類型：${list(D.nm_err)}`:"",
+      has(D.nm_cue)?`  提示效果：${list(D.nm_cue)}`:"",
+      G("rd")?`閱讀：${G("rd")}`:"",
+      G("wr")?`書寫：${G("wr")}`:"",
+      has(D.rw_note)?`讀寫備註：${D.rw_note}`:"",
+      dims.some(([,k])=>has(D[k]))?"各向度總結：":"",
+      ...dims.map(([n,k])=>has(D[k])?`  ${n}：${D[k]}`:""),
       has(D.lang_imp)?`Impression：${D.lang_imp}`:"",
       has(D.lang_imp_other)?`其他：${D.lang_imp_other}`:"",
-      has(D.lang_tool)?`評估工具：${D.lang_tool}`:"",
-      ...dims.map(([n,k])=>has(D[k])?`${n}：${D[k]}`:""),
+      sev?`嚴重度（BDAE）：${sev}`:"",
       has(D.lang_func)?`功能性溝通：${D.lang_func}`:"",
+      has(D.lang_strat)?`有效的溝通策略：${list(D.lang_strat)}`:"",
       has(D.lang_note)?`治療師觀察：${D.lang_note}`:""
     ]);
   }
   const L=[];
   if(has(D.lang_imp)){
     let s=`${P()}語言功能評估結果為${D.lang_imp}`;
-    if(has(D.lang_tool)) s+=`，評估工具為${D.lang_tool}`;
+    if(has(D.lang_sev)) s+=`，BDAE 失語症嚴重度 ${D.lang_sev.split(" — ")[0]} 級`;
     L.push(s+"。");
   }
+  if(tools.length||has(D.lang_score))
+    L.push(`評估工具：${tools.join("、")}${has(D.lang_score)?`${tools.length?"，":""}${D.lang_score}`:""}。`);
+  // 自發性言語
+  const sp=[];
+  if(has(D.lang_flu)) sp.push(D.lang_flu==="幾乎無口語"?"幾乎無口語":`言語${D.lang_flu}`);
+  const INFO={"完整、切題":"訊息完整且切題","大致可傳達主要訊息":"大致可傳達主要訊息","僅片段訊息":"僅能傳達片段訊息","無法傳達訊息":"無法傳達訊息"};
+  if(has(D.lang_info)) sp.push(INFO[D.lang_info]||D.lang_info);
+  if(has(D.lang_mlu)) sp.push(`最長語句約 ${D.lang_mlu.replace(/字$/,"").trim()} 字`);
+  let spS=sp.length?`自發性言語${has(D.lang_task)?`（${list(D.lang_task)}）`:""}：${sp.join("，")}`:"";
+  if(has(D.lang_feat)) spS+=`${spS?"；":"自發性言語："}可見${list(D.lang_feat)}`;
+  if(spS) L.push(spS+"。"+langSample());
+  else if(has(D.lang_sample)) L.push(langSample());
+  // 聽理解
+  if(G("la")||has(D.la_cue)){
+    let t=G("la")?`聽理解：${G("la")}。`:"聽理解：";
+    const cue=arrOf(D.la_cue);
+    if(cue.includes("無需協助")) t+="理解時無需額外協助。";
+    else if(cue.length) t+=`給予${cue.join("、")}有助於理解。`;
+    L.push(t);
+  }
+  // 覆誦
+  if(G("rp")||G("au")||has(D.rp_err)){
+    const t=[];
+    const c=x=>x.replace(/；/g,"，");
+    if(G("rp")) t.push(`覆誦${c(G("rp"))}`);
+    if(has(D.rp_err)) t.push(`覆誦錯誤為${list(D.rp_err)}`);
+    if(G("au")) t.push(`自動化言語${c(G("au"))}`);
+    L.push(`覆誦與自動化言語：${t.join("；")}。`);
+  }
+  // 命名
+  if(G("nm")||has(D.nm_flu)||has(D.nm_err)||has(D.nm_cue)){
+    const t=[];
+    if(G("nm")) t.push(G("nm"));
+    if(has(D.nm_flu)) t.push(`類別流暢度（動物，1 分鐘）${D.nm_flu}`);
+    if(has(D.nm_err)) t.push(`錯誤類型為${list(D.nm_err)}`);
+    const cue=arrOf(D.nm_cue);
+    if(cue.includes("提示無效")) t.push("給予提示仍難以說出目標詞");
+    const eff=cue.filter(x=>x!=="提示無效").map(x=>x.replace(/有效$/,""));
+    if(eff.length) t.push(`${eff.join("、")}有效`);
+    L.push(`命名與找詞：${t.join("；")}。`);
+  }
+  if(G("rd")) L.push(`閱讀：${G("rd")}。`);
+  if(G("wr")) L.push(`書寫：${G("wr")}。`);
+  if(has(D.rw_note)) L.push(D.rw_note);
   const imp=dims.filter(([,k])=>has(D[k])&&D[k]!=="正常").map(([n,k])=>`${n}${D[k]}`);
   const ok =dims.filter(([,k])=>D[k]==="正常").map(([n])=>n);
-  if(imp.length) L.push(`各向度表現：${imp.join("、")}${ok.length?`；${ok.join("、")}表現正常`:""}。`);
-  else if(ok.length) L.push(`各向度表現：${ok.join("、")}均在正常範圍。`);
-  if(has(D.lang_func)) L.push(`功能性溝通方面，${D.lang_func}。`);
+  if(imp.length) L.push(`各向度總結：${imp.join("、")}${ok.length?`；${ok.join("、")}表現正常`:""}。`);
+  else if(ok.length) L.push(`各向度總結：${ok.join("、")}均在正常範圍。`);
+  if(has(D.lang_sev)) L.push(`嚴重度：${D.lang_sev.split(" — ")[1]}。`);
+  if(has(D.lang_func)) L.push(`功能性溝通方面，${D.lang_func}${has(D.lang_strat)?`；${list(D.lang_strat)}可提升溝通效果`:""}。`);
+  else if(has(D.lang_strat)) L.push(`功能性溝通方面，${list(D.lang_strat)}可提升溝通效果。`);
   if(has(D.lang_imp_other)) L.push(D.lang_imp_other);
   if(has(D.lang_note)) L.push(D.lang_note);
   return blk("語言功能",L);
@@ -2027,7 +2190,7 @@ function gussVerdict(t){
    ========================================================= */
 function progress(){
   const keys=["note_type","rec_date","name","chart","gender","age","dx","chief","modules"];
-  if(on("lang")) keys.push("lang_imp","lgm_aud","lgm_exp","lang_func");
+  if(on("lang")) keys.push("lang_imp","lang_flu","lgm_aud","lgm_exp","lang_func");
   if(on("sp"))   keys.push("sp_imp","sp_intel","tg_l","tg_r","om_lip","om_jaw");
   if(on("sw"))   keys.push("sw_imp","feed","sw_sys","guss_do");
   if(on("hnc"))  keys.push("h_imp","h_type","h_site","hs_tg");
@@ -2140,6 +2303,7 @@ const RERENDER=new Set(["modules","feed","home_ok","guss_do","c_strat","c_exer",
 function softRefresh(k,el){
   touch();
   if(RERENDER.has(k)||/^g[1-4]_/.test(k)){ render(); return; }
+  if(LANG_SUG_KEYS.has(k)){ const n=document.getElementById("langSug"); if(n) n.innerHTML=langSug(); }
   if(el) mark(el); else bump();
 }
 
