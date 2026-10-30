@@ -319,6 +319,12 @@ function step5(){
   F('溝通功能（可複選）',chips('it.func',FUNCS,true))+
   F('遊戲層次',chips('it.play',['感覺動作遊戲','功能性遊戲','假裝／扮演遊戲','規則遊戲'])));
 }
+/* 手動調整過建議後不再自動帶入，但構音／口腔動作改回正常時，對應的居家練習與訓練方向仍要拿掉，以免報告出現矛盾 */
+function pruneStale(){
+ const tied=['oral','slow','artic'];
+ S.home=(S.home||[]).filter(k=>{if(!tied.includes(k))return true;const h=HOME.find(x=>x[0]===k);try{return h[3](S)}catch(_){return false}});
+ if(S.o.mo==='無異常'){S.dir.o=[];if(S.need.o==='需要訓練')S.need.o='不需要'}
+}
 function autoFill(){
  const s=S;const lvNeed=(lv,dirs)=>!isAbn(lv)?(dirs.length?'需要追蹤及諮詢':'不需要'):'需要訓練';
  const c=[];if(nok(s.c.cmd1))c.push(C_DIR[3]);if(nok(s.c.obj))c.push(C_DIR[4]);if(nok(s.c.adj))c.push(C_DIR[5]);if(nok(s.c.cmd2)||nok(s.c.cmd3))c.push(C_DIR[6]);if(nok(s.c.cplx))c.push(C_DIR[7]);
@@ -337,7 +343,7 @@ function autoFill(){
  s.freq=(langAbn(s)||s.artic==='異常'||s.o.mo==='異常')?'至少一周一次':'暫不需治療';
 }
 function step6(){
- if(S.auto)autoFill();
+ if(S.auto)autoFill();else pruneStale();
  const D=(k,list,lab)=>F(lab+'訓練',seg('need.'+k,NEED))+chips('dir.'+k,list.map(x=>[x,x.replace(/（.+?）|，如：.+$/g,'')]),true);
  return `<div class="card" style="flex-direction:row;align-items:center;justify-content:space-between;gap:10px"><span class="hint" style="font-size:13px">${S.auto?'已依前面的評估結果自動帶入，可再點選調整':'已手動調整，不再自動帶入'}</span><button class="ghost" data-act="reauto">重新帶入</button></div>`
  +card('治療建議',F('語言治療頻率',chips('freq',FREQ))+F('何時再評估／追蹤',chips('fu',FU)+`<span class="hint">不選會自動帶入：治療中約六個月後、定期追蹤三至六個月後</span>`)+F('轉介／跨專業',chips('ref',REFS.map(r=>[r[0],r[1]]),true))+F('輔具需求',seg('need.aid',NEED)))
@@ -498,7 +504,7 @@ function tables(){
  ];
 }
 function step7(){
- if(S.auto)autoFill();
+ if(S.auto)autoFill();else pruneStale();
  const H='語言治療評估欄位內，分項敘述';
  const blocks=[
   ['評估結果與建議','團隊評估結果，1.評估結果報告-語言治療評估（「主訴與就診問題」下方）',pSummary()],
@@ -624,6 +630,7 @@ function fillDoc(doc){
 async function buildDocx(){
  const zip=await JSZip.loadAsync(TPL_B64,{base64:true});
  const xml=await zip.file('word/document.xml').async('string');
+ if(S.auto)autoFill();else pruneStale();
  const doc=new DOMParser().parseFromString(xml,'application/xml');
  fillDoc(doc);
  zip.file('word/document.xml',new XMLSerializer().serializeToString(doc));
@@ -649,7 +656,7 @@ async function saveDocx(btn){
 const RENDER=[step0,step1,step2,step3,step4,step5,step6,step7];
 const isWide=()=>window.matchMedia('(min-width:1000px)').matches;
 function sidePreview(){
- if(S.auto)autoFill();
+ if(S.auto)autoFill();else pruneStale();
  const bl=[['評估結果與建議',pSummary()],...(oralShown()?[['進食、吞嚥和口腔動作功能',pOral()]]:[]),['語言理解和認知能力',pComp()],['口語表達能力',pExp()],['說話能力',pSpeech()],['溝通互動和效度層面',pInter()],['建議',pRec()],['具體建議',pHome()]].filter(b=>b[1]);
  PV=bl.map(b=>b[1]);
  return `<div class="pv"><div class="pvh"><b>報告即時預覽</b><button class="copy" data-act="docx">下載綜合版 Word</button></div>`+
