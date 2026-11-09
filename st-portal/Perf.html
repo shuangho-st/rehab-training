@@ -130,7 +130,7 @@ form{background:var(--night-2);border:3px solid var(--edge);border-radius:20px;b
         <div class="hint">寫日期和主題就好，組長核對用。</div>
       </div>
       <button class="go" id="send" type="submit">送出提報</button>
-      <p class="note">送出後會記在<b id="fmMon"></b>月。組長會再確認要不要採計；不採計的會在「我的本月」顯示「不採計」。寫錯了請跟組長說。</p>
+      <p class="note">送出後會記在<b id="fmMon"></b>月、記在你自己名下。組長會再確認要不要採計；不採計的會在「我的本月」顯示「不採計」。寫錯了請跟組長說。</p>
     </form>
   </section>
 </div>
@@ -172,11 +172,9 @@ call("perfInit").then(r=>{
   META=r; ITEMS=r.items||[];
   $("hi").textContent = r.me + " 的本月";
   const who=$("who");
-  if(r.admin){
-    who.style.display="";
-    who.innerHTML=r.staff.map(n=>`<option ${n===r.me?"selected":""}>${esc(n)}</option>`).join("");
-    $("sub").textContent="組長模式：可以切換看每個人";
-  }
+  who.style.display="";
+  who.innerHTML=r.staff.map(n=>`<option ${n===r.me?"selected":""}>${esc(n)}</option>`).join("");
+  $("sub").textContent="右上角可以切換看組裡每個人";
   const mon=$("mon"), now=r.month;
   let opts=""; for(let m=1;m<=12;m++) opts+=`<option value="${m}" ${m===now?"selected":""}>${r.year-1911} 年 ${m} 月</option>`;
   mon.innerHTML=opts;
@@ -194,7 +192,8 @@ document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
 }));
 
 /* ---------- 我的本月 ---------- */
-function curName(){ return META.admin ? $("who").value : META.me; }
+function curName(){ return $("who").value || META.me; }
+function postName(){ return META.admin ? curName() : META.me; }
 function loadSum(){
   $("pSum").innerHTML='<div class="loading">讀取中…</div>';
   call("perfMonth", curName(), Number($("mon").value)).then(renderSum).catch(showErr);
@@ -258,7 +257,8 @@ $("fm").addEventListener("submit",e=>{
   e.preventDefault();
   const x=ITEMS[+$("item").value]; if(!x) return;
   const actual=x.min==="依實際";
-  const f={ name:curName(), month:Number($("mon").value), item:x.name,
+  if(!META.admin && curName()!==META.me){ return toast("只能提報自己的，請先把右上角切回自己"); }
+  const f={ name:postName(), month:Number($("mon").value), item:x.name,
     qty: actual?"":$("qty").value, min: actual?$("min").value:"", note:$("note").value.trim() };
   if(actual && !(Number(f.min)>0)) return toast("請填實際花了幾分鐘");
   if(!f.note) return toast("請寫一句內容說明");

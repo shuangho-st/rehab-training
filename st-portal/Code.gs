@@ -477,7 +477,9 @@ function 檢查草稿() {
    我的本月＋不固定行政提報（?p=perf）
    - 讀寫「ST績效與人次統計_115_v5」。組員不用打開那張表。
    - 身分：登入帳號的 @ 前面＝員編，對照 v5「設定」人員主檔。
-   - 一般組員只能看／提報自己；PERF_ADMINS 裡的員編可以切換看所有人。
+   - 每個人都可以切換看全組的數字（慈芯 11/9 要的：大家看得到彼此）；
+     提報只能報自己，PERF.ADMINS 裡的員編可以幫別人代填。
+   - 之後若加入具體獎金金額：金額只能看自己的（慈芯 11/9 說明），不要跟著全組開放。
    ========================================================================= */
 const PERF = {
   SHEET_ID: '1IAAcbBcDoY5iyf_65o2zcWdq6guGxn2YOzJirAwPfvs',
@@ -518,16 +520,16 @@ function perfInit() {
     }
     return {
       ok: true, known: true, me: w.me.name, admin: w.admin,
-      staff: w.admin ? w.staff : [w.me.name],
+      staff: w.staff,
       year: w.year, month: new Date().getMonth() + 1, items: items
     };
   } catch (e) { return { ok: false, error: String(e) }; }
 }
 
-function perfName_(w, name) {
+function perfName_(w, name, forWrite) {
   if (!w.me) throw new Error('找不到你的員編，請用學校帳號登入，或請組長把你加進人員主檔');
   if (!name || name === w.me.name) return w.me.name;
-  if (!w.admin) throw new Error('只能查看自己的資料');
+  if (forWrite && !w.admin) throw new Error('只能提報自己的行政工作');
   if (w.staff.indexOf(name) < 0) throw new Error('人員主檔沒有「' + name + '」');
   return name;
 }
@@ -601,7 +603,7 @@ function perfSubmitAdmin(f) {
   try {
     f = f || {};
     const w = perfWho_();
-    const name = perfName_(w, f.name);
+    const name = perfName_(w, f.name, true);
     const month = Number(f.month);
     if (!(month >= 1 && month <= 12)) throw new Error('月份不正確');
     const item = String(f.item || '').trim();
@@ -631,9 +633,11 @@ function perfSubmitAdmin(f) {
     sh.getRange(r, 10).setValue(note);
     sh.getRange(r, 11).setValue('線上提報 ' +
       Utilities.formatDate(new Date(), 'Asia/Taipei', 'M/d HH:mm') + (w.me.name !== name ? '（' + w.me.name + ' 代填）' : ''));
-    // 公式欄（類別、標準分鐘、採計分鐘、檢查）沿用第 4 列
+    // 公式欄（類別、標準分鐘、採計分鐘、檢查）沿用第 4 列。
+    // 不用 copyTo：表上有篩選時，第 4 列被藏起來會出現「不支援含有已篩除列的範圍」。
     [4, 6, 9, 12].forEach(function (c) {
-      sh.getRange(4, c).copyTo(sh.getRange(r, c), SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+      const f1 = sh.getRange(4, c).getFormulaR1C1();
+      if (f1) sh.getRange(r, c).setFormulaR1C1(f1);
     });
     SpreadsheetApp.flush();
     const v = sh.getRange(r, 1, 1, 12).getDisplayValues()[0];
