@@ -82,6 +82,12 @@ form{background:var(--night-2);border:3px solid var(--edge);border-radius:20px;b
 .std b{color:var(--lemon)}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--star);color:var(--ink);border:3px solid var(--edge);border-radius:999px;padding:9px 20px;font-weight:700;box-shadow:var(--pop);display:none;max-width:92vw;text-align:center;z-index:9}
 .loading{color:var(--star-dim);padding:30px 0;text-align:center}
+.qs,.ms{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.chip{padding:7px 13px;border:2px solid var(--edge);border-radius:999px;background:var(--night-2);color:var(--star);font-weight:700;font-size:14px;cursor:pointer}
+.chip.on{background:var(--lemon);color:var(--ink)}
+.out{margin-top:14px;background:var(--night-2);border:3px solid var(--edge);border-radius:18px;padding:14px 16px;line-height:1.7}
+.out a{color:var(--lemon);font-weight:800}
+.out .w{color:#FFB4A8;font-size:13.5px}
 .note{font-size:12.5px;color:var(--ink-3);margin-top:14px;line-height:1.6}
 @media (max-width:560px){.two{grid-template-columns:1fr}.card .v{font-size:32px}}
 </style>
@@ -103,6 +109,7 @@ form{background:var(--night-2);border:3px solid var(--edge);border-radius:20px;b
   <div class="tabs">
     <button class="tab on" data-t="sum">📊 我的本月</button>
     <button class="tab" data-t="add">✏️ 提報不固定行政</button>
+    <button class="tab" data-t="sec" id="tabSec" style="display:none">📮 給秘書的報表</button>
   </div>
 
   <section id="pSum"><div class="loading">讀取中…</div></section>
@@ -133,6 +140,18 @@ form{background:var(--night-2);border:3px solid var(--edge);border-radius:20px;b
       <p class="note">送出後會記在<b id="fmMon"></b>月、記在你自己名下。組長會再確認要不要採計；不採計的會在「我的本月」顯示「不採計」。寫錯了請跟組長說。</p>
     </form>
   </section>
+
+  <section id="pSec" style="display:none">
+    <div class="f">
+      <label>要哪幾個月？</label>
+      <div class="qs" id="qs"></div>
+      <div class="ms" id="ms"></div>
+      <div class="hint">按季別一次選三個月，也可以單點月份。月份要先在 v5「結算月份到績效」結算過才有數字。</div>
+    </div>
+    <button class="go" id="mk" type="button">產生人次表＋業績分配比例</button>
+    <div id="secOut"></div>
+    <p class="note">會在雲端「給秘書報表」資料夾產生一份試算表，裡面有「人次表」和「業績分配比例」兩頁，格式照之前給裕惠秘書的樣子。可以直接下載 Excel 附在信裡。只有組長看得到這個按鈕。</p>
+  </section>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -160,7 +179,8 @@ const DEMO={
   perfMonth:(n,m)=>({ok:true,name:n,month:m,year:2026,visits:m===10?110:24,byType:{"成人":m===10?7:2,"小兒":m===10?3:1,"吞嚥":m===10?100:21},points:m===10?241.5:52.75,inpatient:m===10?49:12,lastDay:"11/8",fixMin:1380,varMin:270,
     adminItems:[{item:"院內醫療人員/家長教育講座",qty:"1",min:180,counted:true,note:"11/5 家長講座"},{item:"其他不固定行政",qty:"",min:90,counted:false,note:"組內會議"}],
     final:m===10?{workDays:20,leave:1,points:241.5,visits:110,slots:24.6,perSlotPts:9.8,bonus:0.8,perfShare:.0912,adminShare:.0421,total:.1333}:null}),
-  perfSubmitAdmin:f=>({ok:true,row:99,min:f.min||180})
+  perfSubmitAdmin:f=>({ok:true,row:99,min:f.min||180}),
+  perfSecretaryReport:ms=>({ok:true,name:"115年"+ms.join("、")+"月 ST人次表與業績分配比例",url:"#",xlsx:"#",warn:ms.includes(11)?["11 月還沒結算人次（個案人次輸入沒有資料）"]:[]})
 };
 /* ---------- 啟動 ---------- */
 call("perfInit").then(r=>{
@@ -180,6 +200,7 @@ call("perfInit").then(r=>{
   mon.innerHTML=opts;
   $("item").innerHTML=ITEMS.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("");
   onItem(); loadSum();
+  if(r.admin) initSec();
 }).catch(showErr);
 
 $("who").addEventListener("change",()=>{ $("hi").textContent=$("who").value+" 的本月"; loadSum(); });
@@ -188,6 +209,7 @@ document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
   $("pSum").style.display=b.dataset.t==="sum"?"":"none";
   $("pAdd").style.display=b.dataset.t==="add"?"":"none";
+  $("pSec").style.display=b.dataset.t==="sec"?"":"none";
   $("fmMon").textContent=$("mon").value;
 }));
 
@@ -271,6 +293,35 @@ $("fm").addEventListener("submit",e=>{
     document.querySelector('.tab[data-t="sum"]').click(); loadSum();
   }).catch(err=>{ $("send").disabled=false; $("send").textContent="送出提報"; showErr(err); });
 });
+
+/* ---------- 給秘書的報表（組長） ---------- */
+const SEL=new Set();
+function initSec(){
+  $("tabSec").style.display="";
+  const now=META.month, last=now===1?12:now-1;
+  $("qs").innerHTML=[1,2,3,4].map(q=>`<button type="button" class="chip" data-q="${q}">第 ${q} 季（${q*3-2}–${q*3} 月）</button>`).join("");
+  $("ms").innerHTML=Array.from({length:12},(_,i)=>`<button type="button" class="chip" data-m="${i+1}">${i+1} 月</button>`).join("");
+  SEL.add(last); paintSec();
+  $("qs").addEventListener("click",e=>{ const q=+(e.target.dataset.q||0); if(!q) return; SEL.clear(); [0,1,2].forEach(i=>SEL.add(q*3-2+i)); paintSec(); });
+  $("ms").addEventListener("click",e=>{ const m=+(e.target.dataset.m||0); if(!m) return; SEL.has(m)?SEL.delete(m):SEL.add(m); paintSec(); });
+  $("mk").addEventListener("click",makeSec);
+}
+function paintSec(){
+  document.querySelectorAll("#ms .chip").forEach(b=>b.classList.toggle("on",SEL.has(+b.dataset.m)));
+  document.querySelectorAll("#qs .chip").forEach(b=>{ const q=+b.dataset.q; b.classList.toggle("on",SEL.size===3&&[0,1,2].every(i=>SEL.has(q*3-2+i))); });
+}
+function makeSec(){
+  const ms=[...SEL].sort((a,b)=>a-b);
+  if(!ms.length) return toast("請先選月份");
+  const b=$("mk"); b.disabled=true; b.textContent="產生中…（約 10 秒）"; $("secOut").innerHTML="";
+  call("perfSecretaryReport", ms).then(r=>{
+    b.disabled=false; b.textContent="產生人次表＋業績分配比例";
+    if(!r||!r.ok) return toast((r&&r.error)||"產生失敗");
+    $("secOut").innerHTML=`<div class="out">✅ 已產生：<b>${esc(r.name)}</b><br>
+      <a href="${esc(r.url)}" target="_blank" rel="noopener">打開試算表</a>　·　<a href="${esc(r.xlsx)}" target="_blank" rel="noopener">下載 Excel</a>
+      ${(r.warn||[]).map(w=>`<div class="w">⚠️ ${esc(w)}</div>`).join("")}</div>`;
+  }).catch(err=>{ b.disabled=false; b.textContent="產生人次表＋業績分配比例"; showErr(err); });
+}
 
 window.__PORTAL_BOOT="js";
 </script>

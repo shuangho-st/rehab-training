@@ -657,3 +657,122 @@ function perfSubmitAdmin(f) {
     try { lock.releaseLock(); } catch (e) {}
   }
 }
+
+/* =========================================================================
+   給秘書的報表（組長專用）：選月份或一季 → 產生一份新的試算表
+   - 「人次表」：格式照舊表「115年全組人次」（成人／小兒／吞嚥／總計 × 每位治療師，右側合計、工作日數、平均、護家）
+   - 「業績分配比例」：格式照舊表「業績分配比例-裕惠」（每月一塊：員編、姓名、比例，合計 100%）
+   - 檔案放在組長雲端硬碟的「給秘書報表」資料夾；回傳試算表與 Excel 下載網址。
+   ========================================================================= */
+function perfSecretaryReport(months) {
+  try {
+    const w = perfWho_();
+    if (!w.admin) throw new Error('只有組長可以產生給秘書的報表');
+    months = (months || []).map(Number).filter(function (m) { return m >= 1 && m <= 12; });
+    if (!months.length) throw new Error('請選月份');
+    const ss = perfSs_();
+    const roc = w.year - 1911;
+
+    // 人員主檔（照主檔順序；簡稱給人次表用）
+    const staff = ss.getRange(PERF.STAFF_RANGE).getDisplayValues()
+      .filter(function (r) { return r[0] && r[1]; })
+      .map(function (r) { return { id: r[0], name: r[1], short: r[2] || r[1] }; });
+
+    // 個案人次輸入：月份、姓名、成人、小兒、吞嚥、小計
+    const cnt = ss.getSheetByName('個案人次輸入').getDataRange().getValues().slice(3);
+    // 人次統計：月份列 A..L
+    const stat = ss.getSheetByName('人次統計').getRange('A4:L15').getValues();
+    // 績效計算：個人總比例 AA（index 26），總點數 J（index 9）
+    const perf = ss.getSheetByName('績效計算').getDataRange().getValues().slice(3);
+
+    const warn = [];
+    const visitBlocks = [], shareBlocks = [];
+    months.forEach(function (m) {
+      // ---- 人次 ----
+      const people = staff.map(function (s) {
+        const r = cnt.filter(function (x) { return Number(x[0]) === m && String(x[1]) === s.name; })[0];
+        return { s: s, a: r ? num_(r[2]) : null, c: r ? num_(r[3]) : null, d: r ? num_(r[4]) : null };
+      }).filter(function (p) { return p.a !== null; });
+      if (!people.length) warn.push(m + ' 月還沒結算人次（個案人次輸入沒有資料）');
+      const st = stat.filter(function (x) { return Number(x[0]) === m; })[0] || [];
+      visitBlocks.push({ m: m, people: people, st: st });
+
+      // ---- 比例 ----
+      const rows = [];
+      staff.forEach(function (s) {
+        const r = perf.filter(function (x) {
+          return Number(x[0]) === m && String(x[1]) === s.name && x[9] !== '' && x[9] !== null;
+        })[0];
+        if (r && r[26] !== '' && r[26] !== null) rows.push([s.id, s.name, num_(r[26])]);
+      });
+      if (!rows.length) warn.push(m + ' 月還沒結算業績比例（績效計算沒有總點數）');
+      shareBlocks.push({ m: m, rows: rows });
+    });
+
+    // ---- 建檔 ----
+    const label = months.length === 1 ? roc + '年' + months[0] + '月'
+      : roc + '年' + months[0] + '-' + months[months.length - 1] + '月';
+    const out = SpreadsheetApp.create(label + ' ST人次表與業績分配比例');
+    const sv = out.getSheets()[0].setName('人次表');
+    var row = 1;
+    visitBlocks.forEach(function (b) {
+      const names = b.people.map(function (p) { return p.s.short; });
+      const n = names.length;
+      const head = [b.m + '月'].concat(names, ['合計']);
+      const sum = function (k) { return b.people.reduce(function (t, p) { return t + (p[k] || 0); }, 0); };
+      const body = [
+        ['成人'].concat(b.people.map(function (p) { return p.a; }), [sum('a')]),
+        ['小兒'].concat(b.people.map(function (p) { return p.c; }), [sum('c')]),
+        ['吞嚥'].concat(b.people.map(function (p) { return p.d; }), [sum('d')]),
+        ['總計'].concat(b.people.map(function (p) { return p.a + p.c + p.d; }), [sum('a') + sum('c') + sum('d')])
+      ];
+      sv.getRange(row, 1, 1, n + 2).setValues([head]).setFontWeight('bold').setBackground('#E8EAF6');
+      sv.getRange(row + 1, 1, 4, n + 2).setValues(body);
+      sv.getRange(row + 4, 1, 1, n + 2).setFontWeight('bold');
+      // 右側統計
+      const st = b.st;
+      const side = [
+        ['工作日數', st[5] === '' ? '' : st[5]],
+        ['治療師人數', st[6] === '' ? '' : st[6]],
+        ['每人每天平均', st[7] === '' ? '' : st[7]],
+        ['每人每月平均', st[8] === '' ? '' : st[8]],
+        ['護理之家15樓', st[9] === '' ? '' : st[9]],
+        ['護理之家13樓', st[10] === '' ? '' : st[10]],
+        ['護家合計', st[11] === '' ? '' : st[11]]
+      ];
+      sv.getRange(row, n + 4, side.length, 2).setValues(side);
+      sv.getRange(row, n + 5, side.length, 1).setNumberFormat('0.##');
+      row += Math.max(6, side.length + 1) + 1;
+    });
+    sv.autoResizeColumns(1, sv.getLastColumn() || 1);
+
+    const ssh = out.insertSheet('業績分配比例');
+    ssh.getRange(1, 1).setValue(roc + '年').setFontWeight('bold');
+    var col = 1;
+    shareBlocks.forEach(function (b) {
+      const vals = [[b.m + '月', '員編', '語言治療師姓名', '業績分配比例']];
+      b.rows.forEach(function (r) { vals.push(['', r[0], r[1], r[2]]); });
+      const total = b.rows.reduce(function (t, r) { return t + r[2]; }, 0);
+      vals.push(['', '', '', total]);
+      ssh.getRange(2, col, vals.length, 4).setValues(vals);
+      ssh.getRange(2, col, 1, 4).setFontWeight('bold').setBackground('#E8EAF6');
+      ssh.getRange(3, col + 3, vals.length - 1, 1).setNumberFormat('0.00%');
+      ssh.getRange(2 + vals.length - 1, col + 3).setFontWeight('bold');
+      col += 5;
+    });
+    ssh.autoResizeColumns(1, ssh.getLastColumn() || 1);
+
+    // ---- 放進「給秘書報表」資料夾 ----
+    try {
+      const it = DriveApp.getFoldersByName('給秘書報表');
+      const folder = it.hasNext() ? it.next() : DriveApp.createFolder('給秘書報表');
+      DriveApp.getFileById(out.getId()).moveTo(folder);
+    } catch (e) { warn.push('檔案留在雲端硬碟最上層（移到資料夾失敗：' + e + '）'); }
+
+    return {
+      ok: true, name: out.getName(), url: out.getUrl(),
+      xlsx: 'https://docs.google.com/spreadsheets/d/' + out.getId() + '/export?format=xlsx',
+      warn: warn
+    };
+  } catch (e) { return { ok: false, error: String(e).replace(/^Error:\s*/, '') }; }
+}
