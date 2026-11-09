@@ -402,6 +402,7 @@ const DEFAULTS=[
   {g:"mine", n:"成人評估紀錄",        u:"", note:"分步驟表單", s:["eval"]},
   {g:"mine", n:"語言治療每日紀錄",    u:"", note:"每日治療日誌", s:["pt"]},
   {g:"mine", n:"小話芽 早療評估",     u:"", note:"兒童早期療育", s:["eval"]},
+  {g:"mine", n:"我的本月（人次・行政提報）", u:"?p=perf", note:"看自己的人次點數、提報不固定行政", s:["admin"]},
   {g:"hosp", n:"表單系統",            u:"http://10.125.254.244:9001", note:"需連院內網路", s:["start","pt","eval"]},
   {g:"hosp", n:"OnePage 病歷查詢",    u:"", note:"需連院內網路", s:["start","pt"]},
   {g:"hosp", n:"OneTeam",             u:"", note:"", s:["admin"]},
@@ -424,6 +425,10 @@ function bootData(s){
   REMIND = (s&&Array.isArray(s.remind)) ? s.remind : [];
   RDONE  = (s&&s.rdone&&typeof s.rdone==="object") ? s.rdone : {};
   TODO   = (s&&s.todo&&s.todo.d===dstr()) ? s.todo : {d:dstr(), items:[]};
+  // 新增的固定連結：舊使用者的連結清單裡沒有就補上
+  DEFAULTS.filter(x=>/^\?p=/.test(x.u)).forEach(x=>{
+    if(!LINKS.some(y=>y.u===x.u)) LINKS.push({...x, s:[...(x.s||[])]});
+  });
 }
 let saveTimer=null;
 function save(){

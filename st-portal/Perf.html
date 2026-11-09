@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1E1B3A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@400;600;800&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<title>我的本月</title>
+<style>
+/* 與工作入口同一套：夜空底＋粉彩貼紙，只做深色 */
+:root{
+  --night:#1E1B3A; --night-2:#2A2650; --night-3:#3A3570; --night-4:#4A4488;
+  --star:#F4F1FF; --star-dim:#B9B3E0; --ink:#241F3D; --edge:#15122B; --ink-3:#8F89BD;
+  --lemon:#FFE070; --pink:#FFB3CB; --mint:#9FEBC6; --sky:#A9D4FF; --lilac:#CDBDFF; --peach:#FFC59E; --red:#FF7A8A;
+  --pop:0 5px 0 var(--edge);
+  --sans:"Chiron GoRound TC","Noto Sans TC",-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{background:var(--night)}
+body{font-family:var(--sans);color:var(--star);background:var(--night);font-size:15px;line-height:1.65;-webkit-text-size-adjust:100%;
+  background-image:radial-gradient(circle at 8% 4%,rgba(255,224,112,.10) 0 130px,transparent 131px),
+    radial-gradient(circle at 92% 14%,rgba(205,189,255,.10) 0 170px,transparent 171px)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px dashed var(--lemon);outline-offset:3px}
+.wrap{max-width:880px;margin:0 auto;padding:28px 18px 80px}
+#errbar{display:none;background:var(--red);color:var(--ink);padding:10px 16px;border-radius:12px;margin-bottom:14px;font-weight:700}
+
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.bubble{flex:1 1 18rem;background:var(--star);color:var(--ink);border:3px solid var(--edge);border-radius:22px;padding:12px 20px;box-shadow:var(--pop)}
+.bubble h1{margin:0;font-size:clamp(20px,4vw,26px);font-weight:800;letter-spacing:.03em;line-height:1.3}
+.bubble p{margin:2px 0 0;color:#5B5480;font-size:13px}
+.pick{display:flex;gap:8px;flex-wrap:wrap}
+select,input,textarea{background:var(--night-2);color:var(--star);border:3px solid var(--edge);border-radius:14px;padding:8px 12px;box-shadow:0 3px 0 var(--edge)}
+select:focus,input:focus,textarea:focus{outline:none;box-shadow:0 3px 0 var(--edge),0 0 0 3px var(--lemon)}
+
+.tabs{display:flex;gap:8px;margin:0 0 18px}
+.tab{padding:9px 18px;border:3px solid var(--edge);border-radius:999px;background:var(--night-2);color:var(--star-dim);cursor:pointer;font-weight:700;box-shadow:0 4px 0 var(--edge)}
+.tab.on{background:var(--lemon);color:var(--ink)}
+.tab:active{transform:translateY(3px);box-shadow:0 1px 0 var(--edge)}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{background:var(--night-2);border:3px solid var(--edge);border-radius:20px;padding:16px 18px;box-shadow:var(--pop);position:relative}
+.card .k{font-size:13px;color:var(--star-dim);font-weight:700;letter-spacing:.04em}
+.card .v{font-size:38px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;margin:2px 0 4px}
+.card .v small{font-size:15px;font-weight:600;color:var(--star-dim);margin-left:4px}
+.card .why{font-size:13px;color:var(--star-dim);line-height:1.55}
+.card .why b{color:var(--star)}
+.card.big{grid-column:1/-1;background:var(--lemon);color:var(--ink)}
+.card.big .k,.card.big .why,.card.big .v small{color:#4B4470}
+.card.big .why b{color:var(--ink)}
+.c1 .v{color:var(--mint)} .c2 .v{color:var(--sky)} .c3 .v{color:var(--pink)} .c4 .v{color:var(--peach)}
+.pending{color:var(--star-dim);font-size:22px !important}
+.split{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{font-size:12px;padding:2px 10px;border-radius:999px;background:var(--night-3);color:var(--star)}
+
+h2{font-size:17px;margin:26px 0 10px;font-weight:800;letter-spacing:.04em}
+.list{background:var(--night-2);border:3px solid var(--edge);border-radius:18px;box-shadow:var(--pop);overflow:hidden}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 16px;border-top:1px solid rgba(185,179,224,.15)}
+.row:first-child{border-top:0}
+.row .it{font-weight:700}
+.row .nt{grid-column:1/-1;font-size:12.5px;color:var(--star-dim)}
+.row .mn{font-weight:800;color:var(--lemon);font-variant-numeric:tabular-nums}
+.row .no{color:var(--red);font-size:12px;font-weight:700}
+.empty{padding:16px;color:var(--ink-3);font-size:14px}
+
+form{background:var(--night-2);border:3px solid var(--edge);border-radius:20px;box-shadow:var(--pop);padding:18px 18px 20px}
+.f{margin-bottom:14px}
+.f label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+.f .hint{font-size:12.5px;color:var(--star-dim);margin-top:5px}
+.f select,.f input,.f textarea{width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.go{width:100%;padding:12px;border:3px solid var(--edge);border-radius:999px;background:var(--mint);color:var(--ink);font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 4px 0 var(--edge)}
+.go:disabled{opacity:.55;cursor:wait}
+.go:active{transform:translateY(3px);box-shadow:0 1px 0 var(--edge)}
+.std{background:var(--night-3);border-radius:12px;padding:8px 12px;font-size:13.5px;margin-top:8px}
+.std b{color:var(--lemon)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--star);color:var(--ink);border:3px solid var(--edge);border-radius:999px;padding:9px 20px;font-weight:700;box-shadow:var(--pop);display:none;max-width:92vw;text-align:center;z-index:9}
+.loading{color:var(--star-dim);padding:30px 0;text-align:center}
+.note{font-size:12.5px;color:var(--ink-3);margin-top:14px;line-height:1.6}
+@media (max-width:560px){.two{grid-template-columns:1fr}.card .v{font-size:32px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="errbar"></div>
+  <header>
+    <div class="bubble">
+      <h1 id="hi">我的本月</h1>
+      <p id="sub">人次、點數和行政時間，一頁看完</p>
+    </div>
+    <div class="pick">
+      <select id="who" aria-label="人員" style="display:none"></select>
+      <select id="mon" aria-label="月份"></select>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" data-t="sum">📊 我的本月</button>
+    <button class="tab" data-t="add">✏️ 提報不固定行政</button>
+  </div>
+
+  <section id="pSum"><div class="loading">讀取中…</div></section>
+
+  <section id="pAdd" style="display:none">
+    <form id="fm" autocomplete="off">
+      <div class="f">
+        <label for="item">做了什麼</label>
+        <select id="item" required></select>
+        <div class="std" id="std"></div>
+      </div>
+      <div class="two">
+        <div class="f" id="fQty">
+          <label for="qty">幾件／幾次</label>
+          <input id="qty" type="number" min="1" max="100" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="f" id="fMin" style="display:none">
+          <label for="min">實際花了幾分鐘</label>
+          <input id="min" type="number" min="1" max="6000" step="1" inputmode="numeric" placeholder="例如 90">
+        </div>
+      </div>
+      <div class="f">
+        <label for="note">內容說明</label>
+        <textarea id="note" rows="2" maxlength="300" placeholder="例如：11/12 家長講座「吞嚥安全」" required></textarea>
+        <div class="hint">寫日期和主題就好，組長核對用。</div>
+      </div>
+      <button class="go" id="send" type="submit">送出提報</button>
+      <p class="note">送出後會記在<b id="fmMon"></b>月。組長會再確認要不要採計；不採計的會在「我的本月」顯示「不採計」。寫錯了請跟組長說。</p>
+    </form>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const HAS_GAS = !!(typeof google!=="undefined" && google.script && google.script.run);
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (n,d) => Number(n||0).toLocaleString("zh-TW",{maximumFractionDigits:d==null?0:d});
+let META=null, ITEMS=[];
+
+function call(fn, ...args){
+  return new Promise((res,rej)=>{
+    if(!HAS_GAS) return res(DEMO[fn] ? DEMO[fn](...args) : {ok:false,error:"預覽模式"});
+    google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej(e))[fn](...args);
+  });
+}
+function toast(t){ const el=$("toast"); el.textContent=t; el.style.display="block"; clearTimeout(toast.t); toast.t=setTimeout(()=>el.style.display="none",3200); }
+function showErr(e){ const b=$("errbar"); b.style.display="block"; b.textContent=String(e&&e.message||e); }
+
+/* ---------- 本機預覽用假資料（不連 Apps Script 時才用） ---------- */
+const DEMO={
+  perfInit:()=>({ok:true,known:true,me:"江慈芯",admin:true,staff:["江慈芯","劉彥妤","徐婉瑜"],year:2026,month:11,
+    items:[{name:"表單請購",min:"30",unit:"每件"},{name:"院內醫療人員/家長教育講座",min:"180",unit:"每件",note:"一般主題 3 小時；特殊主題 8–16 小時請用手動分鐘"},{name:"其他不固定行政",min:"依實際",unit:"依實際",note:"請填手動分鐘，內容寫在「內容說明」"}]}),
+  perfMonth:(n,m)=>({ok:true,name:n,month:m,year:2026,visits:m===10?110:24,byType:{"成人":m===10?7:2,"小兒":m===10?3:1,"吞嚥":m===10?100:21},points:m===10?241.5:52.75,inpatient:m===10?49:12,lastDay:"11/8",fixMin:1380,varMin:270,
+    adminItems:[{item:"院內醫療人員/家長教育講座",qty:"1",min:180,counted:true,note:"11/5 家長講座"},{item:"其他不固定行政",qty:"",min:90,counted:false,note:"組內會議"}],
+    final:m===10?{workDays:20,leave:1,points:241.5,visits:110,slots:24.6,perSlotPts:9.8,bonus:0.8,perfShare:.0912,adminShare:.0421,total:.1333}:null}),
+  perfSubmitAdmin:f=>({ok:true,row:99,min:f.min||180})
+};
+/* ---------- 啟動 ---------- */
+call("perfInit").then(r=>{
+  if(!r||!r.ok) return showErr((r&&r.error)||"讀取失敗");
+  if(!r.known){
+    $("pSum").innerHTML=`<div class="empty">找不到你的員編（${esc(r.email||"未登入")}）。請用學校帳號登入，或請組長把你加進人員主檔。</div>`;
+    $("pAdd").innerHTML=""; return;
+  }
+  META=r; ITEMS=r.items||[];
+  $("hi").textContent = r.me + " 的本月";
+  const who=$("who");
+  if(r.admin){
+    who.style.display="";
+    who.innerHTML=r.staff.map(n=>`<option ${n===r.me?"selected":""}>${esc(n)}</option>`).join("");
+    $("sub").textContent="組長模式：可以切換看每個人";
+  }
+  const mon=$("mon"), now=r.month;
+  let opts=""; for(let m=1;m<=12;m++) opts+=`<option value="${m}" ${m===now?"selected":""}>${r.year-1911} 年 ${m} 月</option>`;
+  mon.innerHTML=opts;
+  $("item").innerHTML=ITEMS.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("");
+  onItem(); loadSum();
+}).catch(showErr);
+
+$("who").addEventListener("change",()=>{ $("hi").textContent=$("who").value+" 的本月"; loadSum(); });
+$("mon").addEventListener("change",()=>{ loadSum(); $("fmMon").textContent=$("mon").value; });
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
+  $("pSum").style.display=b.dataset.t==="sum"?"":"none";
+  $("pAdd").style.display=b.dataset.t==="add"?"":"none";
+  $("fmMon").textContent=$("mon").value;
+}));
+
+/* ---------- 我的本月 ---------- */
+function curName(){ return META.admin ? $("who").value : META.me; }
+function loadSum(){
+  $("pSum").innerHTML='<div class="loading">讀取中…</div>';
+  call("perfMonth", curName(), Number($("mon").value)).then(renderSum).catch(showErr);
+}
+function renderSum(d){
+  if(!d||!d.ok) return showErr((d&&d.error)||"讀取失敗");
+  const f=d.final, t=d.byType;
+  let h='<div class="cards">';
+  if(f){
+    h+=`<div class="card big"><div class="k">這個月的分配比例</div>
+      <div class="v">${fmt(f.total*100,2)}<small>%</small></div>
+      <div class="why">= 績效 <b>${fmt(f.perfShare*100,2)}%</b>（看人次、點數和工作天）＋ 行政 <b>${fmt(f.adminShare*100,2)}%</b>（看行政分鐘佔全組多少）。
+      全組加起來是 100%，獎金照這個比例分。</div></div>`;
+  }else{
+    h+=`<div class="card big"><div class="k">這個月的分配比例</div>
+      <div class="v pending">月底結算後才會出來</div>
+      <div class="why">組長月底按「結算」後，這裡會顯示你的比例。下面的數字每天自動更新${d.lastDay?`，目前算到 <b>${esc(d.lastDay)}</b>`:""}。</div></div>`;
+  }
+  h+=`<div class="card c1"><div class="k">個案人次</div>
+    <div class="v">${fmt(d.visits)}<small>人次</small></div>
+    <div class="why">白板上<b>打勾</b>的格子才算。</div>
+    <div class="split"><span class="chip">成人 ${fmt(t["成人"])}</span><span class="chip">小兒 ${fmt(t["小兒"])}</span><span class="chip">吞嚥 ${fmt(t["吞嚥"])}</span>${d.inpatient?`<span class="chip">其中住院 ${fmt(d.inpatient)}</span>`:""}</div></div>`;
+  h+=`<div class="card c2"><div class="k">點數</div>
+    <div class="v">${fmt(d.points,2)}<small>點</small></div>
+    <div class="why">每種治療的點數不同，評估另外加 0.75 點。點數越高，績效比例越高。</div></div>`;
+  h+=`<div class="card c3"><div class="k">行政時間</div>
+    <div class="v">${fmt(d.fixMin+d.varMin)}<small>分鐘</small></div>
+    <div class="why">固定 <b>${fmt(d.fixMin)}</b> ＋ 不固定 <b>${fmt(d.varMin)}</b>。行政越多，臨床時間就扣掉越多，所以不會吃虧。</div></div>`;
+  if(f){
+    h+=`<div class="card c4"><div class="k">每個時段平均點數</div>
+      <div class="v">${fmt(f.perSlotPts,1)}<small>點／時段</small></div>
+      <div class="why">點數 ÷ 臨床時段（${fmt(f.slots,1)} 個，已扣掉行政和請假）。對到加乘 <b>${fmt(f.bonus,1)}</b> 倍：低於 5 點是 0 倍（績效比例會變 0），10 點是 1 倍，20 點以上最高 1.8 倍。</div></div>`;
+  }else{
+    h+=`<div class="card c4"><div class="k">每個時段平均點數</div>
+      <div class="v pending">月底結算後</div>
+      <div class="why">點數 ÷ 扣掉行政和請假後的臨床時段，低於 5 點是 0 倍，10 點是 1 倍，20 點以上最高 1.8 倍。</div></div>`;
+  }
+  h+='</div>';
+  h+=`<h2>✏️ 這個月提報的不固定行政</h2><div class="list">`;
+  if(!d.adminItems.length) h+=`<div class="empty">還沒有。點上面「提報不固定行政」新增。</div>`;
+  d.adminItems.forEach(x=>{
+    h+=`<div class="row"><span class="it">${esc(x.item)}${x.qty&&x.qty!=="1"?` × ${esc(x.qty)}`:""}</span>
+      <span>${x.counted?`<span class="mn">${fmt(x.min)} 分</span>`:`<span class="no">不採計</span>`}</span>
+      ${x.note?`<span class="nt">${esc(x.note)}</span>`:""}${x.check?`<span class="nt" style="color:var(--peach)">⚠ ${esc(x.check)}</span>`:""}</div>`;
+  });
+  h+='</div><p class="note">數字來自「ST績效與人次統計」，每天自動從白板匯入一次；今天打的勾通常明天才會算進來。</p>';
+  $("pSum").innerHTML=h;
+}
+
+/* ---------- 提報 ---------- */
+function onItem(){
+  const x=ITEMS[+$("item").value]; if(!x) return;
+  const actual = x.min==="依實際";
+  $("fMin").style.display = actual?"":"none";
+  $("fQty").style.display = actual?"none":"";
+  $("std").innerHTML = actual ? `這項<b>依實際時間</b>計算，請填花了幾分鐘。${x.note?"<br>"+esc(x.note):""}`
+    : `每${esc(String(x.unit||"件").replace(/^每/,""))}算 <b>${esc(x.min)} 分鐘</b>，會自動乘上件數。${x.note?"<br>"+esc(x.note):""}`;
+}
+$("item").addEventListener("change",onItem);
+$("fm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const x=ITEMS[+$("item").value]; if(!x) return;
+  const actual=x.min==="依實際";
+  const f={ name:curName(), month:Number($("mon").value), item:x.name,
+    qty: actual?"":$("qty").value, min: actual?$("min").value:"", note:$("note").value.trim() };
+  if(actual && !(Number(f.min)>0)) return toast("請填實際花了幾分鐘");
+  if(!f.note) return toast("請寫一句內容說明");
+  $("send").disabled=true; $("send").textContent="送出中…";
+  call("perfSubmitAdmin", f).then(r=>{
+    $("send").disabled=false; $("send").textContent="送出提報";
+    if(!r||!r.ok) return toast((r&&r.error)||"送出失敗");
+    toast(`已送出：${x.name} ${fmt(r.min)} 分鐘 ✨`);
+    $("note").value=""; $("min").value=""; $("qty").value="1";
+    document.querySelector('.tab[data-t="sum"]').click(); loadSum();
+  }).catch(err=>{ $("send").disabled=false; $("send").textContent="送出提報"; showErr(err); });
+});
+
+window.__PORTAL_BOOT="js";
+</script>
+</body>
+</html>
