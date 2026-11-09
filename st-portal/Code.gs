@@ -33,7 +33,8 @@ const CONFIG = {
   PAGES: {
     adult: 'Adult',          // 成人評估紀錄（分步驟表單）
     daily: 'Daily',          // 語言治療每日紀錄
-    early: 'Early'           // 早療語言治療評估紀錄
+    early: 'Early',          // 早療語言治療評估紀錄
+    perf:  'Perf'            // 我的本月＋不固定行政提報（讀寫績效表 v5）
   },
   HTML_NAME: 'Index.html',   // 備援：雲端硬碟上的檔名（需 Drive 授權）
   HTML_FILE_ID: '',          // 若有多個同名檔造成混淆，可直接指定檔案 ID
@@ -45,7 +46,7 @@ const CONFIG = {
 function doGet(e) {
   const p = (e && e.parameter && e.parameter.p) ? String(e.parameter.p) : '';
   const fileName = p ? (CONFIG.PAGES[p] || '') : CONFIG.PROJECT_HTML;
-  const title = p ? (p === 'adult' ? '成人評估紀錄' : p === 'daily' ? '語言治療每日紀錄' : p === 'early' ? '小話芽｜早療語言評估' : '表單')
+  const title = p ? (p === 'adult' ? '成人評估紀錄' : p === 'daily' ? '語言治療每日紀錄' : p === 'early' ? '小話芽｜早療語言評估' : p === 'perf' ? '我的本月' : '表單')
                   : '語言治療組 工作入口';
   let html;
   try {
@@ -469,4 +470,177 @@ function 檢查草稿() {
                '　段數=' + m.chunks);
   });
   Logger.log('保留天數：' + DRAFT_TTL_DAYS + '　上限份數：' + DRAFT_MAX);
+}
+
+
+/* =========================================================================
+   我的本月＋不固定行政提報（?p=perf）
+   - 讀寫「ST績效與人次統計_115_v5」。組員不用打開那張表。
+   - 身分：登入帳號的 @ 前面＝員編，對照 v5「設定」人員主檔。
+   - 一般組員只能看／提報自己；PERF_ADMINS 裡的員編可以切換看所有人。
+   ========================================================================= */
+const PERF = {
+  SHEET_ID: '1IAAcbBcDoY5iyf_65o2zcWdq6guGxn2YOzJirAwPfvs',
+  ADMINS: ['17398'],             // 技術組長（江慈芯）
+  STAFF_RANGE: "'設定'!A13:F42",  // 員編、姓名、簡稱、職別、份數、備註
+  YEAR_CELL: "'設定'!B9"
+};
+
+function perfSs_() { return SpreadsheetApp.openById(PERF.SHEET_ID); }
+
+function perfWho_() {
+  var email = '';
+  try { email = String(Session.getActiveUser().getEmail() || '').toLowerCase(); } catch (e) {}
+  const id = email.split('@')[0];
+  const ss = perfSs_();
+  const rows = ss.getRange(PERF.STAFF_RANGE).getDisplayValues()
+    .filter(function (r) { return r[0] && r[1]; });
+  var me = null;
+  rows.forEach(function (r) { if (String(r[0]).trim() === id) me = { id: r[0], name: r[1], role: r[3] }; });
+  return {
+    email: email, me: me,
+    admin: !!(me && PERF.ADMINS.indexOf(String(me.id)) >= 0),
+    staff: rows.map(function (r) { return r[1]; }),
+    year: Number(ss.getRange(PERF.YEAR_CELL).getValue()) || new Date().getFullYear()
+  };
+}
+
+/** 頁面一開啟：身分、可選人員、不固定行政項目 */
+function perfInit() {
+  try {
+    const w = perfWho_();
+    const items = perfSs_().getSheetByName('行政項目清單').getDataRange().getDisplayValues()
+      .slice(3)
+      .filter(function (r) { return r[0] === '不固定' && r[1]; })
+      .map(function (r) { return { name: r[1], min: r[2], unit: r[3], note: r[4] || '' }; });
+    if (!w.me) {
+      return { ok: true, known: false, email: w.email };
+    }
+    return {
+      ok: true, known: true, me: w.me.name, admin: w.admin,
+      staff: w.admin ? w.staff : [w.me.name],
+      year: w.year, month: new Date().getMonth() + 1, items: items
+    };
+  } catch (e) { return { ok: false, error: String(e) }; }
+}
+
+function perfName_(w, name) {
+  if (!w.me) throw new Error('找不到你的員編，請用學校帳號登入，或請組長把你加進人員主檔');
+  if (!name || name === w.me.name) return w.me.name;
+  if (!w.admin) throw new Error('只能查看自己的資料');
+  if (w.staff.indexOf(name) < 0) throw new Error('人員主檔沒有「' + name + '」');
+  return name;
+}
+
+function num_(v) {
+  if (typeof v === 'number') return v;
+  const n = Number(String(v || '').replace(/[,%\s]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+/** 我的本月：人次、點數、行政分鐘、（月底結算後）單位時間點數、加乘、個人比例 */
+function perfMonth(name, month) {
+  try {
+    const w = perfWho_();
+    name = perfName_(w, name);
+    month = Number(month);
+    if (!(month >= 1 && month <= 12)) throw new Error('月份不正確');
+    const ss = perfSs_();
+
+    // 1) 每日明細：成人／小兒／吞嚥人次、點數、住院人次
+    const d = ss.getSheetByName('每日明細').getDataRange().getValues();
+    var cnt = { 成人: 0, 小兒: 0, 吞嚥: 0 }, pts = 0, inpt = 0, lastDay = '';
+    for (var i = 1; i < d.length; i++) {
+      const r = d[i];
+      if (Number(r[1]) !== w.year || Number(r[2]) !== month || String(r[3]) !== name) continue;
+      const k = String(r[6]);
+      if (cnt.hasOwnProperty(k)) cnt[k] += num_(r[5]);
+      pts += num_(r[8]);
+      if (r[9] && k !== '不計人次') inpt += num_(r[5]);
+      const ds = r[0] instanceof Date ? Utilities.formatDate(r[0], 'Asia/Taipei', 'M/d') : String(r[0]);
+      if (r[0] instanceof Date && (!lastDay || r[0] > lastDay.d)) lastDay = { d: r[0], s: ds };
+    }
+    const visits = cnt['成人'] + cnt['小兒'] + cnt['吞嚥'];
+
+    // 2) 行政工作紀錄：本月固定／不固定分鐘＋自己提報的明細
+    const a = ss.getSheetByName('行政工作紀錄').getDataRange().getDisplayValues();
+    var fixMin = 0, varMin = 0, mine = [];
+    for (var j = 3; j < a.length; j++) {
+      const r = a[j];
+      if (Number(r[0]) !== month || r[1] !== name || !r[2]) continue;
+      const m = num_(r[8]);
+      if (r[3] === '固定') fixMin += m; else varMin += m;
+      if (r[3] !== '固定') mine.push({ row: j + 1, item: r[2], qty: r[4], min: m,
+        counted: r[7] !== '否', note: r[9], check: r[11] });
+    }
+
+    // 3) 績效計算：月底結算後才有
+    const p = ss.getSheetByName('績效計算').getDataRange().getValues();
+    var fin = null;
+    for (var k = 3; k < p.length; k++) {
+      const r = p[k];
+      if (Number(r[0]) === month && String(r[1]) === name && r[9] !== '' && r[9] !== null) {
+        fin = { workDays: num_(r[8]), leave: num_(r[7]), points: num_(r[9]), visits: num_(r[10]),
+                slots: num_(r[15]), perSlotPts: num_(r[17]), bonus: num_(r[18]),
+                perfShare: num_(r[23]), adminShare: num_(r[25]), total: num_(r[26]) };
+        break;
+      }
+    }
+    return {
+      ok: true, name: name, month: month, year: w.year,
+      visits: visits, byType: cnt, points: Math.round(pts * 100) / 100, inpatient: inpt,
+      lastDay: lastDay ? lastDay.s : '',
+      fixMin: fixMin, varMin: varMin, adminItems: mine, final: fin
+    };
+  } catch (e) { return { ok: false, error: String(e) }; }
+}
+
+/** 不固定行政提報：寫一列到「行政工作紀錄」 */
+function perfSubmitAdmin(f) {
+  const lock = LockService.getScriptLock();
+  try {
+    f = f || {};
+    const w = perfWho_();
+    const name = perfName_(w, f.name);
+    const month = Number(f.month);
+    if (!(month >= 1 && month <= 12)) throw new Error('月份不正確');
+    const item = String(f.item || '').trim();
+    const ss = perfSs_();
+    const list = ss.getSheetByName('行政項目清單').getDataRange().getDisplayValues().slice(3)
+      .filter(function (r) { return r[0] === '不固定' && r[1] === item; });
+    if (!list.length) throw new Error('項目不在清單：「' + item + '」');
+    const byActual = list[0][2] === '依實際';
+    const qty = f.qty === '' || f.qty == null ? '' : Number(f.qty);
+    const min = f.min === '' || f.min == null ? '' : Number(f.min);
+    const note = String(f.note || '').trim().substring(0, 300);
+    if (qty !== '' && !(qty > 0 && qty <= 100)) throw new Error('數量請填 1～100');
+    if (min !== '' && !(min > 0 && min <= 6000)) throw new Error('分鐘請填 1～6000');
+    if (byActual && min === '') throw new Error('這個項目要填實際花了幾分鐘');
+    if (!note) throw new Error('請寫一句內容說明（例如日期、主題）');
+
+    lock.waitLock(20000);
+    const sh = ss.getSheetByName('行政工作紀錄');
+    const colC = sh.getRange(4, 3, Math.max(sh.getLastRow() - 3, 1), 1).getValues();
+    var last = 3;
+    for (var i = 0; i < colC.length; i++) if (String(colC[i][0]).trim()) last = i + 4;
+    const r = last + 1;
+    if (r > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 20);
+    sh.getRange(r, 1, 1, 3).setValues([[month, name, item]]);
+    sh.getRange(r, 5).setValue(qty);
+    sh.getRange(r, 7).setValue(byActual ? min : '');
+    sh.getRange(r, 10).setValue(note);
+    sh.getRange(r, 11).setValue('線上提報 ' +
+      Utilities.formatDate(new Date(), 'Asia/Taipei', 'M/d HH:mm') + (w.me.name !== name ? '（' + w.me.name + ' 代填）' : ''));
+    // 公式欄（類別、標準分鐘、採計分鐘、檢查）沿用第 4 列
+    [4, 6, 9, 12].forEach(function (c) {
+      sh.getRange(4, c).copyTo(sh.getRange(r, c), SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+    });
+    SpreadsheetApp.flush();
+    const v = sh.getRange(r, 1, 1, 12).getDisplayValues()[0];
+    return { ok: true, row: r, min: num_(v[8]), check: v[11] };
+  } catch (e) {
+    return { ok: false, error: String(e).replace(/^Error:\s*/, '') };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }
