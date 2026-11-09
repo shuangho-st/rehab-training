@@ -633,14 +633,23 @@ function perfSubmitAdmin(f) {
     sh.getRange(r, 10).setValue(note);
     sh.getRange(r, 11).setValue('線上提報 ' +
       Utilities.formatDate(new Date(), 'Asia/Taipei', 'M/d HH:mm') + (w.me.name !== name ? '（' + w.me.name + ' 代填）' : ''));
-    // 公式欄（類別、標準分鐘、採計分鐘、檢查）沿用第 4 列。
-    // 不用 copyTo：表上有篩選時，第 4 列被藏起來會出現「不支援含有已篩除列的範圍」。
-    [4, 6, 9, 12].forEach(function (c) {
-      const f1 = sh.getRange(4, c).getFormulaR1C1();
-      if (f1) sh.getRange(r, c).setFormulaR1C1(f1);
+    // 公式欄（類別、標準分鐘、採計分鐘、檢查）直接寫成本列的公式。
+    // 不從第 4 列複製：表上開著篩選時 copyTo 會失敗，R1C1 複製實測也會留下空白。
+    const L = "'行政項目清單'!";
+    const F = {
+      4:  '=IF(C{r}="","",IFERROR(INDEX(' + L + '$A$4:$A$70,MATCH(C{r},' + L + '$B$4:$B$70,0)),"未列項目"))',
+      6:  '=IF(C{r}="","",IFERROR(INDEX(' + L + '$C$4:$C$70,MATCH(C{r},' + L + '$B$4:$B$70,0)),""))',
+      9:  '=IF(C{r}="","",IF(H{r}="否",0,IF(G{r}<>"",G{r},IF(ISNUMBER(F{r}),F{r}*IF(E{r}="",1,E{r}),0))))',
+      12: '=IF(C{r}="","",IF(OR(A{r}="",B{r}=""),"缺月份或姓名",IF(AND(G{r}="",NOT(ISNUMBER(F{r}))),"需填手動分鐘",IF(D{r}="未列項目","項目不在清單",""))))'
+    };
+    Object.keys(F).forEach(function (c) {
+      sh.getRange(r, Number(c)).setFormula(F[c].replace(/\{r\}/g, String(r)));
     });
     SpreadsheetApp.flush();
     const v = sh.getRange(r, 1, 1, 12).getDisplayValues()[0];
+    if (!v[3] || v[8] === '') {
+      return { ok: false, error: '已記下第 ' + r + ' 列，但分鐘沒有算出來，請告訴組長' };
+    }
     return { ok: true, row: r, min: num_(v[8]), check: v[11] };
   } catch (e) {
     return { ok: false, error: String(e).replace(/^Error:\s*/, '') };
