@@ -354,8 +354,8 @@ function saveSettings(json) {
    ========================================================================= */
 const DIDX = 'st_adult_idx_v1';     // 索引
 const DPRE = 'st_adult_dft_v1_';    // 內容：DPRE + id + '_' + 段號
-const DRAFT_MAX = 20;
-const DRAFT_TTL_DAYS = 14;
+const DRAFT_MAX = 30;
+const DRAFT_TTL_DAYS = 30;
 const DCHUNK = 6000;                // Base64 為純 ASCII，6000 字元約 6KB
 
 function dProps_() { return PropertiesService.getUserProperties(); }
@@ -455,6 +455,39 @@ function deleteDraft(id) {
     idx = idx.filter(function (m) { if (m.id === id) { hit = m; return false; } return true; });
     if (hit) dDropChunks_(p, hit);
     dSetIndex_(idx);
+    return { ok: true };
+  } catch (e) { return { ok: false, msg: String(e) }; }
+}
+
+/* =========================================================================
+   成人評估紀錄：常用句（從填寫者自己寫過的文字累積，存在自己的帳號下）
+   內容為 JSON 字串，切段存放（UserProperties 每筆上限 9KB）
+   ========================================================================= */
+const PHR_N = 'st_adult_phr_n_v1';   // 段數
+const PHR_P = 'st_adult_phr_v1_';    // 內容：PHR_P + 段號
+const PHR_CHUNK = 2500;              // 中文一字 3 bytes，2500 字約 7.5KB
+
+function getPhrases() {
+  try {
+    const p = dProps_();
+    const n = parseInt(p.getProperty(PHR_N) || '0', 10) || 0;
+    var json = '';
+    for (var i = 0; i < n; i++) json += (p.getProperty(PHR_P + i) || '');
+    return { ok: true, json: json || '{}' };
+  } catch (e) { return { ok: false, msg: String(e) }; }
+}
+
+function savePhrases(json) {
+  try {
+    json = String(json || '{}');
+    if (json.length > 40000) return { ok: false, msg: '常用句太多' };
+    const p = dProps_();
+    const old = parseInt(p.getProperty(PHR_N) || '0', 10) || 0;
+    var obj = {}, n = 0;
+    for (var s = 0; s < json.length; s += PHR_CHUNK) obj[PHR_P + (n++)] = json.substring(s, s + PHR_CHUNK);
+    obj[PHR_N] = String(n);
+    p.setProperties(obj, false);
+    for (var i = n; i < old; i++) { try { p.deleteProperty(PHR_P + i); } catch (e) {} }
     return { ok: true };
   } catch (e) { return { ok: false, msg: String(e) }; }
 }

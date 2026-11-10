@@ -113,6 +113,12 @@ input:focus,textarea:focus,select:focus{border-color:var(--pick);box-shadow:0 0 
 .seg label:hover:not(.on){background:var(--pick-bg)}
 
 /* ---------- matrix ---------- */
+.phr{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.phr:empty{display:none}
+.phr .pc{display:inline-flex;align-items:center;border:1px dashed var(--line);border-radius:999px;background:var(--surface);font-size:12.5px;color:var(--ink-2);overflow:hidden}
+.phr .pc button{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:5px 4px 5px 10px;max-width:22em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phr .pc button.px{padding:5px 9px 5px 4px;color:var(--ink-3)}
+.phr .pc:hover{border-color:var(--pick);color:var(--pick)}
 .mx{width:100%;border-collapse:collapse;font-size:13.5px}
 .mx th{font-weight:600;color:var(--ink-2);font-size:12.5px;padding:0 6px 8px;text-align:center}
 .mx th:first-child{text-align:left}
@@ -545,13 +551,77 @@ function toast(msg){
 }
 
 /* ---- 欄位產生器 ---- */
+/* ---- 常用句：累積自己寫過的文字，出現兩次以上就變成欄位下方的快速選項 ---- */
+let PHR = {};                         // { 欄位: { 句子: [次數, 最後使用時間] } }
+const PHR_SKIP = new Set(["name","chart","birth","age","onset","rec_date","lang_sample","lang_score","lang_mlu","nm_flu","om_amr","om_smr"]);
+const PHR_SHOW = 6, PHR_KEEP = 25;    // 每欄顯示幾個、最多記幾個
+function phrParts(v,multi){
+  const a = multi ? String(v||"").split(/[\n。；;]+/) : [String(v||"")];
+  return a.map(x=>x.trim()).filter(x=>x.length>=2 && x.length<=60 && !/^[\d\s.\/%:：\-]+$/.test(x));
+}
+function phrTop(k){
+  const o=PHR[k]||{};
+  return Object.keys(o).filter(p=>o[p][0]>=2)
+    .sort((a,b)=>(o[b][0]-o[a][0])||(o[b][1]-o[a][1])).slice(0,PHR_SHOW);
+}
+function phrChips(k){
+  if(PHR_SKIP.has(k)) return "";
+  const cur=String(D[k]||"");
+  const c=phrTop(k).filter(p=>!cur.includes(p)).map(p=>
+    `<span class="pc"><button type="button" data-pins="${esc(k)}" data-pv="${esc(p)}" title="${esc(p)}">${esc(p)}</button><button type="button" class="px" data-pdel="${esc(k)}" data-pv="${esc(p)}" title="不再顯示這句">×</button></span>`).join("");
+  return `<div class="phr" data-pk="${esc(k)}">${c}</div>`;
+}
+/* 複製／列印報告時，把這份紀錄裡寫過的文字記一次（同一份紀錄同一句只算一次） */
+function phrLearn(){
+  const seen=new Set(D._ph||[]); let changed=false; const now=Date.now();
+  Object.keys(D).forEach(k=>{
+    if(k[0]==="_"||PHR_SKIP.has(k)||typeof D[k]!=="string") return;
+    if(PHR_FIELDS && !PHR_FIELDS.has(k)) return;
+    phrParts(D[k],PHR_AREAS.has(k)).forEach(p=>{
+      const id=k+"|"+p; if(seen.has(id)) return;
+      seen.add(id); changed=true;
+      const o=PHR[k]=PHR[k]||{};
+      o[p]=[(o[p]?o[p][0]:0)+1,now];
+    });
+  });
+  if(!changed) return;
+  D._ph=[...seen];
+  Object.keys(PHR).forEach(k=>{            // 每欄只留最常用的幾句
+    const o=PHR[k], ks=Object.keys(o);
+    if(ks.length>PHR_KEEP) ks.sort((a,b)=>(o[b][0]-o[a][0])||(o[b][1]-o[a][1])).slice(PHR_KEEP).forEach(x=>delete o[x]);
+  });
+  Store.phrSave(JSON.stringify(PHR));
+  touch();
+}
+/* 手打的文字欄位才學（radio 的值也存在 D 裡，要排除） */
+let PHR_FIELDS = null; const PHR_AREAS = new Set();
+function phrScan(){
+  PHR_FIELDS = PHR_FIELDS || new Set();
+  document.querySelectorAll("#main input[type=text][data-k], #main textarea[data-k]").forEach(el=>{
+    PHR_FIELDS.add(el.dataset.k); if(el.tagName==="TEXTAREA") PHR_AREAS.add(el.dataset.k);
+  });
+}
+function phrInsert(k,p){
+  const el=document.getElementById("f_"+k); if(!el) return;
+  const v=el.value.trim();
+  if(!v) el.value=p;
+  else if(el.tagName==="TEXTAREA") el.value=v+(/[。；;，,]$/.test(v)?"":"。")+p;
+  else el.value=v+"、"+p;
+  D[k]=el.value; bump(); touch();
+  const box=el.parentNode.querySelector(".phr"); if(box) box.outerHTML=phrChips(k);
+}
+function phrForget(k,p){
+  if(PHR[k]) delete PHR[k][p];
+  Store.phrSave(JSON.stringify(PHR));
+  document.querySelectorAll(`.phr[data-pk="${k}"]`).forEach(b=>b.outerHTML=phrChips(k));
+}
 function text(k,label,ph,hint){
   return `<div class="field"><label for="f_${k}">${label}${hint?`<span class="hint">${hint}</span>`:""}</label>
-  <input type="text" id="f_${k}" data-k="${k}" value="${D[k]?esc(D[k]):""}" placeholder="${ph||""}"></div>`;
+  <input type="text" id="f_${k}" data-k="${k}" value="${D[k]?esc(D[k]):""}" placeholder="${ph||""}">${phrChips(k)}</div>`;
 }
 function area(k,label,ph){
   return `<div class="field"><label for="f_${k}">${label}</label>
-  <textarea id="f_${k}" data-k="${k}" placeholder="${ph||""}">${D[k]?esc(D[k]):""}</textarea></div>`;
+  <textarea id="f_${k}" data-k="${k}" placeholder="${ph||""}">${D[k]?esc(D[k]):""}</textarea>${phrChips(k)}</div>`;
 }
 function radio(k,label,opts,cls){
   const o=opts.map(v=>{
@@ -1064,7 +1134,7 @@ out(){
     <button class="btn ghost" id="reset">清空重填</button>
     ${curDraftId?`<button class="btn ghost" id="doneDel">貼好了，刪除這份草稿</button>`:""}
   </div>
-  ${curDraftId?`<div class="note" style="margin-top:12px">住院個案之後還會再評估的話，先別刪這份：下次在基本資料輸入同一個病歷號或姓名，就能「載入上一次」。紀錄保留 14 天。</div>`:""}
+  ${curDraftId?`<div class="note" style="margin-top:12px">住院個案之後還會再評估的話，先別刪這份：下次在基本資料輸入同一個病歷號或姓名，就能「載入上一次」。紀錄保留 30 天。</div>`:""}
   <fieldset style="margin-top:28px"><legend>自動帶入表單系統</legend>
     <div class="row" style="margin-top:0">
       <button class="btn" id="emrCopy">複製表單系統代碼</button>
@@ -2270,6 +2340,7 @@ function render(){
   const sameStep = (lastStep===cur.k);
   const keepY = sameStep ? (window.scrollY||window.pageYOffset||0) : 0;
   document.getElementById("main").innerHTML=VIEW[cur.k]();
+  phrScan();
   // 只有真的換步驟才回到頂端；同一步驟內重繪要保留捲動位置
   if(sameStep) window.scrollTo(0,keepY);
   else window.scrollTo(0,0);
@@ -2353,7 +2424,7 @@ const HAS_GAS = !!(typeof google!=="undefined" && google.script && google.script
 
 const GasStore = {
   where:"gas",
-  note:"草稿存在你自己的 Google 帳號裡（不會離開 Google，同事看不到）。手機存好，到治療室用電腦打開同一個網址就能接著用。超過 14 天會自動清掉。",
+  note:"草稿存在你自己的 Google 帳號裡（不會離開 Google，同事看不到）。手機存好，到治療室用電腦打開同一個網址就能接著用。超過 30 天會自動清掉。",
   list(cb){ google.script.run.withSuccessHandler(r=>cb(r&&r.ok?r.data||[]:[]))
                              .withFailureHandler(()=>cb([])).listDrafts(); },
   save(meta,json,cb){ google.script.run.withSuccessHandler(r=>cb(r||{ok:false}))
@@ -2362,7 +2433,10 @@ const GasStore = {
   load(id,cb){ google.script.run.withSuccessHandler(r=>cb(r||{ok:false}))
                              .withFailureHandler(e=>cb({ok:false,msg:String(e)})).getDraft(id); },
   del(id,cb){ google.script.run.withSuccessHandler(r=>cb(r||{ok:false}))
-                             .withFailureHandler(e=>cb({ok:false,msg:String(e)})).deleteDraft(id); }
+                             .withFailureHandler(e=>cb({ok:false,msg:String(e)})).deleteDraft(id); },
+  phrGet(cb){ google.script.run.withSuccessHandler(r=>cb(r&&r.ok?r.json:"{}"))
+                             .withFailureHandler(()=>cb("{}")).getPhrases(); },
+  phrSave(json){ google.script.run.withFailureHandler(()=>{}).savePhrases(json); }
 };
 
 const LS_IDX="st_adult_idx_v1", LS_PRE="st_adult_draft_v1_";
@@ -2381,7 +2455,7 @@ const LocalStore = {
   save(meta,json,cb){
     const idx=this._idx().filter(m=>m.id!==meta.id);
     idx.unshift({id:meta.id,label:meta.label,chart:meta.chart,pct:meta.pct,ts:Date.now()});
-    while(idx.length>20){ const g=idx.pop(); if(LS_LIVE){try{localStorage.removeItem(LS_PRE+g.id);}catch(e){}} else delete MEM.data[g.id]; }
+    while(idx.length>30){ const g=idx.pop(); if(LS_LIVE){try{localStorage.removeItem(LS_PRE+g.id);}catch(e){}} else delete MEM.data[g.id]; }
     try{
       if(LS_LIVE) localStorage.setItem(LS_PRE+meta.id,json); else MEM.data[meta.id]=json;
       this._setIdx(idx); cb({ok:true,id:meta.id});
@@ -2395,7 +2469,9 @@ const LocalStore = {
     this._setIdx(this._idx().filter(m=>m.id!==id));
     if(LS_LIVE){try{localStorage.removeItem(LS_PRE+id);}catch(e){}} else delete MEM.data[id];
     cb({ok:true});
-  }
+  },
+  phrGet(cb){ let j="{}"; if(LS_LIVE){ try{ j=localStorage.getItem("st_adult_phr_v1")||"{}"; }catch(e){} } else j=MEM.phr||"{}"; cb(j); },
+  phrSave(json){ if(LS_LIVE){ try{ localStorage.setItem("st_adult_phr_v1",json); }catch(e){} } else MEM.phr=json; }
 };
 const Store = HAS_GAS ? GasStore : LocalStore;
 
@@ -2586,6 +2662,9 @@ function newCase(){
 document.addEventListener("click",e=>{
   const b=e.target.closest("button");
   if(!b) return;
+  if(b.dataset.pins){ phrInsert(b.dataset.pins,b.dataset.pv); return; }
+  if(b.dataset.pdel){ phrForget(b.dataset.pdel,b.dataset.pv); return; }
+  if(b.id==="print"||b.id==="copy"||b.id==="emrCopy") phrLearn();
   if(b.dataset.go!==undefined){ step=+b.dataset.go; render(); return; }
   if(b.id==="prev"){ step--; render(); return; }
   if(b.id==="next"){ step++; render(); return; }
@@ -2657,6 +2736,7 @@ document.addEventListener("visibilitychange",()=>{
 
 render();
 booted = true;
+Store.phrGet(j=>{ try{ const o=JSON.parse(j); if(o&&typeof o==="object"){ PHR=o; if(Object.keys(o).length) render(); } }catch(e){} });
 refreshDrafts(a=>{
   if(a.length) toast("有 "+a.length+" 份草稿，點右下角「草稿」可以打開");
 });
