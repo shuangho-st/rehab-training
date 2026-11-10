@@ -678,6 +678,7 @@ basic(){
   <fieldset><legend>個案</legend>
     ${text("name","姓名")}
     ${text("chart","病歷號/病床號","如 1234567 / 12A-05")}
+    <div id="prevBox">${prevBox()}</div>
     ${radio("gender","性別",["男","女"])}
     ${text("birth","出生日期")}
     ${text("age","年齡")}
@@ -1063,6 +1064,7 @@ out(){
     <button class="btn ghost" id="reset">清空重填</button>
     ${curDraftId?`<button class="btn ghost" id="doneDel">貼好了，刪除這份草稿</button>`:""}
   </div>
+  ${curDraftId?`<div class="note" style="margin-top:12px">住院個案之後還會再評估的話，先別刪這份：下次在基本資料輸入同一個病歷號或姓名，就能「載入上一次」。紀錄保留 14 天。</div>`:""}
   <fieldset style="margin-top:28px"><legend>自動帶入表單系統</legend>
     <div class="row" style="margin-top:0">
       <button class="btn" id="emrCopy">複製表單系統代碼</button>
@@ -2313,7 +2315,8 @@ document.addEventListener("input",e=>{
   if(el.dataset.t==="gtext"){ (el.dataset.gk==="S"?GOALS_S:GOALS_L)[+el.dataset.gi].t=el.value; bump(); return; }
   if(el.dataset.t==="ttext"){ TRIALS[+el.dataset.ti][el.dataset.tk]=el.value; bump(); touch(); return; }
   if(el.id==="out"){ outEdited=el.value; touch(); return; }
-  if(el.dataset.k && (el.tagName==="INPUT"||el.tagName==="TEXTAREA")){ D[el.dataset.k]=el.value; bump(); touch(); }
+  if(el.dataset.k && (el.tagName==="INPUT"||el.tagName==="TEXTAREA")){ D[el.dataset.k]=el.value; bump(); touch();
+    if(el.dataset.k==="name"||el.dataset.k==="chart") paintPrev(); }
 });
 
 function mark(el){
@@ -2475,6 +2478,7 @@ function refreshDrafts(cb){
     const b=document.getElementById("dBadge");
     if(b){ b.textContent=draftMeta.length; b.hidden = draftMeta.length===0; }
     if(!document.getElementById("sheet").hidden) paintSheet();
+    paintPrev();
     if(cb) cb(draftMeta);
   });
 }
@@ -2496,6 +2500,7 @@ function paintSheet(){
       <div class="meta">${bits.join("　·　")}</div>
       <div class="row">
         ${cur?"":`<button class="mini" data-dopen="${esc(m.id)}">打開接著填</button>`}
+        ${cur?"":`<button class="mini" data-dprev="${esc(m.id)}">載入為新的一次</button>`}
         <button class="mini" data-ddel="${esc(m.id)}">刪除</button>
       </div></div>`;
   }).join("");
@@ -2517,6 +2522,49 @@ function loadDraft(id){
     setSaveLine(`已儲存 ${curDraftLabel}・${m&&m.ts?stamp(m.ts):""}`);
     toast("已打開「"+curDraftLabel+"」");
   });
+}
+/* ---- 載入上一次：把同一位個案先前的紀錄複製成新的一份，原本那份保留 ---- */
+const sameCase = m => {
+  const c=(D.chart||"").trim(), n=(D.name||"").trim();
+  return (c && String(m.chart||"").trim()===c) || (n && String(m.label||"").trim()===n);
+};
+function prevMatch(){
+  return draftMeta.filter(m=>m.id!==curDraftId && sameCase(m))
+                  .sort((x,y)=>(y.ts||0)-(x.ts||0))[0] || null;
+}
+function prevBox(){
+  if(D._from) return "";               // 這份已經是從上一次載入的，不再提示
+  const m=prevMatch();
+  if(!m) return "";
+  const bits=[esc(m.label||"未命名個案")];
+  if(m.chart) bits.push("病歷號/床號 "+esc(String(m.chart)));
+  if(m.ts) bits.push(stamp(m.ts));
+  return `<div class="note">找到先前的紀錄：${bits.join("・")}
+    <div class="row" style="margin-top:8px"><button class="btn" data-dprev="${esc(m.id)}" data-keep="1">載入上一次</button></div>
+    <div style="margin-top:6px">會把上次的內容整份帶進來，只需修改有變化的地方；上次那份會保留。病床號可能換過人，載入前請確認是同一位個案。</div></div>`;
+}
+function paintPrev(){ const b=document.getElementById("prevBox"); if(b) b.innerHTML=prevBox(); }
+function todayStr(){
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`;
+}
+/* keepId＝沿用目前這份（只填了姓名／病歷號的空殼）；否則先存好目前的，再開新的一份 */
+function loadPrev(id,keepId){
+  const go=()=>Store.load(id,r=>{
+    if(!r||!r.ok||!r.json){ toast((r&&r.msg)||"打不開這份紀錄"); return; }
+    const mine=keepId?curDraftId:null;
+    if(!restoreFrom(r.json)){ toast("這份紀錄的內容讀不出來"); return; }
+    const m=draftMeta.filter(x=>x.id===id)[0];
+    curDraftId=mine; curDraftLabel="";
+    if(D.note_type==="Initial") D.note_type="Progress";
+    D.rec_date=todayStr();
+    D._from=id;
+    step=0; outEdited=null;
+    closeSheet(); lastStep=null; render();
+    doSave(true);
+    toast("已載入"+(m&&m.ts?" "+stamp(m.ts)+" ":"上一次")+"的內容，請修改有變化的地方");
+  });
+  if(!keepId && hasContent()) doSave(true,go); else go();
 }
 function delDraft(id){
   const m=draftMeta.filter(x=>x.id===id)[0];
@@ -2586,6 +2634,7 @@ document.addEventListener("click",e=>{
     return;
   }
   if(b.dataset.dopen){ loadDraft(b.dataset.dopen); return; }
+  if(b.dataset.dprev){ loadPrev(b.dataset.dprev, b.dataset.keep==="1"); return; }
   if(b.dataset.ddel){ delDraft(b.dataset.ddel); return; }
   if(b.id==="doneDel"){
     const id=curDraftId; if(!id) return;
