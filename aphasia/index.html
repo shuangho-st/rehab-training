@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>成人失語症｜實習生自學課程</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#F2F2F6; --surface:#FFFFFF; --surface2:#E8E8F0; --ink:#1B1C2B; --ink2:#5A5C72; --line:#D5D6E2;
+ --accent:#343C8C; --on-accent:#F5F6FC; --accent-soft:#DFE2F5;
+ --tip:#0D6154; --tip-soft:#D9EDE8; --warn:#8A4A00; --warn-soft:#F6E7D2; --ok:#2C6E49; --ok-soft:#DCEDE2; --bad:#A93226; --bad-soft:#F6E0DD;
+ --sans:'Noto Sans TC','PingFang TC','Microsoft JhengHei',Arial,sans-serif;
+ --serif:'Noto Serif TC','PMingLiU',Georgia,serif;
+ padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root{
+ --bg:#101222; --surface:#191B2C; --surface2:#222539; --ink:#E7E8F2; --ink2:#A7AAC2; --line:#2F3248;
+ --accent:#9AA5F0; --on-accent:#0F1120; --accent-soft:#242945;
+ --tip:#79CDBC; --tip-soft:#16302C; --warn:#E3B778; --warn-soft:#332616; --ok:#7BC99A; --ok-soft:#17301F; --bad:#EF9A90; --bad-soft:#331E1C; color-scheme:dark}}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.75}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px 56px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:760px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:12px;justify-content:space-between}
+.home-btn{border:0;background:transparent;font-weight:700;font-size:15px;padding:6px 0;text-align:left}
+.home-btn small{display:block;font-weight:400;font-size:12px;color:var(--ink2)}
+.pbar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;max-width:760px;margin:0 auto}
+.pbar div{height:100%;background:var(--accent);transition:width .4s}
+h1{font-family:var(--serif);font-size:30px;line-height:1.35;margin:26px 0 8px}
+h2{font-family:var(--serif);font-size:21px;line-height:1.45;margin:30px 0 10px}
+h3{font-size:17px;margin:22px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:4px 0}
+.muted{color:var(--ink2)}
+.small{font-size:14.5px}
+.lead{font-size:17.5px;color:var(--ink2)}
+.card{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:10px}
+.card:hover{border-color:var(--accent)}
+.card b{font-size:17px}
+.card .meta{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:6px}
+.chip{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px;background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.chip.done{background:var(--ok-soft);color:var(--ok)}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+.num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;margin-right:8px}
+.box{border-radius:12px;padding:14px 16px;margin:16px 0;font-size:15.5px;line-height:1.7}
+.tip{background:var(--tip-soft);border-left:4px solid var(--tip)}
+.tip b{color:var(--tip)}
+.pitfall{background:var(--warn-soft);border-left:4px solid var(--warn)}
+.pitfall b{color:var(--warn)}
+.goal{background:var(--accent-soft);border-left:4px solid var(--accent)}
+.goal b{color:var(--accent)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:14px 0}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:15px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--surface2);font-size:13.5px;color:var(--ink2)}
+tr:last-child td{border-bottom:0}
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:18px 0}
+.opt{display:block;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;font-size:15.5px;line-height:1.6;min-height:46px}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.opt:disabled{cursor:default}
+.fb{border-radius:10px;padding:10px 14px;font-size:15px;margin-top:6px}
+.fb.ok{background:var(--ok-soft);color:var(--ok)}
+.fb.no{background:var(--bad-soft);color:var(--bad)}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:var(--accent);color:var(--on-accent);min-height:48px}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn.block{width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.nav{display:flex;gap:10px;margin-top:28px;border-top:1px solid var(--line);padding-top:18px}
+.nav button{flex:1}
+.tree{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:16px 0}
+.path{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.path span{font-size:13px;background:var(--accent-soft);color:var(--accent);padding:2px 10px;border-radius:999px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:15px;margin:10px 0}
+.kv b{color:var(--ink2);font-weight:500}
+.foot{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;font-size:13.5px;color:var(--ink2)}
+.linkbtn{background:none;border:0;color:var(--accent);text-decoration:underline;font-size:14px;padding:4px 0}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-weight:500}
+.inp{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);min-height:48px;width:100%}
+.err{color:var(--bad);font-size:14.5px;min-height:1.4em}
+.sync{font-size:14px;color:var(--ink2)}
+.sync.warn{color:var(--warn)}
+.copyarea{width:100%;min-height:180px;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-top:10px}
+</style>
+</head>
+<body>
+<header class="top">
+ <div class="top-in">
+  <button class="home-btn" id="home">成人失語症<small id="crumb">實習生自學課程</small></button>
+  <span class="chip acc" id="prog">0 / 16</span>
+ </div>
+ <div class="pbar"><div id="bar" style="width:0%"></div></div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="content.js"></script>
+<script>
+/* ===================== 設定 ===================== */
+// 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
+const API_URL = 'https://script.google.com/a/macros/s.tmu.edu.tw/s/AKfycbywBWQXUvHmv3lFdBjRzSQ06qwB2ky_E9clevPthTjEN3TEhq7XdZVNt84dKmmss721Kw/exec';
+const APP_VER = 'aphasia-1';
+/* =============================================== */
+
+const ALL=D.flatMap(d=>d.L.map(l=>({d,l})));
+const app=document.getElementById('app');
+const K={done:'aph-done',quiz:'aph-quiz',secs:'aph-secs',me:'aph-me',out:'aph-outbox'};
+const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let done=ld(K.done,{}),qlog=ld(K.quiz,{}),secs=ld(K.secs,{}),me=ld(K.me,null),outbox=ld(K.out,[]);
+const save=()=>{sv(K.done,done);sv(K.quiz,qlog);sv(K.secs,secs)};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+let cur='home',openedAt=0,flushing=false;
+
+/* ---------- 回傳 ---------- */
+function queue(ev){
+ if(!me)return;
+ outbox.push(Object.assign({id:uid(),ts:new Date().toISOString(),name:me.name,role:me.role,ver:APP_VER},ev));
+ sv(K.out,outbox);flush();
+}
+async function flush(){
+ if(!API_URL||flushing||!outbox.length||!navigator.onLine)return;
+ flushing=true;const batch=outbox.slice(0,50);
+ try{
+  await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({items:batch})});
+  const ids=new Set(batch.map(b=>b.id));outbox=outbox.filter(b=>!ids.has(b.id));sv(K.out,outbox);
+ }catch(e){}
+ flushing=false;syncLine();
+ if(outbox.length&&navigator.onLine)setTimeout(flush,1500);
+}
+window.addEventListener('online',flush);
+function syncText(){
+ if(!API_URL)return['尚未設定回傳網址，紀錄只存在這台裝置。','warn'];
+ if(outbox.length)return[`${outbox.length} 筆紀錄待上傳${navigator.onLine?'，上傳中…':'，連上網路後會自動補傳'}`,'warn'];
+ return['紀錄已全部上傳給督導',''];
+}
+function syncLine(){const el=document.getElementById('sync');if(!el)return;const[t,c]=syncText();el.textContent=t;el.className='sync '+c;}
+async function restore(){
+ if(!API_URL||!me)return;
+ try{
+  const r=await fetch(API_URL+'?action=progress&name='+encodeURIComponent(me.name));
+  const j=await r.json();if(!j||!j.ok)return;
+  Object.keys(j.lessons||{}).forEach(id=>{done[id]=true;secs[id]=Math.max(secs[id]||0,j.lessons[id]||0)});
+  Object.keys(j.quiz||{}).forEach(k=>{if(!qlog[k])qlog[k]=j.quiz[k]});
+  save();if(cur==='home')home();else header(document.getElementById('crumb').textContent);
+ }catch(e){}
+}
+
+/* ---------- 紀錄 ---------- */
+function recLesson(d,l){
+ const sec=openedAt?Math.min((Date.now()-openedAt)/1000,3600):0;openedAt=0;
+ secs[l.id]=(secs[l.id]||0)+sec;const first=!done[l.id];done[l.id]=true;save();
+ queue({type:'單元完成',domain:d.name,lesson:l.id,title:l.t,sec:Math.round(sec),first});
+}
+function recQuiz(d,l,qi,oi,right){
+ const k=l.id+'_'+qi,o=qlog[k];
+ qlog[k]=o?{first:o.first,n:(o.n||1)+1}:{first:right,n:1};save();
+ queue({type:'測驗作答',domain:d.name,lesson:l.id,title:l.t,q:qi+1,choice:oi+1,correct:right,first:!o,n:qlog[k].n});
+}
+
+/* ---------- 畫面 ---------- */
+function header(txt){document.getElementById('crumb').textContent=txt;
+ const n=ALL.filter(x=>done[x.l.id]).length;
+ document.getElementById('prog').textContent=n+' / '+ALL.length;
+ document.getElementById('bar').style.width=(n/ALL.length*100)+'%';}
+
+function register(){
+ cur='reg';header('登錄');window.scrollTo(0,0);
+ app.innerHTML=`<h1>成人失語症自學課程</h1>
+ <p class="lead">開始前請先登錄。你的閱讀進度與測驗作答會回傳給督導，用來安排後續的臨床學習。</p>
+ <form id="rf" novalidate>
+  <div class="field"><label for="r-name">姓名</label><input class="inp" id="r-name" maxlength="20" autocomplete="name" placeholder="例如：王小明"></div>
+  <div class="field"><label for="r-role">身分</label><select class="inp" id="r-role"><option>實習生</option><option>新進人員</option><option>其他</option></select></div>
+  <p class="small muted">換手機或換電腦時，輸入同一個姓名，進度會自動接回。</p>
+  <div class="err" id="r-err"></div>
+  <button class="btn block" type="submit" id="r-go">開始學習</button>
+ </form>`;
+ document.getElementById('rf').onsubmit=e=>{e.preventDefault();
+  const name=document.getElementById('r-name').value.trim().replace(/\s+/g,' ');
+  if(!name){document.getElementById('r-err').textContent='請輸入姓名。';return;}
+  me={name,role:document.getElementById('r-role').value};sv(K.me,me);
+  queue({type:'登錄'});home();restore();};
+}
+
+function summaryText(){
+ const L=[],qs=Object.values(qlog);
+ L.push(`成人失語症自學紀錄｜${me?me.name:''}｜${new Date().toLocaleDateString('zh-TW')}`);
+ L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}`);
+ D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
+  L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
+ return L.join('\n');
+}
+function copySummary(){
+ const t=summaryText(),box=document.getElementById('cpbox');
+ const show=msg=>{box.innerHTML=`<p class="small muted">${msg}</p><textarea class="copyarea" readonly>${esc(t)}</textarea>`;const ta=box.querySelector('textarea');ta.focus();ta.select()};
+ try{navigator.clipboard.writeText(t).then(()=>show('已複製，可以貼到 LINE 或 email。'),()=>show('請長按或按 Ctrl+C 複製下面的文字。'))}catch(e){show('請長按或按 Ctrl+C 複製下面的文字。')}
+}
+
+function home(){
+ if(!me)return register();
+ cur='home';header('實習生自學課程');window.scrollTo(0,0);
+ app.innerHTML=`<h1>成人失語症</h1>
+ <p class="lead">從神經解剖到非標準化評估。選一個領域開始，每個單元約 8 到 12 分鐘，最後有小測驗。</p>
+ <p class="small muted">學習者：<b>${esc(me.name)}</b>（${esc(me.role)}）　<span id="sync" class="sync"></span></p>
+ ${D.map(d=>{const n=d.L.filter(l=>done[l.id]).length;
+  return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
+  <span class="meta"><span class="small muted">${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
+ <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類，最後的非標準化評估會用到前面所有概念。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
+ <div class="row"><button class="btn ghost" id="cp">複製我的學習紀錄</button><button class="linkbtn" id="sw">不是 ${esc(me.name)}？換人登錄</button></div>
+ <div id="cpbox"></div>
+ <div class="foot">本課程為科內自學教材，內容為學理概要，臨床判斷請以教科書、標準化測驗手冊與督導指導為準。</div>`;
+ app.querySelectorAll('.card').forEach(b=>b.onclick=()=>domain(b.dataset.d));
+ document.getElementById('cp').onclick=copySummary;
+ document.getElementById('sw').onclick=()=>{if(outbox.length){flush();}
+  me=null;sv(K.me,null);done={};qlog={};secs={};save();register();};
+ syncLine();
+}
+function domain(id){
+ const d=D.find(x=>x.id===id);cur='domain';header(d.name);window.scrollTo(0,0);
+ app.innerHTML=`<h1>${d.name}</h1><p class="lead">${d.desc}</p>
+ ${d.L.map((l,i)=>`<button class="card" data-l="${l.id}"><span class="num">${i+1}</span><b>${l.t}</b>
+ <span class="meta"><span class="small muted">${l.goal}</span><span class="chip ${done[l.id]?'done':''}">${done[l.id]?'已完成':'未讀'}</span></span></button>`).join('')}
+ <div class="nav"><button class="btn ghost" id="bk">回課程首頁</button></div>`;
+ app.querySelectorAll('.card').forEach(b=>b.onclick=()=>lesson(b.dataset.l));
+ document.getElementById('bk').onclick=home;
+}
+function lesson(lid){
+ const idx=ALL.findIndex(x=>x.l.id===lid),{d,l}=ALL[idx];
+ cur='lesson';openedAt=Date.now();header(d.name+'｜'+l.t);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">${d.name}</p><h1>${l.t}</h1>
+ <div class="box goal"><b>學習目標：</b>${l.goal}</div>
+ ${l.h}
+ ${l.tree?'<div id="tree"></div>':''}
+ ${l.h2||''}
+ ${l.tip?`<div class="box tip"><b>臨床提示：</b>${l.tip}</div>`:''}
+ <h2>小測驗</h2><div id="qz"></div>
+ <div class="nav">
+  ${idx>0?`<button class="btn ghost" id="prev">上一個單元</button>`:''}
+  <button class="btn" id="next">${idx<ALL.length-1?'完成，下一個單元':'完成，回首頁'}</button></div>`;
+ if(l.tree)tree();
+ quiz(d,l);
+ const pv=document.getElementById('prev');if(pv)pv.onclick=()=>lesson(ALL[idx-1].l.id);
+ document.getElementById('next').onclick=()=>{recLesson(d,l);
+  if(idx<ALL.length-1)lesson(ALL[idx+1].l.id);else home();};
+}
+function quiz(d,l){
+ const box=document.getElementById('qz');
+ box.innerHTML=l.quiz.map((q,qi)=>`<div class="quiz" data-q="${qi}"><p><b>${q.q}</b></p>
+ ${q.o.map((o,oi)=>`<button class="opt" data-o="${oi}">${o}</button>`).join('')}
+ <div class="fbwrap"></div></div>`).join('');
+ box.querySelectorAll('.quiz').forEach(qb=>{const qi=+qb.dataset.q,q=l.quiz[qi];
+  qb.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+   const oi=+b.dataset.o,right=oi===q.a;recQuiz(d,l,qi,oi,right);
+   qb.querySelectorAll('.opt').forEach((x,i)=>{x.disabled=true;if(i===q.a)x.classList.add('right')});
+   if(!right)b.classList.add('wrong');
+   qb.querySelector('.fbwrap').innerHTML=`<div class="fb ${right?'ok':'no'}">${right?'答對了。':'正確答案已標示。'}${q.e}</div>`;});});
+}
+function tree(){
+ const el=document.getElementById('tree');
+ let s={};
+ const Q=[{k:'f',q:'一、語言輸出流暢嗎？',o:[['流暢','y'],['不流暢','n']]},
+          {k:'c',q:'二、聽理解相對保留嗎？',o:[['相對保留','y'],['明顯受損','n']]},
+          {k:'r',q:'三、複誦能力如何？',o:[['相對好','y'],['差','n']]}];
+ const R={fyy:'命名型失語（若命名也大致正常，需考慮並非失語症）',fyn:'傳導型失語',fny:'經皮質感覺型失語',fnn:'Wernicke 型失語',
+          nyy:'經皮質運動型失語',nyn:'Broca 型失語',nny:'混合型經皮質失語',nnn:'全失語'};
+ const draw=()=>{
+  const step=!s.f?0:(!s.c?1:(!s.r?2:3));
+  const path=[s.f&&(s.f==='y'?'流暢':'不流暢'),s.c&&(s.c==='y'?'理解相對保留':'理解受損'),s.r&&(s.r==='y'?'複誦相對好':'複誦差')].filter(Boolean);
+  let body;
+  if(step<3){const q=Q[step];
+   body=`<p><b>${q.q}</b></p><div>${q.o.map(([t,v])=>`<button class="opt" data-k="${q.k}" data-v="${v}">${t}</button>`).join('')}</div>`;
+  }else{
+   const key=(s.f==='y'?'f':'n')+s.c+s.r;
+   body=`<div class="fb ok" style="font-size:16px"><b>推論結果：</b>${R[key]}</div>
+   <div class="row" style="margin-top:12px"><button class="btn ghost" id="again">再練一次</button></div>`;}
+  el.innerHTML=`<div class="tree">${path.length?`<div class="path">${path.map(p=>`<span>${p}</span>`).join('')}</div>`:''}${body}</div>`;
+  el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{s[b.dataset.k]=b.dataset.v;draw()});
+  const ag=document.getElementById('again');if(ag)ag.onclick=()=>{s={};draw()};};
+ draw();
+}
+document.getElementById('home').onclick=home;
+home();
+flush();
+restore();
+</script>
+</body>
+</html>
