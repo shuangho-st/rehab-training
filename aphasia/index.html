@@ -150,7 +150,7 @@ async function restore(){
   const r=await fetch(API_URL+'?action=progress&name='+encodeURIComponent(me.name));
   const j=await r.json();if(!j||!j.ok)return;
   Object.keys(j.lessons||{}).forEach(id=>{done[id]=true;secs[id]=Math.max(secs[id]||0,j.lessons[id]||0)});
-  Object.keys(j.quiz||{}).forEach(k=>{if(!qlog[k])qlog[k]=j.quiz[k]});
+  Object.keys(j.quiz||{}).forEach(k=>{if(!qlog[k]){const r=j.quiz[k];qlog[k]={first:r.first,n:r.n,last:r.last===undefined?r.first:r.last}}});
   save();if(cur==='home')home();else header(document.getElementById('crumb').textContent);
  }catch(e){}
 }
@@ -163,8 +163,51 @@ function recLesson(d,l){
 }
 function recQuiz(d,l,qi,oi,right){
  const k=l.id+'_'+qi,o=qlog[k];
- qlog[k]=o?{first:o.first,n:(o.n||1)+1}:{first:right,n:1};save();
+ qlog[k]=o?{first:o.first,n:(o.n||1)+1,last:right}:{first:right,n:1,last:right};save();
  queue({type:'測驗作答',domain:d.name,lesson:l.id,title:l.t,q:qi+1,choice:oi+1,correct:right,first:!o,n:qlog[k].n});
+}
+
+/* ---------- 錯題 ---------- */
+const QALL=ALL.flatMap(({d,l})=>l.quiz.map((q,qi)=>({d,l,q,qi,k:l.id+'_'+qi})));
+const isWrong=r=>!!r&&(r.last===undefined?r.first===false:r.last===false);
+const wrongList=()=>QALL.filter(x=>isWrong(qlog[x.k]));
+function recReview(x,oi,right){
+ const o=qlog[x.k]||{first:false,n:0};qlog[x.k]={first:o.first,n:(o.n||0)+1,last:right};save();
+ queue({type:'錯題重考',domain:x.d.name,lesson:x.l.id,title:x.l.t,q:x.qi+1,choice:oi+1,correct:right,first:false,n:qlog[x.k].n});
+}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+let rv=null;
+function review(){
+ const list=shuffle(wrongList());
+ if(!list.length)return home();
+ rv={list,i:0,ok:0};reviewQ();
+}
+function reviewQ(){
+ cur='review';
+ if(rv.i>=rv.list.length){
+  const left=wrongList().length;header('錯題重考');window.scrollTo(0,0);
+  app.innerHTML=`<h1>重考結果</h1>
+  <p class="lead">這一輪答對 <b>${rv.ok}</b> / ${rv.list.length} 題。${left?`還有 <b>${left}</b> 題沒答對，建議先回去複習對應的單元再重考。`:'錯題已全部清空。'}</p>
+  ${left?`<div class="tablewrap"><table><tr><th>還沒答對的題目</th><th>單元</th></tr>${wrongList().map(x=>`<tr><td>${esc(x.q.q)}</td><td><button class="linkbtn" data-l="${x.l.id}">${esc(x.l.t)}</button></td></tr>`).join('')}</table></div>`:''}
+  <div class="nav">${left?'<button class="btn ghost" id="again">再考一輪</button>':''}<button class="btn" id="bk">回課程首頁</button></div>`;
+  app.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>lesson(b.dataset.l));
+  const ag=document.getElementById('again');if(ag)ag.onclick=review;
+  document.getElementById('bk').onclick=home;return;
+ }
+ const x=rv.list[rv.i],order=shuffle(x.q.o.map((_,i)=>i));
+ header(`錯題重考 ${rv.i+1} / ${rv.list.length}`);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">錯題重考　${rv.i+1} / ${rv.list.length}　·　${esc(x.d.name)}｜${esc(x.l.t)}</p>
+ <div class="quiz"><p><b>${x.q.q}</b></p>${order.map(oi=>`<button class="opt" data-o="${oi}">${x.q.o[oi]}</button>`).join('')}<div class="fbwrap"></div></div>
+ <div class="nav"><button class="btn ghost" id="bk">結束重考</button><button class="btn" id="nx" hidden>${rv.i<rv.list.length-1?'下一題':'看結果'}</button></div>`;
+ app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+  const oi=+b.dataset.o,right=oi===x.q.a;recReview(x,oi,right);if(right)rv.ok++;
+  app.querySelectorAll('.opt').forEach(o=>{o.disabled=true;if(+o.dataset.o===x.q.a)o.classList.add('right')});
+  if(!right)b.classList.add('wrong');
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${right?'ok':'no'}">${right?'答對了，這題已從錯題清單移除。':'還是答錯了，這題會留在錯題清單。'}${x.q.e}</div>${right?'':`<button class="linkbtn" id="gl">回去複習「${esc(x.l.t)}」</button>`}`;
+  const gl=document.getElementById('gl');if(gl)gl.onclick=()=>lesson(x.l.id);
+  document.getElementById('nx').hidden=false;});
+ document.getElementById('nx').onclick=()=>{rv.i++;reviewQ()};
+ document.getElementById('bk').onclick=()=>{rv.i=rv.list.length;reviewQ()};
 }
 
 /* ---------- 畫面 ---------- */
@@ -194,7 +237,7 @@ function register(){
 function summaryText(){
  const L=[],qs=Object.values(qlog);
  L.push(`成人失語症自學紀錄｜${me?me.name:''}｜${new Date().toLocaleDateString('zh-TW')}`);
- L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}`);
+ L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}　錯題待重考：${wrongList().length}`);
  D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
   L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
  return L.join('\n');
@@ -215,11 +258,13 @@ function home(){
   return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
   <span class="meta"><span class="small muted">${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
  <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類，最後的非標準化評估會用到前面所有概念。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
+ ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
  <div class="row"><button class="btn ghost" id="cp">複製我的學習紀錄</button><button class="linkbtn" id="sw">不是 ${esc(me.name)}？換人登錄</button></div>
  <div id="cpbox"></div>
  <div class="foot">本課程為科內自學教材，內容為學理概要，臨床判斷請以教科書、標準化測驗手冊與督導指導為準。</div>`;
  app.querySelectorAll('.card').forEach(b=>b.onclick=()=>domain(b.dataset.d));
  document.getElementById('cp').onclick=copySummary;
+ const rvb=document.getElementById('rvb');if(rvb)rvb.onclick=review;
  document.getElementById('sw').onclick=()=>{if(outbox.length){flush();}
   me=null;sv(K.me,null);done={};qlog={};secs={};save();register();};
  syncLine();
