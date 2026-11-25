@@ -112,6 +112,12 @@ tr:last-child td{border-bottom:0}
 .ln.hit .tag{color:var(--ok)}.ln.miss .tag{color:var(--warn)}.ln.extra .tag{color:var(--ink2)}
 .wk{display:inline-block;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;margin-right:8px;vertical-align:middle;white-space:nowrap}
 .wkplan td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+.seq{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.seqitem{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--surface);font-size:15px;text-align:left;width:100%;font-family:inherit;color:var(--ink)}
+.seqitem .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;display:grid;place-items:center;font-size:14px}
+.seqitem.used{opacity:.4}
+.seqitem.right{border-color:var(--ok);background:var(--ok-soft)}.seqitem.wrong{border-color:var(--warn);background:var(--warn-soft)}
+.resp{background:var(--surface2);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:15px}
 .copyarea{width:100%;min-height:180px;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-top:10px}
 </style>
 </head>
@@ -124,8 +130,9 @@ tr:last-child td{border-bottom:0}
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125f"></script>
-<script src="plans.js?v=20261125f"></script>
+<script src="content.js?v=20261125g"></script>
+<script src="plans.js?v=20261125g"></script>
+<script src="cues.js?v=20261125g"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
@@ -144,7 +151,7 @@ const WEEKPLAN=[
  [1,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
  [2,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
  [3,'失語症：古典分類、非標準化評估｜吞嚥治療：治療原則、病歷閱讀練習'],
- [4,'失語症：失語症治療、治療計畫練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
+ [4,'失語症：失語症治療、治療計畫練習、提示步驟練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
  [5,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
  [6,'運動言語：治療、臨床實務、模擬個案']];
 const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
@@ -313,6 +320,80 @@ function simEnd(){
  document.getElementById('bk').onclick=home;
 }
 
+/* ---------- 提示步驟練習 ---------- */
+let QZ=null;
+function cueStart(id){
+ const c=CUES.find(x=>x.id===id);
+ QZ={c,order:shuffle(c.cues.map((_,i)=>i)),pick:[],a:0,lvl:0,stopOk:false,lvlOk:false,over:0,early:0,t0:Date.now()};
+ cur='cue';cueOrder();
+}
+function cueOrder(){
+ const c=QZ.c;header('提示步驟｜'+c.title);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">提示步驟練習　·　第 1 步：排出提示順序</p><h1>${esc(c.title)}</h1>
+ <div class="box goal"><b>病人：</b>${esc(c.who)}<br><b>題目：</b>${esc(c.target)}<br>把下面的提示<b>由少到多</b>依序點選（先點的是第 1 層）。</div>
+ <h3>你的順序</h3><div class="seq" id="sq">${QZ.pick.length?QZ.pick.map((i,k)=>`<div class="seqitem"><span class="n">${k+1}</span><span>${esc(c.cues[i].t)}</span></div>`).join(''):'<p class="small muted">尚未選擇</p>'}</div>
+ <h3>提示選項</h3><div class="seq">${QZ.order.map(i=>`<button class="seqitem ${QZ.pick.includes(i)?'used':''}" data-i="${i}" ${QZ.pick.includes(i)?'disabled':''}><span>${esc(c.cues[i].t)}</span></button>`).join('')}</div>
+ <div class="nav"><button class="btn ghost" id="rs">重新排</button><button class="btn" id="nx" ${QZ.pick.length<c.cues.length?'disabled':''}>檢查順序</button></div>
+ <p><button class="linkbtn" id="bk">離開</button></p>`;
+ app.querySelectorAll('button.seqitem').forEach(b=>b.onclick=()=>{QZ.pick.push(+b.dataset.i);cueOrder()});
+ document.getElementById('rs').onclick=()=>{QZ.pick=[];cueOrder()};
+ document.getElementById('bk').onclick=home;
+ document.getElementById('nx').onclick=cueCheck;
+}
+function cueCheck(){
+ const c=QZ.c;QZ.a=QZ.pick.filter((i,k)=>i===k).length;
+ header('提示步驟｜順序核對');window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">提示步驟練習　·　順序核對</p><h1>${esc(c.title)}</h1>
+ <div class="fb ${QZ.a===c.cues.length?'ok':'no'}">位置正確 ${QZ.a} / ${c.cues.length} 層。</div>
+ <h3>你的順序</h3><div class="seq">${QZ.pick.map((i,k)=>`<div class="seqitem ${i===k?'right':'wrong'}"><span class="n">${k+1}</span><span>${esc(c.cues[i].t)}${i!==k?`<br><span class="small muted">應該是第 ${i+1} 層</span>`:''}</span></div>`).join('')}</div>
+ <h3>建議的順序與理由</h3><div class="seq">${c.cues.map((x,k)=>`<div class="seqitem"><span class="n">${k+1}</span><span><b>${esc(x.t)}</b><br><span class="small muted">${esc(x.why)}</span></span></div>`).join('')}</div>
+ <p class="small muted">提示順序可以依病人調整，例如語意提示對某些病人比語音提示更有效。重點是：由少到多、一次只加一層、記錄成功的層級。</p>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">第 2 步：實際給提示</button></div>`;
+ document.getElementById('bk').onclick=home;document.getElementById('nx').onclick=()=>{QZ.lvl=0;QZ.log=[];cueRun()};
+}
+function cueRun(){
+ const c=QZ.c;header('提示步驟｜實際給提示');
+ const given=QZ.lvl,succ=given>=c.ok;
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">提示步驟練習　·　第 2 步：實際給提示</p><h1>${esc(c.target)}</h1>
+ <div class="box goal">依建議順序一層一層給提示。病人<b>成功時就停下來</b>，並記錄是第幾層。</div>
+ ${QZ.log.map((r,k)=>`<div class="resp"><b>第 ${k+1} 層</b>　${esc(c.cues[k].t)}<br>病人：${esc(r)}</div>`).join('')}
+ <div id="cr"></div>
+ <div class="nav" id="cb">${given<c.cues.length?`<button class="btn" id="nxl">${given===0?'開始：給第 1 層':'給下一層提示（第 '+(given+1)+' 層）'}</button>`:''}${given>0?'<button class="btn ghost" id="st">他成功了，記錄層級</button>':''}</div>
+ <p><button class="linkbtn" id="bk">離開</button></p>`;
+ document.getElementById('bk').onclick=home;
+ const nxl=document.getElementById('nxl');
+ if(nxl)nxl.onclick=()=>{if(succ){QZ.over++;document.getElementById('cr').innerHTML='<div class="fb no"><b>病人已經成功了。</b>成功後就不需要再給更多提示，給太多會讓他依賴提示，也無法知道他真正需要的協助。</div>';return}
+  QZ.log.push(c.res[QZ.lvl]);QZ.lvl++;cueRun();window.scrollTo(0,document.body.scrollHeight)};
+ const st=document.getElementById('st');
+ if(st)st.onclick=()=>{if(!succ){QZ.early++;document.getElementById('cr').innerHTML='<div class="fb no"><b>還沒成功。</b>看清楚病人的反應：說出完整、正確的目標反應才算成功，否則繼續給下一層。</div>';return}
+  QZ.stopOk=QZ.over===0&&QZ.early===0;cueLevel()};
+}
+function cueLevel(){
+ const c=QZ.c;const opts=c.cues.map((x,k)=>k);
+ document.getElementById('cb').innerHTML='';
+ document.getElementById('cr').innerHTML=`<div class="quiz"><p><b>要記錄的是？</b></p>${opts.map(k=>`<button class="opt" data-k="${k}">在第 ${k+1} 層成功：${esc(c.cues[k].t)}</button>`).join('')}<div class="fbwrap"></div></div>`;
+ app.querySelectorAll('#cr .opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;QZ.lvlOk=k===c.ok-1;
+  app.querySelectorAll('#cr .opt').forEach(x=>{x.disabled=true;if(+x.dataset.k===c.ok-1)x.classList.add('right')});if(!QZ.lvlOk)b.classList.add('wrong');
+  app.querySelector('#cr .fbwrap').innerHTML=`<div class="fb ${QZ.lvlOk?'ok':'no'}">${esc(c.note)}</div><div class="nav"><button class="btn" id="fin">看結果</button></div>`;
+  document.getElementById('fin').onclick=cueEnd;});
+ window.scrollTo(0,document.body.scrollHeight);
+}
+function cueEnd(){
+ const c=QZ.c,n=c.cues.length;
+ const score=Math.max(0,Math.round(QZ.a/n*60+(QZ.stopOk?20:0)+(QZ.lvlOk?20:0)-(QZ.over+QZ.early)*5));
+ const sec=Math.min((Date.now()-QZ.t0)/1000,3600);
+ const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
+ queue({type:'提示步驟練習',domain:'提示步驟練習',lesson:c.id,title:c.title,score,correct:score>=80,n:sims[c.id].n,sec:Math.round(sec),
+  note:`順序正確 ${QZ.a}/${n}｜成功時停止 ${QZ.stopOk?'是':'否'}（多給 ${QZ.over}、太早停 ${QZ.early}）｜層級記錄 ${QZ.lvlOk?'正確':'錯誤'}`});
+ header('提示步驟｜結果');window.scrollTo(0,0);
+ app.innerHTML=`<h1>${esc(c.title)}｜結果</h1><div class="score">${score} 分</div>
+ <div class="kv"><b>提示順序</b><span>${QZ.a} / ${n} 層位置正確</span><b>成功時停止</b><span>${QZ.stopOk?'正確':'需注意'}（多給 ${QZ.over} 次、太早停 ${QZ.early} 次）</span><b>記錄層級</b><span>${QZ.lvlOk?'正確':'錯誤'}</span></div>
+ <div class="box ${score>=80?'tip':'pitfall'}">${score>=80?'<b>通過。</b>試試其他類型的提示步驟。':'<b>建議再練一次。</b>複習「提示階層與治療中的回饋」單元。'}</div>
+ <p class="small muted">計分：順序 60 分、成功時停下 20 分、記錄正確層級 20 分；多給或太早停每次扣 5 分。通過：80 分以上。</p>
+ <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
+ document.getElementById('ag').onclick=()=>cueStart(c.id);document.getElementById('bk').onclick=home;
+}
+
 /* ---------- 病歷閱讀練習 ---------- */
 let CR=null;
 function chartStart(id){
@@ -479,6 +560,7 @@ function summaryText(){
  L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}　錯題待重考：${wrongList().length}`);
  D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
   L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
+ L.push('');L.push('【提示步驟練習】');CUES.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  L.push('');L.push('【治療中策略選用】');CASES.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  L.push('');L.push('【治療計畫練習】');CHARTS.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  return L.join('\n');
@@ -503,6 +585,10 @@ function home(){
  <p class="small muted">讀一份失語症測驗結果與觀察，標出規劃治療時一定要考慮的資訊，再做治療決策、寫治療計畫，最後和示範計畫比較。個案與分數皆為虛構，可以重複練習。</p>
  ${CHARTS.map(c=>{const r=sims[c.id];return`<button class="card" data-r="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${c.setting?esc(c.setting)+'｜':''}${esc(c.brief)}</span>
   <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
+ <h2>提示步驟練習 ${wkTag(SCH.cues)}</h2>
+ <p class="small muted">先把提示由少到多排出順序，再模擬實際給提示：一層一層給，病人成功就停下，並記錄成功的層級。</p>
+ ${CUES.map(c=>{const r=sims[c.id];return`<button class="card" data-q="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.who)}</span>
+  <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  <h2>治療中策略選用 ${wkTag(SCH.cases)}</h2>
  <p class="small muted">模擬一節治療：先做治療前準備，再在每個當下選下一步：提示怎麼給、難度怎麼調、怎麼回饋、怎麼交代照顧者。接續治療計畫練習的病人，可以重複練習。</p>
  ${CASES.map(c=>{const r=sims[c.id];return`<button class="card" data-c="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.ref)}</span>
@@ -515,6 +601,7 @@ function home(){
  app.querySelectorAll('.card[data-d]').forEach(b=>b.onclick=()=>domain(b.dataset.d));
  app.querySelectorAll('.card[data-c]').forEach(b=>b.onclick=()=>simStart(b.dataset.c));
  app.querySelectorAll('.card[data-r]').forEach(b=>b.onclick=()=>chartStart(b.dataset.r));
+ app.querySelectorAll('.card[data-q]').forEach(b=>b.onclick=()=>cueStart(b.dataset.q));
  document.getElementById('cp').onclick=copySummary;
  const rvb=document.getElementById('rvb');if(rvb)rvb.onclick=review;
  document.getElementById('sw').onclick=()=>{if(outbox.length){flush();}
