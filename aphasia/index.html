@@ -124,8 +124,8 @@ tr:last-child td{border-bottom:0}
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125e"></script>
-<script src="plans.js?v=20261125e"></script>
+<script src="content.js?v=20261125f"></script>
+<script src="plans.js?v=20261125f"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
@@ -144,7 +144,7 @@ const WEEKPLAN=[
  [1,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
  [2,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
  [3,'失語症：古典分類、非標準化評估｜吞嚥治療：治療原則、病歷閱讀練習'],
- [4,'失語症：失語症治療、治療計畫練習｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
+ [4,'失語症：失語症治療、治療計畫練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
  [5,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
  [6,'運動言語：治療、臨床實務、模擬個案']];
 const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
@@ -250,10 +250,10 @@ let SM=null;
 function simStart(id){
  const c=CASES.find(x=>x.id===id);
  SM={c,pick:new Set(),step:-1,ok:0,bad:0,chartHit:0,t0:Date.now(),path:[]};
- cur='sim';header('模擬個案｜'+c.title);window.scrollTo(0,0);
- app.innerHTML=`<p class="small muted" style="margin-top:22px">模擬個案</p><h1>${esc(c.title)}</h1>
- <div class="scene"><b>會診資料：</b>${esc(c.ref)}</div>
- <h2>看病歷</h2><p>${esc(c.chart.prompt)}</p>
+ cur='sim';header('策略選用｜'+c.title);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療中策略選用</p><h1>${esc(c.title)}</h1>
+ <div class="scene"><b>個案：</b>${esc(c.ref)}</div>
+ <h2>治療前準備</h2><p>${esc(c.chart.prompt)}</p>
  <div id="cl">${c.chart.items.map((it,i)=>`<button class="opt" data-i="${i}" aria-pressed="false">${esc(it.t)}</button>`).join('')}</div>
  <div id="cr"></div>
  <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="cf">確認</button></div>`;
@@ -269,15 +269,15 @@ function simStart(id){
   app.querySelectorAll('#cl .opt').forEach((b,i)=>{b.disabled=true;b.classList.remove('pick');
    if(items[i].key)b.classList.add(SM.pick.has(i)?'right':'sub');else if(SM.pick.has(i))b.classList.add('wrong')});
   const missed=items.filter((x,i)=>x.key&&!SM.pick.has(i));
-  document.getElementById('cr').innerHTML=`<div class="fb ${missed.length?'no':'ok'}">關鍵項目選到 ${SM.chartHit} / ${keys}${extra?'，另選了 '+extra+' 項與評估無關的資料':''}。${missed.length?'漏看：'+missed.map(x=>esc(x.t)).join('、')+'。':''}</div>
-  <h3>病歷查到的資訊</h3>${items.filter(x=>x.key).map(x=>`<div class="ci"><b>${esc(x.t)}：</b>${esc(x.info)}</div>`).join('')}`;
-  const cf=document.getElementById('cf');cf.textContent='開始';cf.onclick=simStep;};
+  document.getElementById('cr').innerHTML=`<div class="fb ${missed.length?'no':'ok'}">關鍵項目選到 ${SM.chartHit} / ${keys}${extra?'，另選了 '+extra+' 項與治療無關的資料':''}。${missed.length?'漏看：'+missed.map(x=>esc(x.t)).join('、')+'。':''}</div>
+  <h3>準備情形</h3>${items.filter(x=>x.key).map(x=>`<div class="ci"><b>${esc(x.t)}：</b>${esc(x.info)}</div>`).join('')}`;
+  const cf=document.getElementById('cf');cf.textContent='開始治療';cf.onclick=simStep;};
 }
 function simStep(){
  SM.step++;const c=SM.c;
  if(SM.step>=c.steps.length)return simEnd();
  const st=c.steps[SM.step],order=shuffle(st.o.map((_,i)=>i));
- header(`模擬個案｜第 ${SM.step+1} / ${c.steps.length} 步`);window.scrollTo(0,0);
+ header(`策略選用｜第 ${SM.step+1} / ${c.steps.length} 個當下`);window.scrollTo(0,0);
  app.innerHTML=`<p class="small muted" style="margin-top:22px">${esc(c.title)}　·　第 ${SM.step+1} / ${c.steps.length} 步</p>
  <div class="scene">${esc(st.scene)}</div>
  <div class="quiz"><p><b>${esc(st.q)}</b></p>${order.map(i=>`<button class="opt" data-i="${i}">${esc(st.o[i].t)}</button>`).join('')}<div class="fbwrap"></div></div>
@@ -288,7 +288,7 @@ function simStep(){
   app.querySelectorAll('.quiz .opt').forEach(x=>{x.disabled=true;const r=st.o[+x.dataset.i].r;if(r==='ok')x.classList.add('right')});
   if(o.r!=='ok')b.classList.add(o.r==='bad'?'wrong':'sub');
   const best=st.o.find(x=>x.r==='ok');
-  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${o.r==='ok'?'ok':'no'}">${o.r==='ok'?'':o.r==='bad'?'<b>不安全的選擇。</b>':'<b>可以，但不是最好的做法。</b>'}${esc(o.fb)}${o.r!=='ok'?'<br><b>較佳做法：</b>'+esc(best.t):''}</div>`;
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${o.r==='ok'?'ok':'no'}">${o.r==='ok'?'':o.r==='bad'?'<b>不適當的選擇。</b>':'<b>可以，但不是最好的做法。</b>'}${esc(o.fb)}${o.r!=='ok'?'<br><b>較佳做法：</b>'+esc(best.t):''}</div>`;
   document.getElementById('nx').hidden=false;});
  document.getElementById('nx').onclick=simStep;
  document.getElementById('bk').onclick=home;
@@ -300,14 +300,14 @@ function simEnd(){
  const score=Math.max(0,Math.round(raw));
  const sec=Math.min((Date.now()-SM.t0)/1000,3600);
  const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
- queue({type:'模擬個案',domain:'模擬個案',lesson:c.id,title:c.title,score,correct:SM.bad===0&&SM.ok===n,n:sims[c.id].n,sec:Math.round(sec),
-  note:`病歷關鍵 ${SM.chartHit}/${keys}｜最佳決策 ${SM.ok}/${n}｜次佳 ${subN}｜不安全 ${SM.bad}`});
- header('模擬個案｜結果');window.scrollTo(0,0);
+ queue({type:'模擬個案',domain:'治療中策略選用',lesson:c.id,title:c.title,score,correct:SM.bad===0&&SM.ok===n,n:sims[c.id].n,sec:Math.round(sec),
+  note:`治療前準備 ${SM.chartHit}/${keys}｜最佳策略 ${SM.ok}/${n}｜次佳 ${subN}｜不適當 ${SM.bad}`});
+ header('策略選用｜結果');window.scrollTo(0,0);
  app.innerHTML=`<h1>${esc(c.title)}｜結果</h1>
  <div class="score">${score} 分</div>
- <div class="kv"><b>病歷關鍵項目</b><span>${SM.chartHit} / ${keys}</span><b>最佳決策</b><span>${SM.ok} / ${n}</span><b>次佳選擇</b><span>${subN}</span><b>不安全的選擇</b><span>${SM.bad}</span></div>
- <div class="box ${score>=80&&SM.bad===0?'tip':'pitfall'}">${score>=80&&SM.bad===0?'<b>通過。</b>這個個案的流程已經掌握，可以試試其他個案。':'<b>建議再練一次。</b>'+(SM.bad?'有不安全的選擇，臨床上可能造成吸入、營養不足或延誤處置，請回頭複習相關單元。':'流程大致正確，再熟練一次就能通過。')}</div>
- <p class="small muted">計分：病歷 20 分、決策 80 分（次佳選擇給一半），每個不安全選擇扣 10 分。通過標準：80 分以上且沒有不安全的選擇。</p>
+ <div class="kv"><b>治療前準備</b><span>${SM.chartHit} / ${keys}</span><b>最佳策略</b><span>${SM.ok} / ${n}</span><b>次佳選擇</b><span>${subN}</span><b>不適當的選擇</b><span>${SM.bad}</span></div>
+ <div class="box ${score>=80&&SM.bad===0?'tip':'pitfall'}">${score>=80&&SM.bad===0?'<b>通過。</b>這個個案的流程已經掌握，可以試試其他個案。':'<b>建議再練一次。</b>'+(SM.bad?'有不適當的選擇，可能強化錯誤、增加挫折或讓練習無法延續，請回頭複習「失語症治療原則」與「提示階層」單元。':'流程大致正確，再熟練一次就能通過。')}</div>
+ <p class="small muted">計分：治療前準備 20 分、策略選擇 80 分（次佳選擇給一半），每個不適當選擇扣 10 分。通過標準：80 分以上且沒有不適當的選擇。</p>
  <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
  document.getElementById('ag').onclick=()=>simStart(c.id);
  document.getElementById('bk').onclick=home;
@@ -385,6 +385,7 @@ function chartGoals(){
  <div class="box goal">目標要從<b>病人的日常生活</b>出發：他每天在做什麼、想回到哪些活動、照顧者最需要他能表達什麼。先寫下來，再訂長期目標，最後拆成可測量的短期目標。</div>
  ${c.setting==='住院'?'<div class="box tip"><b>住院個案：</b>急性期以病人的<b>弱項</b>為主訂目標，安排高強度、高頻率、同樣任務的反覆練習；治療次數少時，把同一組練習交給照顧者或護理人員每天重複。也要建立基本需求的溝通方式。</div>':c.setting==='門診'?'<div class="box tip"><b>門診個案：</b>慢性期以<b>社會參與</b>訂目標：回到工作、社區活動、家庭聚會中的對話。治療室時間用來教策略與檢查，練習量放在居家作業。</div>':''}
  ${goalsBoxInfo()}
+ ${principlesBox()}
  <h2>1. 病人的日常生活與參與需求</h2>
  <label class="small muted" for="g-daily">從資料中整理：生活作息、工作或角色、想參與的活動、照顧者與溝通對象</label>${ta('g-daily',G.daily,'例如：水電行老闆，常要接電話；太太白天照顧；希望能回去工作')}
  <h2>2. 長期目標</h2>
@@ -406,6 +407,8 @@ function chartGoals(){
   if(miss.length){document.getElementById('gerr').innerHTML='<div class="fb no">還沒填完：'+miss.map(esc).join('、')+'。</div>';return}
   chartQ()};
 }
+const PRIN=['以病人為中心，目標連結生活','從強項切入','高成功率起步，難度漸進','提示階層與自我提示','強度與重複（含居家與照顧者練習）','特定性與類化（探測項目）','個人化、功能性的材料','多管道溝通','溝通夥伴與環境','情緒、動機與自我效能','測量、檢視與調整','依病程與服務型態調整'];
+function principlesBox(){return `<details class="box"><summary><b>失語症治療原則速查</b></summary><ol>${PRIN.map(x=>`<li>${esc(x)}</li>`).join('')}</ol><p class="small muted">詳見「失語症治療原則」單元。</p></details>`}
 function goalsBoxInfo(){const c=CR.c;return `<details class="box"><summary><b>再看一次關鍵資訊</b></summary><ul>${c.tabs.flatMap(t=>t.lines.filter(l=>l.k).map(l=>`<li>${esc(l.t)}</li>`)).join('')}</ul></details>`}
 function $v(id){const e=document.getElementById(id);return e?e.value.trim():''}
 function chartPlan(){
@@ -435,11 +438,15 @@ function chartEnd(){
  <div class="box ${pass?'tip':'pitfall'}">${pass?'<b>通過。</b>可以換一個個案練習，或過幾天再回來重做，比較自己寫的治療計畫有沒有更完整。':'<b>建議再練一次。</b>先回頭看漏掉的重點與它們的理由。'}</div>
  <h2>你的治療計畫</h2><div class="chartpaper" style="white-space:pre-line">${esc(goalsText())}${CR.sum?'\n\n'+esc(CR.sum):''}</div>
  <h3>目標自我檢核</h3><div class="chartpaper">${goalCheck()}</div>
+ <h3>我的計畫用到了哪些治療原則？</h3><div class="chartpaper" id="prck">${PRIN.map((x,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:15px"><input type="checkbox" data-p="${i}" style="width:20px;height:20px;margin-top:3px;flex:none">${esc(x)}</label>`).join('')}<p class="small muted" style="margin:6px 0 0">勾完按下方「送出原則自評」，督導會在紀錄中看到。沒勾到的，想想示範計畫是怎麼做的。</p><button class="btn ghost" id="prsend" type="button" style="margin-top:8px">送出原則自評</button></div>
  <h2>示範治療計畫</h2><div class="chartpaper" style="white-space:pre-line">${esc(c.model)}</div>
  <p class="small muted">比較看看：你的目標和示範計畫連到的生活情境一樣嗎？示範計畫有、你沒寫到的，是哪一部分？（強項的運用、病人與家屬目標、短期目標的條件與標準、探測項目、溝通夥伴、頻率）。示範計畫只是一種寫法，請和督導討論。</p>
  <p class="small muted">計分：關鍵資訊 50 分（每多標一句非關鍵扣 3 分），決策題 50 分（次佳給一半），每個不適當選擇再扣 5 分。通過：80 分以上且沒有不適當的選擇。</p>
  <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
  document.getElementById('ag').onclick=()=>chartStart(c.id);document.getElementById('bk').onclick=home;
+ const ps=document.getElementById('prsend');if(ps)ps.onclick=()=>{const on=[...app.querySelectorAll('#prck input:checked')].map(x=>PRIN[+x.dataset.p]);
+  queue({type:'治療原則自評',domain:'治療計畫練習',lesson:c.id,title:c.title,score:on.length,n:sims[c.id].n,note:`勾選 ${on.length}/${PRIN.length}：${on.join('、')}｜未勾：${PRIN.filter(x=>!on.includes(x)).join('、')}`});
+  ps.disabled=true;ps.textContent='已送出';};
 }
 
 /* ---------- 畫面 ---------- */
@@ -472,6 +479,7 @@ function summaryText(){
  L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}　錯題待重考：${wrongList().length}`);
  D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
   L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
+ L.push('');L.push('【治療中策略選用】');CASES.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  L.push('');L.push('【治療計畫練習】');CHARTS.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  return L.join('\n');
 }
@@ -490,10 +498,14 @@ function home(){
  ${D.map(d=>{const n=d.L.filter(l=>done[l.id]).length;
   return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
   <span class="meta"><span class="small muted">${wk(d)?'第 '+wk(d)+' 週｜':''}${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
- <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類與非標準化評估，最後讀「失語症治療」並完成治療計畫練習。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
+ <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類與非標準化評估，最後讀「失語症治療」（從「失語症治療原則」開始）並完成治療計畫練習。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
  <h2>治療計畫練習 ${wkTag(SCH.charts)}</h2>
  <p class="small muted">讀一份失語症測驗結果與觀察，標出規劃治療時一定要考慮的資訊，再做治療決策、寫治療計畫，最後和示範計畫比較。個案與分數皆為虛構，可以重複練習。</p>
  ${CHARTS.map(c=>{const r=sims[c.id];return`<button class="card" data-r="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${c.setting?esc(c.setting)+'｜':''}${esc(c.brief)}</span>
+  <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
+ <h2>治療中策略選用 ${wkTag(SCH.cases)}</h2>
+ <p class="small muted">模擬一節治療：先做治療前準備，再在每個當下選下一步：提示怎麼給、難度怎麼調、怎麼回饋、怎麼交代照顧者。接續治療計畫練習的病人，可以重複練習。</p>
+ ${CASES.map(c=>{const r=sims[c.id];return`<button class="card" data-c="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.ref)}</span>
   <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
  <details class="box goal"><summary><b>實習六週進度（四門課）</b></summary><div class="tablewrap"><table class="wkplan">${WEEKPLAN.map(w=>`<tr><td>第 ${w[0]} 週</td><td>${esc(w[1])}</td></tr>`).join('')}</table></div><p class="small muted">週次為建議進度，依實際排程調整。</p></details>
