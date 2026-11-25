@@ -130,9 +130,10 @@ tr:last-child td{border-bottom:0}
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125g"></script>
-<script src="plans.js?v=20261125g"></script>
-<script src="cues.js?v=20261125g"></script>
+<script src="content.js?v=20261125h"></script>
+<script src="plans.js?v=20261125h"></script>
+<script src="cues.js?v=20261125h"></script>
+<script src="design.js?v=20261125h"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
@@ -150,7 +151,7 @@ const wkTag=n=>n?'<span class="wk">第 '+n+' 週</span>':'';
 const WEEKPLAN=[
  [1,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
  [2,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
- [3,'失語症：古典分類、非標準化評估｜吞嚥治療：治療原則、病歷閱讀練習'],
+ [3,'失語症：古典分類、非標準化評估、評估設計練習｜吞嚥治療：治療原則、病歷閱讀練習'],
  [4,'失語症：失語症治療、治療計畫練習、提示步驟練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
  [5,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
  [6,'運動言語：治療、臨床實務、模擬個案']];
@@ -318,6 +319,127 @@ function simEnd(){
  <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
  document.getElementById('ag').onclick=()=>simStart(c.id);
  document.getElementById('bk').onclick=home;
+}
+
+/* ---------- 非正式評估設計練習 ---------- */
+let DZ=null;
+const TK=id=>TASKS.find(t=>t.id===id);
+const fld='width:100%;font:inherit;font-size:16px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);margin:4px 0 8px';
+function dzStart(id){const c=DESIGNS.find(x=>x.id===id);DZ={c,goal:'',items:[],qi:0,ok:0,sub:0,bad:0,order:shuffle(c.qs.map((_,i)=>i)),t0:Date.now()};cur='design';dzCase()}
+function dzCase(){
+ const c=DZ.c;header('評估設計｜'+c.title);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">非正式評估設計　·　第 1 步：讀個案、訂評估目的</p><h1>${esc(c.title)}</h1>
+ <div class="box goal"><b>情境：</b>${esc(c.brief)}</div>
+ <div class="chartpaper"><ul style="margin:4px 0">${c.info.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+ <h2>這次評估要回答哪些問題？</h2>
+ <p class="small muted">例如：他聽得懂多少？是非反應可靠嗎？用什麼方式溝通最有效？可能是哪一型？</p>
+ <textarea id="dgoal" style="${fld};min-height:110px" placeholder="1. …&#10;2. …">${esc(DZ.goal)}</textarea>
+ <div id="derr"></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">下一步：設計流程與教材</button></div>`;
+ document.getElementById('bk').onclick=home;
+ document.getElementById('nx').onclick=()=>{DZ.goal=$v('dgoal');if(DZ.goal.length<8){document.getElementById('derr').innerHTML='<div class="fb no">請先寫下這次評估要回答的問題。</div>';return}dzBuild()};
+}
+function dzRead(){DZ.items.forEach((it,k)=>{['name','tag','min','mat','score'].forEach(f=>{const e=document.getElementById('d'+k+'-'+f);if(e)it[f]=e.value.trim()})})}
+function dzTotal(){return DZ.items.reduce((a,it)=>a+(parseFloat(it.min)||0),0)}
+function dzBuild(){
+ const c=DZ.c;header('評估設計｜設計流程與教材');
+ const tot=dzTotal();
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">非正式評估設計　·　第 2 步：自己設計流程與教材</p><h1>我的評估流程</h1>
+ <div class="box goal">依你訂的評估目的，<b>自己新增</b>評估項目並排出順序。每一項寫下名稱、評估的能力、時間、教材與題目、計分方式。題目請自己設計，不要使用標準化測驗的題目。<br>可用時間：<b>${c.budget} 分鐘</b>　目前合計：<b id="dtot" style="color:${tot>c.budget?'var(--bad)':'var(--accent)'}">${tot} 分鐘</b></div>
+ <details class="box"><summary><b>卡住時再打開：各類能力的設計要點與範例</b></summary>${TASKS.map(t=>`<p><b>${esc(t.name)}</b>：${esc(t.purpose)}<br><span class="small">${esc(t.tip)}</span><br><span class="small muted" style="white-space:pre-line">範例：${esc(t.ex)}</span></p>`).join('')}</details>
+ <div id="dlist">${DZ.items.map((it,k)=>`<div class="chartpaper"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>第 ${k+1} 項</b><span>
+  <button class="linkbtn" data-up="${k}" ${k===0?'disabled':''}>上移</button>　<button class="linkbtn" data-dn="${k}" ${k===DZ.items.length-1?'disabled':''}>下移</button>　<button class="linkbtn" data-rm="${k}">刪除</button></span></div>
+  <label class="small muted" for="d${k}-name">項目名稱（自己取）</label><input id="d${k}-name" value="${esc(it.name||'')}" placeholder="例如：床邊實物指認" style="${fld}">
+  <label class="small muted" for="d${k}-tag">評估的能力</label><select id="d${k}-tag" style="${fld}"><option value="">請選擇</option>${TASKS.map(t=>`<option value="${t.id}" ${it.tag===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select>
+  <label class="small muted" for="d${k}-min">預估時間（分鐘）</label><input id="d${k}-min" type="number" min="0" step="0.5" inputmode="decimal" value="${esc(it.min||'')}" style="${fld};max-width:140px;display:block">
+  <label class="small muted" for="d${k}-mat">教材與題目（一行一題，寫出實際要問或要用的東西）</label><textarea id="d${k}-mat" style="${fld};min-height:110px" placeholder="例如：&#10;你叫○○○嗎？（是）&#10;你現在在家裡嗎？（不是）">${esc(it.mat||'')}</textarea>
+  <label class="small muted" for="d${k}-score">計分與記錄方式</label><input id="d${k}-score" value="${esc(it.score||'')}" placeholder="例如：正確／錯誤、需要的提示層級、反應時間" style="${fld}">
+ </div>`).join('')}</div>
+ <button class="btn ghost" id="add" type="button">＋ 新增評估項目</button>
+ <div id="derr"></div>
+ <div class="nav"><button class="btn ghost" id="bk">上一步</button><button class="btn" id="nx">檢查我的流程</button></div>`;
+ const upd=()=>{dzRead();const t=dzTotal(),e=document.getElementById('dtot');e.textContent=t+' 分鐘';e.style.color=t>c.budget?'var(--bad)':'var(--accent)'};
+ app.querySelectorAll('#dlist input,#dlist textarea,#dlist select').forEach(x=>{x.oninput=upd;x.onchange=upd});
+ app.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{dzRead();const k=+b.dataset.up;[DZ.items[k-1],DZ.items[k]]=[DZ.items[k],DZ.items[k-1]];dzBuild()});
+ app.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{dzRead();const k=+b.dataset.dn;[DZ.items[k+1],DZ.items[k]]=[DZ.items[k],DZ.items[k+1]];dzBuild()});
+ app.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{dzRead();DZ.items.splice(+b.dataset.rm,1);dzBuild()});
+ document.getElementById('add').onclick=()=>{dzRead();DZ.items.push({});dzBuild();const l=app.querySelectorAll('#dlist .chartpaper');l[l.length-1].scrollIntoView({behavior:'smooth'})};
+ document.getElementById('bk').onclick=()=>{dzRead();dzCase()};
+ document.getElementById('nx').onclick=()=>{dzRead();const bad=DZ.items.map((it,k)=>(!it.name||!it.tag||!(parseFloat(it.min)>0)||(it.mat||'').split('\n').filter(x=>x.trim()).length<1||!it.score)?k+1:0).filter(Boolean);
+  if(DZ.items.length<3){document.getElementById('derr').innerHTML='<div class="fb no">至少設計 3 個評估項目。</div>';return}
+  if(bad.length){document.getElementById('derr').innerHTML='<div class="fb no">第 '+bad.join('、')+' 項還有欄位沒填（名稱、能力、時間、題目、計分方式）。</div>';return}
+  dzCheck()};
+}
+function dzRules(){
+ const c=DZ.c,tags=DZ.items.map(it=>it.tag);
+ return c.rules.map(r=>{let pass=true;
+  if(r.type==='include')pass=tags.includes(r.task);
+  if(r.type==='includeAny')pass=r.tasks.some(t=>tags.includes(t));
+  if(r.type==='avoid')pass=!tags.includes(r.task);
+  if(r.type==='early'){const i=tags.indexOf(r.task);pass=i>=0&&i<r.within}
+  if(r.type==='before'){const a=tags.indexOf(r.a),b=tags.indexOf(r.b);pass=a>=0&&(b<0||a<b)}
+  if(r.type==='budget')pass=dzTotal()<=c.budget;
+  return {r,pass}});
+}
+function dzCheck(){
+ const c=DZ.c,res=dzRules();DZ.rp=res.filter(x=>x.pass).length;DZ.rn=res.length;
+ header('評估設計｜流程檢核');window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">非正式評估設計　·　流程檢核</p><h1>${esc(c.title)}</h1>
+ <div class="fb ${DZ.rp===DZ.rn?'ok':'no'}">符合 ${DZ.rp} / ${DZ.rn} 項流程原則。總時間 ${dzTotal()} 分鐘（可用 ${c.budget} 分鐘）。</div>
+ <div class="chartpaper">${res.map(x=>`<div class="ln ${x.pass?'hit':'miss'}"><span class="tag">${x.pass?'符合':'再想想'}</span>${esc(x.r.msg)}</div>`).join('')}</div>
+ <p class="small muted">檢核只依你選的「評估的能力」與順序、時間。可以回去修改流程，或繼續下一步。</p>
+ <div class="nav"><button class="btn ghost" id="bk">回去修改</button><button class="btn" id="nx">下一步：臨場調整</button></div>`;
+ document.getElementById('bk').onclick=dzBuild;document.getElementById('nx').onclick=dzQ;
+}
+function dzQ(){
+ const c=DZ.c;if(DZ.qi>=c.qs.length)return dzEnd();
+ const q=c.qs[DZ.order[DZ.qi]],ord=shuffle(q.o.map((_,i)=>i));
+ header(`評估設計｜臨場調整 ${DZ.qi+1} / ${c.qs.length}`);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">非正式評估設計　·　第 3 步：評估中的臨場調整（${DZ.qi+1} / ${c.qs.length}）</p>
+ <div class="quiz"><p><b>${esc(q.q)}</b></p>${ord.map(i=>`<button class="opt" data-i="${i}">${esc(q.o[i].t)}</button>`).join('')}<div class="fbwrap"></div></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx" hidden>${DZ.qi<c.qs.length-1?'下一題':'看結果與評估紀錄單'}</button></div>`;
+ app.querySelectorAll('.quiz .opt').forEach(b=>b.onclick=()=>{const o=q.o[+b.dataset.i];
+  if(o.r==='ok')DZ.ok++;else if(o.r==='sub')DZ.sub++;else DZ.bad++;
+  app.querySelectorAll('.quiz .opt').forEach(x=>{x.disabled=true;if(q.o[+x.dataset.i].r==='ok')x.classList.add('right')});
+  if(o.r!=='ok')b.classList.add(o.r==='bad'?'wrong':'sub');
+  const best=q.o.find(x=>x.r==='ok');
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${o.r==='ok'?'ok':'no'}">${o.r==='bad'?'<b>不適當。</b>':o.r==='sub'?'<b>可以，但不是最好的。</b>':''}${esc(o.fb)}${o.r!=='ok'?'<br><b>較佳做法：</b>'+esc(best.t):''}</div>`;
+  document.getElementById('nx').hidden=false;});
+ document.getElementById('bk').onclick=home;document.getElementById('nx').onclick=()=>{DZ.qi++;dzQ()};
+}
+function dzSheet(){
+ const c=DZ.c,L=[];
+ L.push(`失語症非正式評估紀錄單｜${c.title.replace(/^設計[一二三]｜/,'')}`);
+ L.push(`設計者：${me?me.name:''}　日期：＿＿＿＿　病人：＿＿＿＿（請勿寫可識別資料於練習）`);
+ L.push('');L.push('【評估目的】');L.push(DZ.goal);L.push('');
+ L.push(`【流程】合計約 ${dzTotal()} 分鐘`);
+ DZ.items.forEach((it,k)=>{L.push('');L.push(`${k+1}. ${it.name}（${TK(it.tag)?TK(it.tag).name:''}，約 ${it.min} 分鐘）`);L.push(`   計分：${it.score}`);
+  it.mat.split('\n').filter(x=>x.trim()).forEach((x,j)=>L.push(`   ${j+1}) ${x.trim()}　反應：＿＿＿＿　提示層級：＿＿`))});
+ L.push('');L.push('【觀察與備註】＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿');
+ L.push('【初步結論與建議】＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿');
+ return L.join('\n');
+}
+function dzEnd(){
+ const c=DZ.c,n=c.qs.length;
+ const p1=Math.round(DZ.rp/DZ.rn*50),p2=Math.round((DZ.ok+DZ.sub*0.5)/n*50),score=Math.max(0,p1+p2-DZ.bad*5);
+ const sec=Math.min((Date.now()-DZ.t0)/1000,3600),sheet=dzSheet();
+ const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
+ queue({type:'評估設計練習',domain:'非正式評估設計',lesson:c.id,title:c.title,score,correct:score>=80&&DZ.bad===0,n:sims[c.id].n,sec:Math.round(sec),
+  note:`流程原則 ${DZ.rp}/${DZ.rn}｜臨場 最佳 ${DZ.ok}/${n}、次佳 ${DZ.sub}、不適當 ${DZ.bad}｜${sheet.slice(0,1500)}`});
+ header('評估設計｜結果');window.scrollTo(0,0);
+ const pass=score>=80&&DZ.bad===0;
+ app.innerHTML=`<h1>${esc(c.title)}｜結果</h1><div class="score">${score} 分</div>
+ <div class="kv"><b>流程原則</b><span>${DZ.rp} / ${DZ.rn}｜${p1} / 50</span><b>臨場調整</b><span>最佳 ${DZ.ok} / ${n}、次佳 ${DZ.sub}、不適當 ${DZ.bad}｜${p2} / 50</span></div>
+ <div class="box ${pass?'tip':'pitfall'}">${pass?'<b>通過。</b>你的評估紀錄單已送給督導，討論後就可以帶去床邊使用。':'<b>建議再練一次。</b>回頭看沒有符合的流程原則與臨場調整的回饋。'}</div>
+ <h2>我的評估紀錄單</h2>
+ <div class="chartpaper" style="white-space:pre-wrap;font-size:14.5px" id="sheet">${esc(sheet)}</div>
+ <div class="row"><button class="btn" id="cps" type="button">複製評估紀錄單</button></div><div id="cpsbox"></div>
+ <h3>教材自我檢核</h3><div class="chartpaper">${['題目有難度梯度（由易到難）','是非題「是」與「不是」大約各半','材料與病人的生活、語言（國語／台語）和識字程度相符','預先寫好計分方式與提示層級的記錄欄','沒有使用標準化測驗的原題','考慮病人的體力、視野與肢體限制'].map(x=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:15px"><input type="checkbox" style="width:20px;height:20px;margin-top:3px;flex:none">${esc(x)}</label>`).join('')}</div>
+ <h2>示範流程</h2><div class="chartpaper" style="white-space:pre-line">${esc(c.model)}</div>
+ <p class="small muted">示範流程只是一種設計；你的流程只要能回答評估目的、符合病人的狀況，就是好的設計。請帶著紀錄單和督導討論。</p>
+ <div class="nav"><button class="btn ghost" id="ag">再設計一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
+ document.getElementById('cps').onclick=async()=>{try{await navigator.clipboard.writeText(sheet);document.getElementById('cps').textContent='已複製'}catch(e){document.getElementById('cpsbox').innerHTML=`<textarea style="${fld};min-height:200px" readonly>${esc(sheet)}</textarea>`;document.querySelector('#cpsbox textarea').select()}};
+ document.getElementById('ag').onclick=()=>dzStart(c.id);document.getElementById('bk').onclick=home;
 }
 
 /* ---------- 提示步驟練習 ---------- */
@@ -560,6 +682,7 @@ function summaryText(){
  L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}　錯題待重考：${wrongList().length}`);
  D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
   L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
+ L.push('');L.push('【非正式評估設計練習】');DESIGNS.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  L.push('');L.push('【提示步驟練習】');CUES.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  L.push('');L.push('【治療中策略選用】');CASES.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  L.push('');L.push('【治療計畫練習】');CHARTS.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
@@ -581,6 +704,10 @@ function home(){
   return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
   <span class="meta"><span class="small muted">${wk(d)?'第 '+wk(d)+' 週｜':''}${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
  <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類與非標準化評估，最後讀「失語症治療」（從「失語症治療原則」開始）並完成治療計畫練習。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
+ <h2>非正式評估設計練習 ${wkTag(SCH.designs)}</h2>
+ <p class="small muted">依情境自己設計評估流程與教材：訂評估目的、新增評估項目、自己出題與計分方式，系統依你的流程給回饋，最後產生可以帶去床邊的評估紀錄單。</p>
+ ${DESIGNS.map(c=>{const r=sims[c.id];return`<button class="card" data-f="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.brief)}</span>
+  <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  <h2>治療計畫練習 ${wkTag(SCH.charts)}</h2>
  <p class="small muted">讀一份失語症測驗結果與觀察，標出規劃治療時一定要考慮的資訊，再做治療決策、寫治療計畫，最後和示範計畫比較。個案與分數皆為虛構，可以重複練習。</p>
  ${CHARTS.map(c=>{const r=sims[c.id];return`<button class="card" data-r="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${c.setting?esc(c.setting)+'｜':''}${esc(c.brief)}</span>
@@ -602,6 +729,7 @@ function home(){
  app.querySelectorAll('.card[data-c]').forEach(b=>b.onclick=()=>simStart(b.dataset.c));
  app.querySelectorAll('.card[data-r]').forEach(b=>b.onclick=()=>chartStart(b.dataset.r));
  app.querySelectorAll('.card[data-q]').forEach(b=>b.onclick=()=>cueStart(b.dataset.q));
+ app.querySelectorAll('.card[data-f]').forEach(b=>b.onclick=()=>dzStart(b.dataset.f));
  document.getElementById('cp').onclick=copySummary;
  const rvb=document.getElementById('rvb');if(rvb)rvb.onclick=review;
  document.getElementById('sw').onclick=()=>{if(outbox.length){flush();}

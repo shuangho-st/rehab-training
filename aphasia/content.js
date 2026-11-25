@@ -448,4 +448,4 @@ const D=[
 ];
 
 /* 第幾週（單元頁會顯示；改數字即可調整）。cases＝模擬個案，charts＝病歷閱讀／治療計畫練習 */
-const SCHEDULE={a:1,b:2,c:3,d:3,e:4,charts:4,cues:4,cases:4};
+const SCHEDULE={a:1,b:2,c:3,d:3,e:4,designs:3,charts:4,cues:4,cases:4};
