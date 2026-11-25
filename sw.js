@@ -1,5 +1,5 @@
 // 更新圖示或其他檔案後，把版本號加 1，手機上的舊快取就會被換掉
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'rehab-demo-' + VERSION;
 const SHELL = [
   './',
@@ -32,10 +32,14 @@ self.addEventListener('fetch', e => {
   // 頁面：先抓網路上的最新版，沒網路時用快取，所以內容一改就會生效
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-cache' })
         .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put('index.html', copy));
+          // 只把首頁存成離線備用，課程頁不要蓋掉首頁
+          const scope = new URL(self.registration.scope);
+          if (res.ok && (url.pathname === scope.pathname || url.pathname === scope.pathname + 'index.html')) {
+            const copy = res.clone();
+            caches.open(CACHE).then(c => c.put('index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('index.html').then(r => r || caches.match('./')))
@@ -60,6 +64,6 @@ self.addEventListener('fetch', e => {
 
   // 同網域的圖示等檔案：先用快取
   if (url.origin === self.location.origin) {
-    e.respondWith(caches.match(req).then(hit => hit || fetch(req)));
+    e.respondWith(caches.match(req, { ignoreSearch: false }).then(hit => hit || fetch(req, { cache: 'no-cache' })));
   }
 });
