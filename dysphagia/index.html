@@ -95,6 +95,8 @@ tr:last-child td{border-bottom:0}
 .scene{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tip);border-radius:12px;padding:14px 16px;margin:14px 0}
 .ci{font-size:14.5px;margin:6px 0;padding:8px 12px;border-radius:8px;background:var(--surface2)}
 .score{font-size:40px;font-weight:700;font-family:var(--serif);color:var(--accent);line-height:1.2}
+.wk{display:inline-block;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;margin-right:8px;vertical-align:middle;white-space:nowrap}
+.wkplan td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
 .copyarea{width:100%;min-height:180px;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-top:10px}
 </style>
 </head>
@@ -107,7 +109,7 @@ tr:last-child td{border-bottom:0}
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125"></script>
+<script src="content.js?v=20261125c"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
@@ -119,6 +121,16 @@ const COURSE_NAME = '吞嚥';
 const ALL=D.flatMap(d=>d.L.map(l=>({d,l})));
 const app=document.getElementById('app');
 const K={done:'dys-done',quiz:'dys-quiz',secs:'dys-secs',me:'st-me',out:'dys-outbox',sim:'dys-sim'};
+const SCH=typeof SCHEDULE!=='undefined'?SCHEDULE:{};
+const wk=(d,l)=>(l&&l.week)||SCH[d.id]||0;
+const wkTag=n=>n?'<span class="wk">第 '+n+' 週</span>':'';
+const WEEKPLAN=[
+ [1,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
+ [2,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
+ [3,'失語症：古典分類、非標準化評估｜吞嚥治療：治療原則、病歷閱讀練習'],
+ [4,'失語症：失語症治療、治療計畫練習｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
+ [5,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
+ [6,'運動言語：治療、臨床實務、模擬個案']];
 const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let done=ld(K.done,{}),qlog=ld(K.quiz,{}),secs=ld(K.secs,{}),me=ld(K.me,null),outbox=ld(K.out,[]),sims=ld(K.sim,{});
@@ -332,13 +344,14 @@ function home(){
  <p class="small muted">學習者：<b>${esc(me.name)}</b>（${esc(me.role)}）　<span id="sync" class="sync"></span></p>
  ${D.map(d=>{const n=d.L.filter(l=>done[l.id]).length;
   return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
-  <span class="meta"><span class="small muted">${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
+  <span class="meta"><span class="small muted">${wk(d)?'第 '+wk(d)+' 週｜':''}${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
  <div class="box goal"><b>建議順序：</b>先讀「吞嚥基礎」與「病房 BS 實務」，再讀「床邊臨床吞嚥評估」與「判讀與決策」。第一次到病房跟診前，至少完成「病房 BS 實務」；自己操作試餵前，三個模擬個案都要達到 80 分以上。</div>
- <h2>模擬個案</h2>
+ <h2>模擬個案 ${wkTag(SCH.cases)}</h2>
  <p class="small muted">從看病歷、進病房、檢查、試餵到給建議，每一步都要做決定。可以重複練習，紀錄取最高分。</p>
  ${CASES.map(c=>{const r=sims[c.id];return`<button class="card" data-c="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.ref)}</span>
   <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
+ <details class="box goal"><summary><b>實習六週進度（四門課）</b></summary><div class="tablewrap"><table class="wkplan">${WEEKPLAN.map(w=>`<tr><td>第 ${w[0]} 週</td><td>${esc(w[1])}</td></tr>`).join('')}</table></div><p class="small muted">週次為建議進度，依實際排程調整。</p></details>
  <div class="row"><button class="btn ghost" id="cp">複製我的學習紀錄</button><button class="linkbtn" id="sw">不是 ${esc(me.name)}？換人登錄</button></div>
  <div id="cpbox"></div>
  <div class="foot">本課程為科內自學教材，內容為學理概要；生命徵象標準、隔離規範與飲食質地以院內規範、醫囑與督導指導為準。</div>`;
@@ -352,7 +365,7 @@ function home(){
 }
 function domain(id){
  const d=D.find(x=>x.id===id);cur='domain';header(d.name);window.scrollTo(0,0);
- app.innerHTML=`<h1>${d.name}</h1><p class="lead">${d.desc}</p>
+ app.innerHTML=`${wk(d)?`<p style="margin:22px 0 0">${wkTag(wk(d))}</p>`:''}<h1>${d.name}</h1><p class="lead">${d.desc}</p>
  ${d.L.map((l,i)=>`<button class="card" data-l="${l.id}"><span class="num">${i+1}</span><b>${l.t}</b>
  <span class="meta"><span class="small muted">${l.goal}</span><span class="chip ${done[l.id]?'done':''}">${done[l.id]?'已完成':'未讀'}</span></span></button>`).join('')}
  <div class="nav"><button class="btn ghost" id="bk">回課程首頁</button></div>`;
@@ -362,7 +375,7 @@ function domain(id){
 function lesson(lid){
  const idx=ALL.findIndex(x=>x.l.id===lid),{d,l}=ALL[idx];
  cur='lesson';openedAt=Date.now();header(d.name+'｜'+l.t);window.scrollTo(0,0);
- app.innerHTML=`<p class="small muted" style="margin-top:22px">${d.name}</p><h1>${l.t}</h1>
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">${wkTag(wk(d,l))}${d.name}</p><h1>${l.t}</h1>
  <div class="box goal"><b>學習目標：</b>${l.goal}</div>
  ${l.h}
  ${l.tree?'<div id="tree"></div>':''}

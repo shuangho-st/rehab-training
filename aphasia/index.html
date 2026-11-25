@@ -90,6 +90,28 @@ tr:last-child td{border-bottom:0}
 .err{color:var(--bad);font-size:14.5px;min-height:1.4em}
 .sync{font-size:14px;color:var(--ink2)}
 .sync.warn{color:var(--warn)}
+.opt.sub{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.opt.pick{border-color:var(--accent);background:var(--accent-soft)}
+.scene{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tip);border-radius:12px;padding:14px 16px;margin:14px 0}
+.ci{font-size:14.5px;margin:6px 0;padding:8px 12px;border-radius:8px;background:var(--surface2)}
+.score{font-size:40px;font-weight:700;font-family:var(--serif);color:var(--accent);line-height:1.2}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:12px 0 4px;padding-bottom:4px}
+.tabbtn{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:14.5px;min-height:38px;cursor:pointer}
+.tabbtn.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.tabbtn .cnt{font-size:12px;margin-left:4px;opacity:.8}
+.chartpaper{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0}
+.ln{display:block;width:100%;text-align:left;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);background:transparent;border:1.5px solid transparent;border-radius:8px;padding:7px 10px;margin:2px 0;cursor:pointer}
+.ln:hover{background:var(--surface2)}
+.ln.mk{border-color:var(--accent);background:var(--accent-soft)}
+.ln.hit{border-color:var(--ok);background:var(--ok-soft);cursor:default}
+.ln.miss{border-color:var(--warn);background:var(--warn-soft);cursor:default}
+.ln.extra{border-color:var(--line);cursor:default;color:var(--ink2)}
+.ln.plain{cursor:default}
+.ln .why{display:block;font-size:13.5px;margin-top:4px;color:var(--ink2)}
+.ln .tag{font-size:12px;font-weight:700;margin-right:6px}
+.ln.hit .tag{color:var(--ok)}.ln.miss .tag{color:var(--warn)}.ln.extra .tag{color:var(--ink2)}
+.wk{display:inline-block;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;margin-right:8px;vertical-align:middle;white-space:nowrap}
+.wkplan td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
 .copyarea{width:100%;min-height:180px;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-top:10px}
 </style>
 </head>
@@ -97,25 +119,37 @@ tr:last-child td{border-bottom:0}
 <header class="top">
  <div class="top-in">
   <button class="home-btn" id="home">成人失語症<small id="crumb">實習生自學課程</small></button>
-  <span class="chip acc" id="prog">0 / 16</span>
+  <span class="chip acc" id="prog">0 / 15</span>
  </div>
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125"></script>
+<script src="content.js?v=20261125c"></script>
+<script src="plans.js?v=20261125c"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
 const API_URL = 'https://script.google.com/a/macros/s.tmu.edu.tw/s/AKfycbywBWQXUvHmv3lFdBjRzSQ06qwB2ky_E9clevPthTjEN3TEhq7XdZVNt84dKmmss721Kw/exec';
-const APP_VER = 'aphasia-1';
+const APP_VER = 'aphasia-2';
+const COURSE_NAME = '失語症';
 /* =============================================== */
 
 const ALL=D.flatMap(d=>d.L.map(l=>({d,l})));
 const app=document.getElementById('app');
-const K={done:'aph-done',quiz:'aph-quiz',secs:'aph-secs',me:'aph-me',out:'aph-outbox'};
+const K={done:'aph-done',quiz:'aph-quiz',secs:'aph-secs',me:'aph-me',out:'aph-outbox',sim:'aph-plan'};
+const SCH=typeof SCHEDULE!=='undefined'?SCHEDULE:{};
+const wk=(d,l)=>(l&&l.week)||SCH[d.id]||0;
+const wkTag=n=>n?'<span class="wk">第 '+n+' 週</span>':'';
+const WEEKPLAN=[
+ [1,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
+ [2,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
+ [3,'失語症：古典分類、非標準化評估｜吞嚥治療：治療原則、病歷閱讀練習'],
+ [4,'失語症：失語症治療、治療計畫練習｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
+ [5,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
+ [6,'運動言語：治療、臨床實務、模擬個案']];
 const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-let done=ld(K.done,{}),qlog=ld(K.quiz,{}),secs=ld(K.secs,{}),me=ld(K.me,null),outbox=ld(K.out,[]);
+let done=ld(K.done,{}),qlog=ld(K.quiz,{}),secs=ld(K.secs,{}),me=ld(K.me,null),outbox=ld(K.out,[]),sims=ld(K.sim,{});
 const save=()=>{sv(K.done,done);sv(K.quiz,qlog);sv(K.secs,secs)};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -124,7 +158,7 @@ let cur='home',openedAt=0,flushing=false;
 /* ---------- 回傳 ---------- */
 function queue(ev){
  if(!me)return;
- outbox.push(Object.assign({id:uid(),ts:new Date().toISOString(),name:me.name,role:me.role,ver:APP_VER},ev));
+ outbox.push(Object.assign({id:uid(),ts:new Date().toISOString(),name:me.name,role:me.role,ver:APP_VER,course:COURSE_NAME},ev));
  sv(K.out,outbox);flush();
 }
 async function flush(){
@@ -147,9 +181,10 @@ function syncLine(){const el=document.getElementById('sync');if(!el)return;const
 async function restore(){
  if(!API_URL||!me)return;
  try{
-  const r=await fetch(API_URL+'?action=progress&name='+encodeURIComponent(me.name));
+  const r=await fetch(API_URL+'?action=progress&course='+encodeURIComponent(COURSE_NAME)+'&name='+encodeURIComponent(me.name));
   const j=await r.json();if(!j||!j.ok)return;
   Object.keys(j.lessons||{}).forEach(id=>{done[id]=true;secs[id]=Math.max(secs[id]||0,j.lessons[id]||0)});
+  Object.keys(j.sims||{}).forEach(id=>{const r=j.sims[id];const o=sims[id]||{};sims[id]={best:Math.max(o.best||0,r.best||0),n:Math.max(o.n||0,r.n||0)}});sv(K.sim,sims);
   Object.keys(j.quiz||{}).forEach(k=>{if(!qlog[k]){const r=j.quiz[k];qlog[k]={first:r.first,n:r.n,last:r.last===undefined?r.first:r.last}}});
   save();if(cur==='home')home();else header(document.getElementById('crumb').textContent);
  }catch(e){}
@@ -210,6 +245,162 @@ function reviewQ(){
  document.getElementById('bk').onclick=()=>{rv.i=rv.list.length;reviewQ()};
 }
 
+/* ---------- 模擬個案 ---------- */
+let SM=null;
+function simStart(id){
+ const c=CASES.find(x=>x.id===id);
+ SM={c,pick:new Set(),step:-1,ok:0,bad:0,chartHit:0,t0:Date.now(),path:[]};
+ cur='sim';header('模擬個案｜'+c.title);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">模擬個案</p><h1>${esc(c.title)}</h1>
+ <div class="scene"><b>會診資料：</b>${esc(c.ref)}</div>
+ <h2>看病歷</h2><p>${esc(c.chart.prompt)}</p>
+ <div id="cl">${c.chart.items.map((it,i)=>`<button class="opt" data-i="${i}" aria-pressed="false">${esc(it.t)}</button>`).join('')}</div>
+ <div id="cr"></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="cf">確認</button></div>`;
+ app.querySelectorAll('#cl .opt').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;
+  if(SM.pick.has(i)){SM.pick.delete(i);b.classList.remove('pick');b.setAttribute('aria-pressed','false')}
+  else{SM.pick.add(i);b.classList.add('pick');b.setAttribute('aria-pressed','true')}});
+ document.getElementById('bk').onclick=home;
+ document.getElementById('cf').onclick=()=>{
+  if(!SM.pick.size)return;
+  const items=c.chart.items,keys=items.filter(x=>x.key).length;
+  SM.chartHit=[...SM.pick].filter(i=>items[i].key).length;
+  const extra=[...SM.pick].filter(i=>!items[i].key).length;
+  app.querySelectorAll('#cl .opt').forEach((b,i)=>{b.disabled=true;b.classList.remove('pick');
+   if(items[i].key)b.classList.add(SM.pick.has(i)?'right':'sub');else if(SM.pick.has(i))b.classList.add('wrong')});
+  const missed=items.filter((x,i)=>x.key&&!SM.pick.has(i));
+  document.getElementById('cr').innerHTML=`<div class="fb ${missed.length?'no':'ok'}">關鍵項目選到 ${SM.chartHit} / ${keys}${extra?'，另選了 '+extra+' 項與評估無關的資料':''}。${missed.length?'漏看：'+missed.map(x=>esc(x.t)).join('、')+'。':''}</div>
+  <h3>病歷查到的資訊</h3>${items.filter(x=>x.key).map(x=>`<div class="ci"><b>${esc(x.t)}：</b>${esc(x.info)}</div>`).join('')}`;
+  const cf=document.getElementById('cf');cf.textContent='開始';cf.onclick=simStep;};
+}
+function simStep(){
+ SM.step++;const c=SM.c;
+ if(SM.step>=c.steps.length)return simEnd();
+ const st=c.steps[SM.step],order=shuffle(st.o.map((_,i)=>i));
+ header(`模擬個案｜第 ${SM.step+1} / ${c.steps.length} 步`);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">${esc(c.title)}　·　第 ${SM.step+1} / ${c.steps.length} 步</p>
+ <div class="scene">${esc(st.scene)}</div>
+ <div class="quiz"><p><b>${esc(st.q)}</b></p>${order.map(i=>`<button class="opt" data-i="${i}">${esc(st.o[i].t)}</button>`).join('')}<div class="fbwrap"></div></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx" hidden>${SM.step<c.steps.length-1?'下一步':'看結果'}</button></div>`;
+ app.querySelectorAll('.quiz .opt').forEach(b=>b.onclick=()=>{
+  const i=+b.dataset.i,o=st.o[i];SM.path.push(o.r);
+  if(o.r==='ok')SM.ok++;if(o.r==='bad')SM.bad++;
+  app.querySelectorAll('.quiz .opt').forEach(x=>{x.disabled=true;const r=st.o[+x.dataset.i].r;if(r==='ok')x.classList.add('right')});
+  if(o.r!=='ok')b.classList.add(o.r==='bad'?'wrong':'sub');
+  const best=st.o.find(x=>x.r==='ok');
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${o.r==='ok'?'ok':'no'}">${o.r==='ok'?'':o.r==='bad'?'<b>不安全的選擇。</b>':'<b>可以，但不是最好的做法。</b>'}${esc(o.fb)}${o.r!=='ok'?'<br><b>較佳做法：</b>'+esc(best.t):''}</div>`;
+  document.getElementById('nx').hidden=false;});
+ document.getElementById('nx').onclick=simStep;
+ document.getElementById('bk').onclick=home;
+}
+function simEnd(){
+ const c=SM.c,keys=c.chart.items.filter(x=>x.key).length,n=c.steps.length;
+ const subN=SM.path.filter(r=>r==='sub').length;
+ const raw=(SM.chartHit/keys)*20+((SM.ok+subN*0.5)/n)*80-SM.bad*10;
+ const score=Math.max(0,Math.round(raw));
+ const sec=Math.min((Date.now()-SM.t0)/1000,3600);
+ const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
+ queue({type:'模擬個案',domain:'模擬個案',lesson:c.id,title:c.title,score,correct:SM.bad===0&&SM.ok===n,n:sims[c.id].n,sec:Math.round(sec),
+  note:`病歷關鍵 ${SM.chartHit}/${keys}｜最佳決策 ${SM.ok}/${n}｜次佳 ${subN}｜不安全 ${SM.bad}`});
+ header('模擬個案｜結果');window.scrollTo(0,0);
+ app.innerHTML=`<h1>${esc(c.title)}｜結果</h1>
+ <div class="score">${score} 分</div>
+ <div class="kv"><b>病歷關鍵項目</b><span>${SM.chartHit} / ${keys}</span><b>最佳決策</b><span>${SM.ok} / ${n}</span><b>次佳選擇</b><span>${subN}</span><b>不安全的選擇</b><span>${SM.bad}</span></div>
+ <div class="box ${score>=80&&SM.bad===0?'tip':'pitfall'}">${score>=80&&SM.bad===0?'<b>通過。</b>這個個案的流程已經掌握，可以試試其他個案。':'<b>建議再練一次。</b>'+(SM.bad?'有不安全的選擇，臨床上可能造成吸入、營養不足或延誤處置，請回頭複習相關單元。':'流程大致正確，再熟練一次就能通過。')}</div>
+ <p class="small muted">計分：病歷 20 分、決策 80 分（次佳選擇給一半），每個不安全選擇扣 10 分。通過標準：80 分以上且沒有不安全的選擇。</p>
+ <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
+ document.getElementById('ag').onclick=()=>simStart(c.id);
+ document.getElementById('bk').onclick=home;
+}
+
+/* ---------- 病歷閱讀練習 ---------- */
+let CR=null;
+function chartStart(id){
+ const c=CHARTS.find(x=>x.id===id);
+ CR={c,mk:new Set(),tab:0,qi:0,ok:0,sub:0,bad:0,p1:0,t0:Date.now(),order:shuffle(c.qs.map((_,i)=>i)),sum:''};
+ cur='chart';chartRead();
+}
+function chartRead(){
+ const c=CR.c;header('治療計畫練習｜'+c.title);
+ const tab=c.tabs[CR.tab];
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 1 步：找關鍵資訊</p><h1>${esc(c.title)}</h1>
+ <div class="box goal"><b>情境：</b>${esc(c.brief)}<br>先讀測驗結果與觀察。把<b>規劃治療時一定要考慮的資訊</b>點起來（再點一次取消），每個分頁都要看。</div>
+ <div class="tabs" role="tablist">${c.tabs.map((t,i)=>{const n=t.lines.filter((_,j)=>CR.mk.has(i+'_'+j)).length;return`<button class="tabbtn ${i===CR.tab?'on':''}" data-t="${i}" role="tab" aria-selected="${i===CR.tab}">${esc(t.name)}${n?`<span class="cnt">${n}</span>`:''}</button>`}).join('')}</div>
+ <div class="chartpaper">${tab.lines.map((l,j)=>`<button class="ln ${CR.mk.has(CR.tab+'_'+j)?'mk':''}" data-j="${j}" aria-pressed="${CR.mk.has(CR.tab+'_'+j)}">${esc(l.t)}</button>`).join('')}</div>
+ <p class="small muted">已標記 <span id="mkn">${CR.mk.size}</span> 句。</p>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">${CR.tab<c.tabs.length-1?'下一個分頁':'完成標記，看結果'}</button></div>`;
+ app.querySelectorAll('.tabbtn').forEach(b=>b.onclick=()=>{CR.tab=+b.dataset.t;chartRead()});
+ app.querySelectorAll('.ln').forEach(b=>b.onclick=()=>{const k=CR.tab+'_'+b.dataset.j;
+  if(CR.mk.has(k))CR.mk.delete(k);else CR.mk.add(k);
+  b.classList.toggle('mk');b.setAttribute('aria-pressed',CR.mk.has(k));
+  const t=app.querySelectorAll('.tabbtn')[CR.tab],n=c.tabs[CR.tab].lines.filter((_,j)=>CR.mk.has(CR.tab+'_'+j)).length;
+  t.innerHTML=esc(c.tabs[CR.tab].name)+(n?`<span class="cnt">${n}</span>`:'');
+  document.getElementById('mkn').textContent=CR.mk.size;});
+ document.getElementById('bk').onclick=home;
+ document.getElementById('nx').onclick=()=>{if(CR.tab<c.tabs.length-1){CR.tab++;chartRead();window.scrollTo(0,0)}else chartCheck()};
+}
+function chartCheck(){
+ const c=CR.c;let keys=0,hit=0,extra=0;
+ c.tabs.forEach((t,i)=>t.lines.forEach((l,j)=>{const m=CR.mk.has(i+'_'+j);if(l.k){keys++;if(m)hit++}else if(m)extra++}));
+ CR.p1=Math.max(0,Math.round(hit/keys*50-extra*3));CR.hit=hit;CR.keys=keys;CR.extra=extra;
+ header('治療計畫練習｜關鍵資訊核對');window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　關鍵資訊核對</p><h1>${esc(c.title)}</h1>
+ <div class="fb ${hit===keys&&!extra?'ok':'no'}">關鍵資訊找到 ${hit} / ${keys} 句${extra?`；另外標了 ${extra} 句與治療規劃關係較小的資料`:''}。這部分得分 ${CR.p1} / 50。</div>
+ <p class="small muted"><span style="color:var(--ok)">■</span> 找到的關鍵資訊　<span style="color:var(--warn)">■</span> 漏掉的　灰色：不是關鍵但被標記</p>
+ ${c.tabs.map((t,i)=>`<h3>${esc(t.name)}</h3><div class="chartpaper">${t.lines.map((l,j)=>{const m=CR.mk.has(i+'_'+j);
+  const cls=l.k?(m?'hit':'miss'):(m?'extra':'plain');const tag=l.k?(m?'找到':'漏掉'):(m?'非重點':'');
+  return`<div class="ln ${cls}">${tag?`<span class="tag">${tag}</span>`:''}${esc(l.t)}${l.k?`<span class="why">${esc(l.k)}</span>`:''}</div>`}).join('')}</div>`).join('')}
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">下一步：治療決策</button></div>`;
+ document.getElementById('bk').onclick=home;document.getElementById('nx').onclick=chartQ;
+}
+function chartQ(){
+ const c=CR.c;if(CR.qi>=c.qs.length)return chartSum();
+ const q=c.qs[CR.order[CR.qi]],ord=shuffle(q.o.map((_,i)=>i));
+ header(`治療計畫練習｜治療決策 ${CR.qi+1} / ${c.qs.length}`);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 2 步：治療決策（${CR.qi+1} / ${c.qs.length}）</p>
+ <details class="box goal"><summary><b>再看一次關鍵資訊</b></summary><ul>${c.tabs.flatMap(t=>t.lines.filter(l=>l.k).map(l=>`<li>${esc(l.t)}</li>`)).join('')}</ul></details>
+ <div class="quiz"><p><b>${esc(q.q)}</b></p>${ord.map(i=>`<button class="opt" data-i="${i}">${esc(q.o[i].t)}</button>`).join('')}<div class="fbwrap"></div></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx" hidden>${CR.qi<c.qs.length-1?'下一題':'下一步：寫治療計畫'}</button></div>`;
+ app.querySelectorAll('.quiz .opt').forEach(b=>b.onclick=()=>{const o=q.o[+b.dataset.i];
+  if(o.r==='ok')CR.ok++;else if(o.r==='sub')CR.sub++;else CR.bad++;
+  app.querySelectorAll('.quiz .opt').forEach(x=>{x.disabled=true;if(q.o[+x.dataset.i].r==='ok')x.classList.add('right')});
+  if(o.r!=='ok')b.classList.add(o.r==='bad'?'wrong':'sub');
+  const best=q.o.find(x=>x.r==='ok');
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${o.r==='ok'?'ok':'no'}">${o.r==='bad'?'<b>不適當。</b>':o.r==='sub'?'<b>可以，但不是最好的。</b>':''}${esc(o.fb)}${o.r!=='ok'?'<br><b>較佳答案：</b>'+esc(best.t):''}</div>`;
+  document.getElementById('nx').hidden=false;});
+ document.getElementById('bk').onclick=home;
+ document.getElementById('nx').onclick=()=>{CR.qi++;chartQ()};
+}
+function chartSum(){
+ header('治療計畫練習｜寫治療計畫');window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 3 步：寫治療計畫</p>
+ <h1>寫治療計畫</h1>
+ <p>依你整理的資訊寫一份治療計畫：問題清單（強項與弱項）、長期目標、2 到 3 個短期目標（行為、材料、條件、標準、時間）、治療方法、頻率與成效追蹤。寫完再看示範計畫比較。</p>
+ <textarea id="sumt" style="width:100%;min-height:170px;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)" placeholder="問題清單：…&#10;長期目標：…&#10;短期目標：1. …&#10;方法：…&#10;頻率與追蹤：…">${esc(CR.sum)}</textarea>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">看示範計畫與結果</button></div>`;
+ document.getElementById('bk').onclick=home;
+ document.getElementById('nx').onclick=()=>{CR.sum=document.getElementById('sumt').value.trim();chartEnd()};
+}
+function chartEnd(){
+ const c=CR.c,n=c.qs.length;
+ const p2=Math.round((CR.ok+CR.sub*0.5)/n*50),score=Math.max(0,CR.p1+p2-CR.bad*5);
+ const sec=Math.min((Date.now()-CR.t0)/1000,3600);
+ const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
+ queue({type:'治療計畫練習',domain:'治療計畫練習',lesson:c.id,title:c.title,score,correct:score>=80&&CR.bad===0,n:sims[c.id].n,sec:Math.round(sec),
+  note:`關鍵 ${CR.hit}/${CR.keys}｜多標 ${CR.extra}｜決策 最佳 ${CR.ok}/${n}、次佳 ${CR.sub}、不適當 ${CR.bad}｜計畫：${CR.sum.slice(0,600)}`});
+ header('治療計畫練習｜結果');window.scrollTo(0,0);
+ const pass=score>=80&&CR.bad===0;
+ app.innerHTML=`<h1>${esc(c.title)}｜結果</h1><div class="score">${score} 分</div>
+ <div class="kv"><b>關鍵資訊</b><span>${CR.hit} / ${CR.keys}（多標 ${CR.extra} 句）｜${CR.p1} / 50</span><b>治療決策</b><span>最佳 ${CR.ok} / ${n}、次佳 ${CR.sub}、不適當 ${CR.bad}｜${p2} / 50</span></div>
+ <div class="box ${pass?'tip':'pitfall'}">${pass?'<b>通過。</b>可以換一個個案練習，或過幾天再回來重做，比較自己寫的治療計畫有沒有更完整。':'<b>建議再練一次。</b>先回頭看漏掉的重點與它們的理由。'}</div>
+ <h2>你的治療計畫</h2><div class="chartpaper">${CR.sum?esc(CR.sum):'<span class="muted">（未填寫）</span>'}</div>
+ <h2>示範治療計畫</h2><div class="chartpaper" style="white-space:pre-line">${esc(c.model)}</div>
+ <p class="small muted">比較看看：示範計畫有、你沒寫到的，是哪一部分？（強項的運用、病人與家屬目標、短期目標的條件與標準、探測項目、溝通夥伴、頻率）。示範計畫只是一種寫法，請和督導討論。</p>
+ <p class="small muted">計分：關鍵資訊 50 分（每多標一句非關鍵扣 3 分），決策題 50 分（次佳給一半），每個不適當選擇再扣 5 分。通過：80 分以上且沒有不適當的選擇。</p>
+ <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
+ document.getElementById('ag').onclick=()=>chartStart(c.id);document.getElementById('bk').onclick=home;
+}
+
 /* ---------- 畫面 ---------- */
 function header(txt){document.getElementById('crumb').textContent=txt;
  const n=ALL.filter(x=>done[x.l.id]).length;
@@ -240,6 +431,7 @@ function summaryText(){
  L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}　錯題待重考：${wrongList().length}`);
  D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
   L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
+ L.push('');L.push('【治療計畫練習】');CHARTS.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
  return L.join('\n');
 }
 function copySummary(){
@@ -252,26 +444,33 @@ function home(){
  if(!me)return register();
  cur='home';header('實習生自學課程');window.scrollTo(0,0);
  app.innerHTML=`<h1>成人失語症</h1>
- <p class="lead">從神經解剖到非標準化評估。選一個領域開始，每個單元約 8 到 12 分鐘，最後有小測驗。</p>
+ <p class="lead">從神經解剖、評估到治療計畫。選一個領域開始，每個單元約 8 到 12 分鐘，最後有小測驗；讀完治療單元後，用治療計畫練習把測驗結果變成治療計畫。</p>
  <p class="small muted">學習者：<b>${esc(me.name)}</b>（${esc(me.role)}）　<span id="sync" class="sync"></span></p>
  ${D.map(d=>{const n=d.L.filter(l=>done[l.id]).length;
   return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
-  <span class="meta"><span class="small muted">${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
- <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類，最後的非標準化評估會用到前面所有概念。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
+  <span class="meta"><span class="small muted">${wk(d)?'第 '+wk(d)+' 週｜':''}${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
+ <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類與非標準化評估，最後讀「失語症治療」並完成治療計畫練習。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
+ <h2>治療計畫練習 ${wkTag(SCH.charts)}</h2>
+ <p class="small muted">讀一份失語症測驗結果與觀察，標出規劃治療時一定要考慮的資訊，再做治療決策、寫治療計畫，最後和示範計畫比較。個案與分數皆為虛構，可以重複練習。</p>
+ ${CHARTS.map(c=>{const r=sims[c.id];return`<button class="card" data-r="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.brief)}</span>
+  <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
+ <details class="box goal"><summary><b>實習六週進度（四門課）</b></summary><div class="tablewrap"><table class="wkplan">${WEEKPLAN.map(w=>`<tr><td>第 ${w[0]} 週</td><td>${esc(w[1])}</td></tr>`).join('')}</table></div><p class="small muted">週次為建議進度，依實際排程調整。</p></details>
  <div class="row"><button class="btn ghost" id="cp">複製我的學習紀錄</button><button class="linkbtn" id="sw">不是 ${esc(me.name)}？換人登錄</button></div>
  <div id="cpbox"></div>
- <div class="foot">本課程為科內自學教材，內容為學理概要，臨床判斷請以教科書、標準化測驗手冊與督導指導為準。</div>`;
- app.querySelectorAll('.card').forEach(b=>b.onclick=()=>domain(b.dataset.d));
+ <div class="foot">本課程為科內自學教材，內容為學理概要；臨床判斷請以教科書、標準化測驗手冊與督導指導為準。</div>`;
+ app.querySelectorAll('.card[data-d]').forEach(b=>b.onclick=()=>domain(b.dataset.d));
+ app.querySelectorAll('.card[data-c]').forEach(b=>b.onclick=()=>simStart(b.dataset.c));
+ app.querySelectorAll('.card[data-r]').forEach(b=>b.onclick=()=>chartStart(b.dataset.r));
  document.getElementById('cp').onclick=copySummary;
  const rvb=document.getElementById('rvb');if(rvb)rvb.onclick=review;
  document.getElementById('sw').onclick=()=>{if(outbox.length){flush();}
-  me=null;sv(K.me,null);done={};qlog={};secs={};save();register();};
+  me=null;sv(K.me,null);done={};qlog={};secs={};sims={};sv(K.sim,sims);save();register();};
  syncLine();
 }
 function domain(id){
  const d=D.find(x=>x.id===id);cur='domain';header(d.name);window.scrollTo(0,0);
- app.innerHTML=`<h1>${d.name}</h1><p class="lead">${d.desc}</p>
+ app.innerHTML=`${wk(d)?`<p style="margin:22px 0 0">${wkTag(wk(d))}</p>`:''}<h1>${d.name}</h1><p class="lead">${d.desc}</p>
  ${d.L.map((l,i)=>`<button class="card" data-l="${l.id}"><span class="num">${i+1}</span><b>${l.t}</b>
  <span class="meta"><span class="small muted">${l.goal}</span><span class="chip ${done[l.id]?'done':''}">${done[l.id]?'已完成':'未讀'}</span></span></button>`).join('')}
  <div class="nav"><button class="btn ghost" id="bk">回課程首頁</button></div>`;
@@ -281,7 +480,7 @@ function domain(id){
 function lesson(lid){
  const idx=ALL.findIndex(x=>x.l.id===lid),{d,l}=ALL[idx];
  cur='lesson';openedAt=Date.now();header(d.name+'｜'+l.t);window.scrollTo(0,0);
- app.innerHTML=`<p class="small muted" style="margin-top:22px">${d.name}</p><h1>${l.t}</h1>
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">${wkTag(wk(d,l))}${d.name}</p><h1>${l.t}</h1>
  <div class="box goal"><b>學習目標：</b>${l.goal}</div>
  ${l.h}
  ${l.tree?'<div id="tree"></div>':''}
