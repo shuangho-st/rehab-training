@@ -124,8 +124,8 @@ tr:last-child td{border-bottom:0}
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125c"></script>
-<script src="plans.js?v=20261125d"></script>
+<script src="content.js?v=20261125e"></script>
+<script src="plans.js?v=20261125e"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
@@ -350,17 +350,17 @@ function chartCheck(){
  ${c.tabs.map((t,i)=>`<h3>${esc(t.name)}</h3><div class="chartpaper">${t.lines.map((l,j)=>{const m=CR.mk.has(i+'_'+j);
   const cls=l.k?(m?'hit':'miss'):(m?'extra':'plain');const tag=l.k?(m?'找到':'漏掉'):(m?'非重點':'');
   return`<div class="ln ${cls}">${tag?`<span class="tag">${tag}</span>`:''}${esc(l.t)}${l.k?`<span class="why">${esc(l.k)}</span>`:''}</div>`}).join('')}</div>`).join('')}
- <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">下一步：治療決策</button></div>`;
- document.getElementById('bk').onclick=home;document.getElementById('nx').onclick=chartQ;
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">下一步：訂治療目標</button></div>`;
+ document.getElementById('bk').onclick=home;document.getElementById('nx').onclick=chartGoals;
 }
 function chartQ(){
- const c=CR.c;if(CR.qi>=c.qs.length)return chartSum();
+ const c=CR.c;if(CR.qi>=c.qs.length)return chartPlan();
  const q=c.qs[CR.order[CR.qi]],ord=shuffle(q.o.map((_,i)=>i));
  header(`治療計畫練習｜治療決策 ${CR.qi+1} / ${c.qs.length}`);window.scrollTo(0,0);
- app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 2 步：治療決策（${CR.qi+1} / ${c.qs.length}）</p>
- <details class="box goal"><summary><b>再看一次關鍵資訊</b></summary><ul>${c.tabs.flatMap(t=>t.lines.filter(l=>l.k).map(l=>`<li>${esc(l.t)}</li>`)).join('')}</ul></details>
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 3 步：方法與頻率的決策（${CR.qi+1} / ${c.qs.length}）</p>
+ ${goalsBox()}<details class="box goal"><summary><b>再看一次關鍵資訊</b></summary><ul>${c.tabs.flatMap(t=>t.lines.filter(l=>l.k).map(l=>`<li>${esc(l.t)}</li>`)).join('')}</ul></details>
  <div class="quiz"><p><b>${esc(q.q)}</b></p>${ord.map(i=>`<button class="opt" data-i="${i}">${esc(q.o[i].t)}</button>`).join('')}<div class="fbwrap"></div></div>
- <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx" hidden>${CR.qi<c.qs.length-1?'下一題':'下一步：寫治療計畫'}</button></div>`;
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx" hidden>${CR.qi<c.qs.length-1?'下一題':'下一步：補上方法與頻率'}</button></div>`;
  app.querySelectorAll('.quiz .opt').forEach(b=>b.onclick=()=>{const o=q.o[+b.dataset.i];
   if(o.r==='ok')CR.ok++;else if(o.r==='sub')CR.sub++;else CR.bad++;
   app.querySelectorAll('.quiz .opt').forEach(x=>{x.disabled=true;if(q.o[+x.dataset.i].r==='ok')x.classList.add('right')});
@@ -371,31 +371,72 @@ function chartQ(){
  document.getElementById('bk').onclick=home;
  document.getElementById('nx').onclick=()=>{CR.qi++;chartQ()};
 }
-function chartSum(){
- header('治療計畫練習｜寫治療計畫');window.scrollTo(0,0);
- app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 3 步：寫治療計畫</p>
- <h1>寫治療計畫</h1>
- <p>依你整理的資訊寫一份治療計畫：問題清單（強項與弱項）、長期目標、2 到 3 個短期目標（行為、材料、條件、標準、時間）、治療方法、頻率與成效追蹤。寫完再看示範計畫比較。</p>
- <textarea id="sumt" style="width:100%;min-height:170px;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)" placeholder="問題清單：…&#10;長期目標：…&#10;短期目標：1. …&#10;方法：…&#10;頻率與追蹤：…">${esc(CR.sum)}</textarea>
+const GF=[['act','行為','病人要做什麼，例如：用口語或溝通板表達需求'],['mat','材料','例如：家中常用物品 20 項、他自己的電話腳本'],['cond','條件','提示程度或情境，例如：在語音提示下、和太太對話中'],['crit','標準','例如：16／20、連續兩次治療達成'],['time','時間','例如：4 週內、出院前'],['life','連結的日常生活情境','這個目標用在他生活中的哪裡？例如：打電話給客戶、告訴看護哪裡痛']];
+function goalLine(g){return `${g.time||'＿＿'}，${g.cond?'在'+g.cond+'，':''}${g.act||'＿＿'}${g.mat?'（'+g.mat+'）':''}，達 ${g.crit||'＿＿'}。`}
+function goalOk(g){return GF.every(f=>(g[f[0]]||'').trim())}
+function goalsBox(){if(!CR.G)return'';const G=CR.G;
+ return `<details class="box goal"><summary><b>我訂的目標</b></summary><p><b>日常生活：</b>${esc(G.daily)}</p><p><b>長期目標：</b>${esc(G.ltg)}（${esc(G.ltgLife)}）</p><ol>${G.stg.filter(goalOk).map(g=>`<li>${esc(goalLine(g))}<br><span class="small muted">生活情境：${esc(g.life)}</span></li>`).join('')}</ol></details>`}
+function chartGoals(){
+ const c=CR.c;CR.G=CR.G||{daily:'',ltg:'',ltgLife:'',stg:[{},{},{}]};const G=CR.G;
+ header('治療計畫練習｜訂治療目標');window.scrollTo(0,0);
+ const inp=(id,v,ph)=>`<input id="${id}" value="${esc(v||'')}" placeholder="${esc(ph)}" style="width:100%;font:inherit;font-size:16px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);margin:4px 0 10px">`;
+ const ta=(id,v,ph)=>`<textarea id="${id}" placeholder="${esc(ph)}" style="width:100%;min-height:80px;font:inherit;font-size:16px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);margin:4px 0 10px">${esc(v||'')}</textarea>`;
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 2 步：先訂長短期目標</p><h1>訂治療目標</h1>
+ <div class="box goal">目標要從<b>病人的日常生活</b>出發：他每天在做什麼、想回到哪些活動、照顧者最需要他能表達什麼。先寫下來，再訂長期目標，最後拆成可測量的短期目標。</div>
+ ${c.setting==='住院'?'<div class="box tip"><b>住院個案：</b>急性期以病人的<b>弱項</b>為主訂目標，安排高強度、高頻率、同樣任務的反覆練習；治療次數少時，把同一組練習交給照顧者或護理人員每天重複。也要建立基本需求的溝通方式。</div>':c.setting==='門診'?'<div class="box tip"><b>門診個案：</b>慢性期以<b>社會參與</b>訂目標：回到工作、社區活動、家庭聚會中的對話。治療室時間用來教策略與檢查，練習量放在居家作業。</div>':''}
+ ${goalsBoxInfo()}
+ <h2>1. 病人的日常生活與參與需求</h2>
+ <label class="small muted" for="g-daily">從資料中整理：生活作息、工作或角色、想參與的活動、照顧者與溝通對象</label>${ta('g-daily',G.daily,'例如：水電行老闆，常要接電話；太太白天照顧；希望能回去工作')}
+ <h2>2. 長期目標</h2>
+ <label class="small muted" for="g-ltg">以活動與參與層次寫，含時間</label>${ta('g-ltg',G.ltg,'例如：3 個月內，能用口語搭配文字，在電話中說出簡單的工作需求')}
+ <label class="small muted" for="g-ltgl">連結的日常生活情境</label>${inp('g-ltgl',G.ltgLife,'例如：接聽客戶電話、預約工作')}
+ <h2>3. 短期目標（至少 2 個）</h2>
+ ${G.stg.map((g,k)=>`<div class="chartpaper"><b>短期目標 ${k+1}${k===2?'（選填）':''}</b>
+  ${GF.map(f=>`<label class="small muted" for="g${k}-${f[0]}">${f[1]}</label>${inp('g'+k+'-'+f[0],g[f[0]],f[2])}`).join('')}
+  <p class="small" id="gp${k}"><b>組合起來：</b>${esc(goalLine(g))}</p></div>`).join('')}
+ <div id="gerr"></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">下一步：方法與頻率</button></div>`;
+ const read=()=>{G.daily=$v('g-daily');G.ltg=$v('g-ltg');G.ltgLife=$v('g-ltgl');
+  G.stg.forEach((g,k)=>{GF.forEach(f=>g[f[0]]=$v('g'+k+'-'+f[0]));document.getElementById('gp'+k).innerHTML='<b>組合起來：</b>'+esc(goalLine(g))})};
+ app.querySelectorAll('input,textarea').forEach(x=>x.oninput=read);
+ document.getElementById('bk').onclick=home;
+ document.getElementById('nx').onclick=()=>{read();const miss=[];
+  if(!G.daily.trim())miss.push('病人的日常生活與參與需求');if(!G.ltg.trim())miss.push('長期目標');if(!G.ltgLife.trim())miss.push('長期目標連結的日常生活情境');
+  const done=G.stg.filter(goalOk).length;if(done<2)miss.push('至少 2 個短期目標的每一欄（包含連結的日常生活情境）');
+  if(miss.length){document.getElementById('gerr').innerHTML='<div class="fb no">還沒填完：'+miss.map(esc).join('、')+'。</div>';return}
+  chartQ()};
+}
+function goalsBoxInfo(){const c=CR.c;return `<details class="box"><summary><b>再看一次關鍵資訊</b></summary><ul>${c.tabs.flatMap(t=>t.lines.filter(l=>l.k).map(l=>`<li>${esc(l.t)}</li>`)).join('')}</ul></details>`}
+function $v(id){const e=document.getElementById(id);return e?e.value.trim():''}
+function chartPlan(){
+ header('治療計畫練習｜方法與頻率');window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">治療計畫練習　·　第 4 步：補上方法與頻率</p><h1>方法、頻率與成效追蹤</h1>
+ ${goalsBox()}
+ <p>針對你訂的目標，寫下要用的治療方法、治療頻率（門診或住院的實際次數）、居家練習與照顧者參與，以及怎麼追蹤成效。</p>
+ <textarea id="sumt" style="width:100%;min-height:150px;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)" placeholder="方法：…&#10;頻率：…&#10;居家練習與照顧者：…&#10;成效追蹤：…">${esc(CR.sum)}</textarea>
  <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx">看示範計畫與結果</button></div>`;
  document.getElementById('bk').onclick=home;
  document.getElementById('nx').onclick=()=>{CR.sum=document.getElementById('sumt').value.trim();chartEnd()};
 }
+function goalCheck(){const G=CR.G,st=G.stg.filter(goalOk);const ok=(b,t)=>`<div class="ln ${b?'hit':'miss'}"><span class="tag">${b?'有':'再想想'}</span>${t}</div>`;
+ return ok(G.daily.length>=15,'日常生活寫得具體（作息、角色、溝通對象）')+ok(/\d|週|月|出院/.test(G.ltg),'長期目標有時間')+ok(!!G.ltgLife,'長期目標連到日常生活情境')+ok(st.length>=2,'至少 2 個短期目標，五個要素都有')+ok(st.every(g=>/\d/.test(g.crit)),'短期目標的標準可以計分（有數字）')+ok(st.every(g=>g.life.length>=4),'每個短期目標都寫出用在生活中的哪裡')+'<p class="small muted" style="margin:8px 0 0">檢核只看形式，內容是否合適請和示範計畫比較，並和督導討論。</p>'}
+function goalsText(){const G=CR.G;if(!G)return'';return `日常生活：${G.daily}\n長期目標：${G.ltg}（生活情境：${G.ltgLife}）\n`+G.stg.filter(goalOk).map((g,k)=>`短期目標 ${k+1}：${goalLine(g)}（生活情境：${g.life}）`).join('\n')}
 function chartEnd(){
  const c=CR.c,n=c.qs.length;
  const p2=Math.round((CR.ok+CR.sub*0.5)/n*50),score=Math.max(0,CR.p1+p2-CR.bad*5);
  const sec=Math.min((Date.now()-CR.t0)/1000,3600);
  const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
  queue({type:'治療計畫練習',domain:'治療計畫練習',lesson:c.id,title:c.title,score,correct:score>=80&&CR.bad===0,n:sims[c.id].n,sec:Math.round(sec),
-  note:`關鍵 ${CR.hit}/${CR.keys}｜多標 ${CR.extra}｜決策 最佳 ${CR.ok}/${n}、次佳 ${CR.sub}、不適當 ${CR.bad}｜計畫：${CR.sum.slice(0,600)}`});
+  note:`關鍵 ${CR.hit}/${CR.keys}｜多標 ${CR.extra}｜決策 最佳 ${CR.ok}/${n}、次佳 ${CR.sub}、不適當 ${CR.bad}｜${goalsText().slice(0,900)}｜方法與頻率：${CR.sum.slice(0,400)}`});
  header('治療計畫練習｜結果');window.scrollTo(0,0);
  const pass=score>=80&&CR.bad===0;
  app.innerHTML=`<h1>${esc(c.title)}｜結果</h1><div class="score">${score} 分</div>
  <div class="kv"><b>關鍵資訊</b><span>${CR.hit} / ${CR.keys}（多標 ${CR.extra} 句）｜${CR.p1} / 50</span><b>治療決策</b><span>最佳 ${CR.ok} / ${n}、次佳 ${CR.sub}、不適當 ${CR.bad}｜${p2} / 50</span></div>
  <div class="box ${pass?'tip':'pitfall'}">${pass?'<b>通過。</b>可以換一個個案練習，或過幾天再回來重做，比較自己寫的治療計畫有沒有更完整。':'<b>建議再練一次。</b>先回頭看漏掉的重點與它們的理由。'}</div>
- <h2>你的治療計畫</h2><div class="chartpaper">${CR.sum?esc(CR.sum):'<span class="muted">（未填寫）</span>'}</div>
+ <h2>你的治療計畫</h2><div class="chartpaper" style="white-space:pre-line">${esc(goalsText())}${CR.sum?'\n\n'+esc(CR.sum):''}</div>
+ <h3>目標自我檢核</h3><div class="chartpaper">${goalCheck()}</div>
  <h2>示範治療計畫</h2><div class="chartpaper" style="white-space:pre-line">${esc(c.model)}</div>
- <p class="small muted">比較看看：示範計畫有、你沒寫到的，是哪一部分？（強項的運用、病人與家屬目標、短期目標的條件與標準、探測項目、溝通夥伴、頻率）。示範計畫只是一種寫法，請和督導討論。</p>
+ <p class="small muted">比較看看：你的目標和示範計畫連到的生活情境一樣嗎？示範計畫有、你沒寫到的，是哪一部分？（強項的運用、病人與家屬目標、短期目標的條件與標準、探測項目、溝通夥伴、頻率）。示範計畫只是一種寫法，請和督導討論。</p>
  <p class="small muted">計分：關鍵資訊 50 分（每多標一句非關鍵扣 3 分），決策題 50 分（次佳給一半），每個不適當選擇再扣 5 分。通過：80 分以上且沒有不適當的選擇。</p>
  <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
  document.getElementById('ag').onclick=()=>chartStart(c.id);document.getElementById('bk').onclick=home;
@@ -452,7 +493,7 @@ function home(){
  <div class="box goal"><b>建議順序：</b>先把「神經解剖與病灶」和「症狀學」讀完，再進入分類與非標準化評估，最後讀「失語症治療」並完成治療計畫練習。臨床跟診前，至少先看完「非標準化評估」的前兩個單元。</div>
  <h2>治療計畫練習 ${wkTag(SCH.charts)}</h2>
  <p class="small muted">讀一份失語症測驗結果與觀察，標出規劃治療時一定要考慮的資訊，再做治療決策、寫治療計畫，最後和示範計畫比較。個案與分數皆為虛構，可以重複練習。</p>
- ${CHARTS.map(c=>{const r=sims[c.id];return`<button class="card" data-r="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.brief)}</span>
+ ${CHARTS.map(c=>{const r=sims[c.id];return`<button class="card" data-r="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${c.setting?esc(c.setting)+'｜':''}${esc(c.brief)}</span>
   <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
  <details class="box goal"><summary><b>實習六週進度（四門課）</b></summary><div class="tablewrap"><table class="wkplan">${WEEKPLAN.map(w=>`<tr><td>第 ${w[0]} 週</td><td>${esc(w[1])}</td></tr>`).join('')}</table></div><p class="small muted">週次為建議進度，依實際排程調整。</p></details>
