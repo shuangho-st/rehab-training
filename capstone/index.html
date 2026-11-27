@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>綜合複習與總結評量｜實習生自學課程</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#F2F2F6; --surface:#FFFFFF; --surface2:#E8E8F0; --ink:#1B1C2B; --ink2:#5A5C72; --line:#D5D6E2;
+ --accent:#343C8C; --on-accent:#F5F6FC; --accent-soft:#DFE2F5;
+ --tip:#0D6154; --tip-soft:#D9EDE8; --warn:#8A4A00; --warn-soft:#F6E7D2; --ok:#2C6E49; --ok-soft:#DCEDE2; --bad:#A93226; --bad-soft:#F6E0DD;
+ --sans:'Noto Sans TC','PingFang TC','Microsoft JhengHei',Arial,sans-serif;
+ --serif:'Noto Serif TC','PMingLiU',Georgia,serif;
+ padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root{
+ --bg:#101222; --surface:#191B2C; --surface2:#222539; --ink:#E7E8F2; --ink2:#A7AAC2; --line:#2F3248;
+ --accent:#9AA5F0; --on-accent:#0F1120; --accent-soft:#242945;
+ --tip:#79CDBC; --tip-soft:#16302C; --warn:#E3B778; --warn-soft:#332616; --ok:#7BC99A; --ok-soft:#17301F; --bad:#EF9A90; --bad-soft:#331E1C; color-scheme:dark}}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.75}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px 56px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:760px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:12px;justify-content:space-between}
+.home-btn{border:0;background:transparent;font-weight:700;font-size:15px;padding:6px 0;text-align:left}
+.home-btn small{display:block;font-weight:400;font-size:12px;color:var(--ink2)}
+.pbar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;max-width:760px;margin:0 auto}
+.pbar div{height:100%;background:var(--accent);transition:width .4s}
+h1{font-family:var(--serif);font-size:30px;line-height:1.35;margin:26px 0 8px}
+h2{font-family:var(--serif);font-size:21px;line-height:1.45;margin:30px 0 10px}
+h3{font-size:17px;margin:22px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:4px 0}
+.muted{color:var(--ink2)}
+.small{font-size:14.5px}
+.lead{font-size:17.5px;color:var(--ink2)}
+.card{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:10px}
+.card:hover{border-color:var(--accent)}
+.card b{font-size:17px}
+.card .meta{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:6px}
+.chip{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px;background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.chip.done{background:var(--ok-soft);color:var(--ok)}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+.num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;margin-right:8px}
+.box{border-radius:12px;padding:14px 16px;margin:16px 0;font-size:15.5px;line-height:1.7}
+.tip{background:var(--tip-soft);border-left:4px solid var(--tip)}
+.tip b{color:var(--tip)}
+.pitfall{background:var(--warn-soft);border-left:4px solid var(--warn)}
+.pitfall b{color:var(--warn)}
+.goal{background:var(--accent-soft);border-left:4px solid var(--accent)}
+.goal b{color:var(--accent)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:14px 0}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:15px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--surface2);font-size:13.5px;color:var(--ink2)}
+tr:last-child td{border-bottom:0}
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:18px 0}
+.opt{display:block;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;font-size:15.5px;line-height:1.6;min-height:46px}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.opt:disabled{cursor:default}
+.fb{border-radius:10px;padding:10px 14px;font-size:15px;margin-top:6px}
+.fb.ok{background:var(--ok-soft);color:var(--ok)}
+.fb.no{background:var(--bad-soft);color:var(--bad)}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:var(--accent);color:var(--on-accent);min-height:48px}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn.block{width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.nav{display:flex;gap:10px;margin-top:28px;border-top:1px solid var(--line);padding-top:18px}
+.nav button{flex:1}
+.tree{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:16px 0}
+.path{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.path span{font-size:13px;background:var(--accent-soft);color:var(--accent);padding:2px 10px;border-radius:999px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:15px;margin:10px 0}
+.kv b{color:var(--ink2);font-weight:500}
+.foot{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;font-size:13.5px;color:var(--ink2)}
+.linkbtn{background:none;border:0;color:var(--accent);text-decoration:underline;font-size:14px;padding:4px 0}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-weight:500}
+.inp{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);min-height:48px;width:100%}
+.err{color:var(--bad);font-size:14.5px;min-height:1.4em}
+.sync{font-size:14px;color:var(--ink2)}
+.sync.warn{color:var(--warn)}
+.opt.sub{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.opt.pick{border-color:var(--accent);background:var(--accent-soft)}
+.scene{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tip);border-radius:12px;padding:14px 16px;margin:14px 0}
+.ci{font-size:14.5px;margin:6px 0;padding:8px 12px;border-radius:8px;background:var(--surface2)}
+.score{font-size:40px;font-weight:700;font-family:var(--serif);color:var(--accent);line-height:1.2}
+.wk{display:inline-block;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;margin-right:8px;vertical-align:middle;white-space:nowrap}
+.wkplan td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+.chartpaper{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0}
+.copyarea{width:100%;min-height:180px;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-top:10px}
+</style>
+</head>
+<body>
+<header class="top">
+ <div class="top-in">
+  <button class="home-btn" id="home">綜合複習與總結評量<small id="crumb">第 19–20 週</small></button>
+  <span class="chip acc" id="prog">0 / 15</span>
+ </div>
+ <div class="pbar"><div id="bar" style="width:0%"></div></div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="content.js?v=20261127"></script>
+<script>
+/* ===================== 設定 ===================== */
+// 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
+const API_URL = '';  // 共用 Apps Script 的 /exec 網址
+const APP_VER = 'capstone-1';
+const COURSE_NAME = '綜合複習與總結評量';
+/* =============================================== */
+
+const ALL=D.flatMap(d=>d.L.map(l=>({d,l})));
+const app=document.getElementById('app');
+const K={done:'cap-done',quiz:'cap-quiz',secs:'cap-secs',me:'st-me',out:'cap-outbox',sim:'cap-sim'};
+const SCH=typeof SCHEDULE!=='undefined'?SCHEDULE:{};
+const wk=(d,l)=>(l&&l.week)||SCH[d.id]||0;
+const wkTag=n=>n?'<span class="wk">第 '+n+' 週</span>':'';
+const WEEKPLAN=[
+ [3,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
+ [4,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
+ [5,'失語症：古典分類、非標準化評估、評估設計練習｜吞嚥治療：治療原則、病歷閱讀練習'],
+ [6,'失語症：失語症治療、治療計畫練習、提示步驟練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
+ [7,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
+ [8,'運動言語：治療、臨床實務、模擬個案']];
+const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let done=ld(K.done,{}),qlog=ld(K.quiz,{}),secs=ld(K.secs,{}),me=ld(K.me,null),outbox=ld(K.out,[]),sims=ld(K.sim,{});
+const save=()=>{sv(K.done,done);sv(K.quiz,qlog);sv(K.secs,secs)};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+let cur='home',openedAt=0,flushing=false;
+
+/* ---------- 回傳 ---------- */
+function queue(ev){
+ if(!me)return;
+ outbox.push(Object.assign({id:uid(),ts:new Date().toISOString(),name:me.name,role:me.role,ver:APP_VER,course:COURSE_NAME},ev));
+ sv(K.out,outbox);flush();
+}
+async function flush(){
+ if(!API_URL||flushing||!outbox.length||!navigator.onLine)return;
+ flushing=true;const batch=outbox.slice(0,50);
+ try{
+  await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({items:batch})});
+  const ids=new Set(batch.map(b=>b.id));outbox=outbox.filter(b=>!ids.has(b.id));sv(K.out,outbox);
+ }catch(e){}
+ flushing=false;syncLine();
+ if(outbox.length&&navigator.onLine)setTimeout(flush,1500);
+}
+window.addEventListener('online',flush);
+function syncText(){
+ if(!API_URL)return['尚未設定回傳網址，紀錄只存在這台裝置。','warn'];
+ if(outbox.length)return[`${outbox.length} 筆紀錄待上傳${navigator.onLine?'，上傳中…':'，連上網路後會自動補傳'}`,'warn'];
+ return['紀錄已全部上傳給督導',''];
+}
+function syncLine(){const el=document.getElementById('sync');if(!el)return;const[t,c]=syncText();el.textContent=t;el.className='sync '+c;}
+async function restore(){
+ if(!API_URL||!me)return;
+ try{
+  const r=await fetch(API_URL+'?action=progress&course='+encodeURIComponent(COURSE_NAME)+'&name='+encodeURIComponent(me.name));
+  const j=await r.json();if(!j||!j.ok)return;
+  Object.keys(j.lessons||{}).forEach(id=>{done[id]=true;secs[id]=Math.max(secs[id]||0,j.lessons[id]||0)});
+  Object.keys(j.sims||{}).forEach(id=>{const r=j.sims[id];const o=sims[id]||{};sims[id]={best:Math.max(o.best||0,r.best||0),n:Math.max(o.n||0,r.n||0)}});sv(K.sim,sims);
+  Object.keys(j.quiz||{}).forEach(k=>{if(!qlog[k]){const r=j.quiz[k];qlog[k]={first:r.first,n:r.n,last:r.last===undefined?r.first:r.last}}});
+  save();if(cur==='home')home();else header(document.getElementById('crumb').textContent);
+ }catch(e){}
+}
+
+/* ---------- 紀錄 ---------- */
+function recLesson(d,l){
+ const sec=openedAt?Math.min((Date.now()-openedAt)/1000,3600):0;openedAt=0;
+ secs[l.id]=(secs[l.id]||0)+sec;const first=!done[l.id];done[l.id]=true;save();
+ queue({type:'單元完成',domain:d.name,lesson:l.id,title:l.t,sec:Math.round(sec),first});
+}
+function recQuiz(d,l,qi,oi,right){
+ const k=l.id+'_'+qi,o=qlog[k];
+ qlog[k]=o?{first:o.first,n:(o.n||1)+1,last:right}:{first:right,n:1,last:right};save();
+ queue({type:'測驗作答',domain:d.name,lesson:l.id,title:l.t,q:qi+1,choice:oi+1,correct:right,first:!o,n:qlog[k].n});
+}
+
+/* ---------- 錯題 ---------- */
+const QALL=ALL.flatMap(({d,l})=>l.quiz.map((q,qi)=>({d,l,q,qi,k:l.id+'_'+qi})));
+const isWrong=r=>!!r&&(r.last===undefined?r.first===false:r.last===false);
+const wrongList=()=>QALL.filter(x=>isWrong(qlog[x.k]));
+function recReview(x,oi,right){
+ const o=qlog[x.k]||{first:false,n:0};qlog[x.k]={first:o.first,n:(o.n||0)+1,last:right};save();
+ queue({type:'錯題重考',domain:x.d.name,lesson:x.l.id,title:x.l.t,q:x.qi+1,choice:oi+1,correct:right,first:false,n:qlog[x.k].n});
+}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+let rv=null;
+function review(){
+ const list=shuffle(wrongList());
+ if(!list.length)return home();
+ rv={list,i:0,ok:0};reviewQ();
+}
+function reviewQ(){
+ cur='review';
+ if(rv.i>=rv.list.length){
+  const left=wrongList().length;header('錯題重考');window.scrollTo(0,0);
+  app.innerHTML=`<h1>重考結果</h1>
+  <p class="lead">這一輪答對 <b>${rv.ok}</b> / ${rv.list.length} 題。${left?`還有 <b>${left}</b> 題沒答對，建議先回去複習對應的單元再重考。`:'錯題已全部清空。'}</p>
+  ${left?`<div class="tablewrap"><table><tr><th>還沒答對的題目</th><th>單元</th></tr>${wrongList().map(x=>`<tr><td>${esc(x.q.q)}</td><td><button class="linkbtn" data-l="${x.l.id}">${esc(x.l.t)}</button></td></tr>`).join('')}</table></div>`:''}
+  <div class="nav">${left?'<button class="btn ghost" id="again">再考一輪</button>':''}<button class="btn" id="bk">回課程首頁</button></div>`;
+  app.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>lesson(b.dataset.l));
+  const ag=document.getElementById('again');if(ag)ag.onclick=review;
+  document.getElementById('bk').onclick=home;return;
+ }
+ const x=rv.list[rv.i],order=shuffle(x.q.o.map((_,i)=>i));
+ header(`錯題重考 ${rv.i+1} / ${rv.list.length}`);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">錯題重考　${rv.i+1} / ${rv.list.length}　·　${esc(x.d.name)}｜${esc(x.l.t)}</p>
+ <div class="quiz"><p><b>${x.q.q}</b></p>${order.map(oi=>`<button class="opt" data-o="${oi}">${x.q.o[oi]}</button>`).join('')}<div class="fbwrap"></div></div>
+ <div class="nav"><button class="btn ghost" id="bk">結束重考</button><button class="btn" id="nx" hidden>${rv.i<rv.list.length-1?'下一題':'看結果'}</button></div>`;
+ app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+  const oi=+b.dataset.o,right=oi===x.q.a;recReview(x,oi,right);if(right)rv.ok++;
+  app.querySelectorAll('.opt').forEach(o=>{o.disabled=true;if(+o.dataset.o===x.q.a)o.classList.add('right')});
+  if(!right)b.classList.add('wrong');
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${right?'ok':'no'}">${right?'答對了，這題已從錯題清單移除。':'還是答錯了，這題會留在錯題清單。'}${x.q.e}</div>${right?'':`<button class="linkbtn" id="gl">回去複習「${esc(x.l.t)}」</button>`}`;
+  const gl=document.getElementById('gl');if(gl)gl.onclick=()=>lesson(x.l.id);
+  document.getElementById('nx').hidden=false;});
+ document.getElementById('nx').onclick=()=>{rv.i++;reviewQ()};
+ document.getElementById('bk').onclick=()=>{rv.i=rv.list.length;reviewQ()};
+}
+
+/* ---------- 模擬個案 ---------- */
+let SM=null;
+function simStart(id){
+ const c=CASES.find(x=>x.id===id);
+ SM={c,pick:new Set(),step:-1,ok:0,bad:0,chartHit:0,t0:Date.now(),path:[]};
+ cur='sim';header('模擬個案｜'+c.title);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">模擬個案</p><h1>${esc(c.title)}</h1>
+ <div class="scene"><b>情境：</b>${esc(c.ref)}</div>
+ <h2>開始前</h2><p>${esc(c.chart.prompt)}</p>
+ <div id="cl">${c.chart.items.map((it,i)=>`<button class="opt" data-i="${i}" aria-pressed="false">${esc(it.t)}</button>`).join('')}</div>
+ <div id="cr"></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="cf">確認</button></div>`;
+ app.querySelectorAll('#cl .opt').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;
+  if(SM.pick.has(i)){SM.pick.delete(i);b.classList.remove('pick');b.setAttribute('aria-pressed','false')}
+  else{SM.pick.add(i);b.classList.add('pick');b.setAttribute('aria-pressed','true')}});
+ document.getElementById('bk').onclick=home;
+ document.getElementById('cf').onclick=()=>{
+  if(!SM.pick.size)return;
+  const items=c.chart.items,keys=items.filter(x=>x.key).length;
+  SM.chartHit=[...SM.pick].filter(i=>items[i].key).length;
+  const extra=[...SM.pick].filter(i=>!items[i].key).length;
+  app.querySelectorAll('#cl .opt').forEach((b,i)=>{b.disabled=true;b.classList.remove('pick');
+   if(items[i].key)b.classList.add(SM.pick.has(i)?'right':'sub');else if(SM.pick.has(i))b.classList.add('wrong')});
+  const missed=items.filter((x,i)=>x.key&&!SM.pick.has(i));
+  document.getElementById('cr').innerHTML=`<div class="fb ${missed.length?'no':'ok'}">關鍵項目選到 ${SM.chartHit} / ${keys}${extra?'，另選了 '+extra+' 項關係較小的資料':''}。${missed.length?'漏看：'+missed.map(x=>esc(x.t)).join('、')+'。':''}</div>
+  <h3>確認到的資訊</h3>${items.filter(x=>x.key).map(x=>`<div class="ci"><b>${esc(x.t)}：</b>${esc(x.info)}</div>`).join('')}`;
+  const cf=document.getElementById('cf');cf.textContent='開始';cf.onclick=simStep;};
+}
+function simStep(){
+ SM.step++;const c=SM.c;
+ if(SM.step>=c.steps.length)return simEnd();
+ const st=c.steps[SM.step],order=shuffle(st.o.map((_,i)=>i));
+ header(`模擬個案｜第 ${SM.step+1} / ${c.steps.length} 步`);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">${esc(c.title)}　·　第 ${SM.step+1} / ${c.steps.length} 步</p>
+ <div class="scene">${esc(st.scene)}</div>
+ <div class="quiz"><p><b>${esc(st.q)}</b></p>${order.map(i=>`<button class="opt" data-i="${i}">${esc(st.o[i].t)}</button>`).join('')}<div class="fbwrap"></div></div>
+ <div class="nav"><button class="btn ghost" id="bk">離開</button><button class="btn" id="nx" hidden>${SM.step<c.steps.length-1?'下一步':'看結果'}</button></div>`;
+ app.querySelectorAll('.quiz .opt').forEach(b=>b.onclick=()=>{
+  const i=+b.dataset.i,o=st.o[i];SM.path.push(o.r);
+  if(o.r==='ok')SM.ok++;if(o.r==='bad')SM.bad++;
+  app.querySelectorAll('.quiz .opt').forEach(x=>{x.disabled=true;const r=st.o[+x.dataset.i].r;if(r==='ok')x.classList.add('right')});
+  if(o.r!=='ok')b.classList.add(o.r==='bad'?'wrong':'sub');
+  const best=st.o.find(x=>x.r==='ok');
+  app.querySelector('.fbwrap').innerHTML=`<div class="fb ${o.r==='ok'?'ok':'no'}">${o.r==='ok'?'':o.r==='bad'?'<b>不適當的選擇。</b>':'<b>可以，但不是最好的做法。</b>'}${esc(o.fb)}${o.r!=='ok'?'<br><b>較佳做法：</b>'+esc(best.t):''}</div>`;
+  document.getElementById('nx').hidden=false;});
+ document.getElementById('nx').onclick=simStep;
+ document.getElementById('bk').onclick=home;
+}
+function simEnd(){
+ const c=SM.c,keys=c.chart.items.filter(x=>x.key).length,n=c.steps.length;
+ const subN=SM.path.filter(r=>r==='sub').length;
+ const raw=(SM.chartHit/keys)*20+((SM.ok+subN*0.5)/n)*80-SM.bad*10;
+ const score=Math.max(0,Math.round(raw));
+ const sec=Math.min((Date.now()-SM.t0)/1000,3600);
+ const o=sims[c.id]||{best:0,n:0};sims[c.id]={best:Math.max(o.best,score),n:o.n+1};sv(K.sim,sims);
+ queue({type:'模擬個案',domain:'模擬個案',lesson:c.id,title:c.title,score,correct:SM.bad===0&&SM.ok===n,n:sims[c.id].n,sec:Math.round(sec),
+  note:`開始前確認 ${SM.chartHit}/${keys}｜最佳決策 ${SM.ok}/${n}｜次佳 ${subN}｜不適當 ${SM.bad}`});
+ header('模擬個案｜結果');window.scrollTo(0,0);
+ app.innerHTML=`<h1>${esc(c.title)}｜結果</h1>
+ <div class="score">${score} 分</div>
+ <div class="kv"><b>開始前確認</b><span>${SM.chartHit} / ${keys}</span><b>最佳決策</b><span>${SM.ok} / ${n}</span><b>次佳選擇</b><span>${subN}</span><b>不適當的選擇</b><span>${SM.bad}</span></div>
+ <div class="box ${score>=80&&SM.bad===0?'tip':'pitfall'}">${score>=80&&SM.bad===0?'<b>通過。</b>這個個案的流程已經掌握，可以試試其他個案。':'<b>建議再練一次。</b>'+(SM.bad?'有不適當的選擇，臨床上可能影響病人安全或效果，請回頭複習相關單元。':'流程大致正確，再熟練一次就能通過。')}</div>
+ <p class="small muted">計分：開始前確認 20 分、決策 80 分（次佳選擇給一半），每個不適當選擇扣 10 分。通過標準：80 分以上且沒有不適當的選擇。</p>
+ <div class="nav"><button class="btn ghost" id="ag">再練一次</button><button class="btn" id="bk">回課程首頁</button></div>`;
+ document.getElementById('ag').onclick=()=>simStart(c.id);
+ document.getElementById('bk').onclick=home;
+}
+
+/* ---------- 畫面 ---------- */
+function header(txt){document.getElementById('crumb').textContent=txt;
+ const n=ALL.filter(x=>done[x.l.id]).length;
+ document.getElementById('prog').textContent=n+' / '+ALL.length;
+ document.getElementById('bar').style.width=(n/ALL.length*100)+'%';}
+
+function register(){
+ cur='reg';header('登錄');window.scrollTo(0,0);
+ app.innerHTML=`<h1>綜合複習與總結評量</h1>
+ <p class="lead">開始前請先登錄。你的閱讀進度與測驗作答會回傳給督導，用來安排後續的臨床學習。</p>
+ <form id="rf" novalidate>
+  <div class="field"><label for="r-name">姓名</label><input class="inp" id="r-name" maxlength="20" autocomplete="name" placeholder="例如：王小明"></div>
+  <div class="field"><label for="r-role">身分</label><select class="inp" id="r-role"><option>實習生</option><option>新進人員</option><option>其他</option></select></div>
+  <p class="small muted">換手機或換電腦時，輸入同一個姓名，進度會自動接回。</p>
+  <div class="err" id="r-err"></div>
+  <button class="btn block" type="submit" id="r-go">開始學習</button>
+ </form>`;
+ document.getElementById('rf').onsubmit=e=>{e.preventDefault();
+  const name=document.getElementById('r-name').value.trim().replace(/\s+/g,' ');
+  if(!name){document.getElementById('r-err').textContent='請輸入姓名。';return;}
+  me={name,role:document.getElementById('r-role').value};sv(K.me,me);
+  queue({type:'登錄'});home();restore();};
+}
+
+function summaryText(){
+ const L=[],qs=Object.values(qlog);
+ L.push(`綜合複習與總結評量自學紀錄｜${me?me.name:''}｜${new Date().toLocaleDateString('zh-TW')}`);
+ L.push(`完成單元：${ALL.filter(x=>done[x.l.id]).length} / ${ALL.length}　測驗首答正確：${qs.filter(q=>q.first).length} / ${qs.length}　錯題待重考：${wrongList().length}`);
+ D.forEach(d=>{L.push('');L.push('【'+d.name+'】');d.L.forEach(l=>{const q=qlog[l.id+'_0'],m=Math.round((secs[l.id]||0)/60);
+  L.push(`${done[l.id]?'✓':'　'} ${l.t}｜測驗：${q?(q.first?'首答正確':'首答錯誤')+'（作答 '+q.n+' 次）':'未作答'}${m?'｜約 '+m+' 分鐘':''}`)})});
+ L.push('');L.push('【模擬個案】');CASES.forEach(c=>{const r=sims[c.id];L.push(`${c.title}｜${r?'最高 '+r.best+' 分（練習 '+r.n+' 次）':'尚未練習'}`)});
+ return L.join('\n');
+}
+function copySummary(){
+ const t=summaryText(),box=document.getElementById('cpbox');
+ const show=msg=>{box.innerHTML=`<p class="small muted">${msg}</p><textarea class="copyarea" readonly>${esc(t)}</textarea>`;const ta=box.querySelector('textarea');ta.focus();ta.select()};
+ try{navigator.clipboard.writeText(t).then(()=>show('已複製，可以貼到 LINE 或 email。'),()=>show('請長按或按 Ctrl+C 複製下面的文字。'))}catch(e){show('請長按或按 Ctrl+C 複製下面的文字。')}
+}
+
+function home(){
+ if(!me)return register();
+ cur='home';header('實習生自學課程');window.scrollTo(0,0);
+ app.innerHTML=`<h1>綜合複習與總結評量</h1>
+ <p class="lead">跨主題的綜合個案：成人與兒童、評估與治療、安全與溝通。用來檢視是否具備獨立執業的能力。</p>
+ <p class="small muted">學習者：<b>${esc(me.name)}</b>（${esc(me.role)}）　<span id="sync" class="sync"></span></p>
+ ${D.map(d=>{const n=d.L.filter(l=>done[l.id]).length;
+  return`<button class="card" data-d="${d.id}"><b>${d.name}</b><br><span class="small muted">${d.desc}</span>
+  <span class="meta"><span class="small muted">${wk(d)?'第 '+wk(d)+' 週｜':''}${d.L.length} 個單元</span><span class="chip ${n===d.L.length?'done':''}">${n} / ${d.L.length} 完成</span></span></button>`}).join('')}
+ <div class="box goal"><b>建議順序：</b>先讀「總結評量說明」，再完成所有綜合個案。每個個案都要達 80 分以上且沒有不適當的選擇。</div>
+ <h2>綜合個案 ${wkTag(SCH.cases)}</h2>
+ <p class="small muted">每個個案都可能跨越多個主題，請整合 20 週所學。可以重複練習，紀錄取最高分。</p>
+ ${CASES.map(c=>{const r=sims[c.id];return`<button class="card" data-c="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.ref)}</span>
+  <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
+ ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
+ <p class="small muted">週次依 <a href="../roadmap/">20 週學習地圖</a>，依實際排程調整。</p>
+ <div class="row"><button class="btn ghost" id="cp">複製我的學習紀錄</button><button class="linkbtn" id="sw">不是 ${esc(me.name)}？換人登錄</button></div>
+ <div id="cpbox"></div>
+ <div class="foot">本課程為總結評量的一部分；最終是否可獨立執業，由總結里程碑會議決定。</div>`;
+ app.querySelectorAll('.card[data-d]').forEach(b=>b.onclick=()=>domain(b.dataset.d));
+ app.querySelectorAll('.card[data-c]').forEach(b=>b.onclick=()=>simStart(b.dataset.c));
+ document.getElementById('cp').onclick=copySummary;
+ const rvb=document.getElementById('rvb');if(rvb)rvb.onclick=review;
+ document.getElementById('sw').onclick=()=>{if(outbox.length){flush();}
+  me=null;sv(K.me,null);done={};qlog={};secs={};sims={};sv(K.sim,sims);save();register();};
+ syncLine();
+}
+function domain(id){
+ const d=D.find(x=>x.id===id);cur='domain';header(d.name);window.scrollTo(0,0);
+ app.innerHTML=`${wk(d)?`<p style="margin:22px 0 0">${wkTag(wk(d))}</p>`:''}<h1>${d.name}</h1><p class="lead">${d.desc}</p>
+ ${d.L.map((l,i)=>`<button class="card" data-l="${l.id}"><span class="num">${i+1}</span><b>${l.t}</b>
+ <span class="meta"><span class="small muted">${l.goal}</span><span class="chip ${done[l.id]?'done':''}">${done[l.id]?'已完成':'未讀'}</span></span></button>`).join('')}
+ <div class="nav"><button class="btn ghost" id="bk">回課程首頁</button></div>`;
+ app.querySelectorAll('.card').forEach(b=>b.onclick=()=>lesson(b.dataset.l));
+ document.getElementById('bk').onclick=home;
+}
+function lesson(lid){
+ const idx=ALL.findIndex(x=>x.l.id===lid),{d,l}=ALL[idx];
+ cur='lesson';openedAt=Date.now();header(d.name+'｜'+l.t);window.scrollTo(0,0);
+ app.innerHTML=`<p class="small muted" style="margin-top:22px">${wkTag(wk(d,l))}${d.name}</p><h1>${l.t}</h1>
+ <div class="box goal"><b>學習目標：</b>${l.goal}</div>
+ ${l.h}
+ ${l.tree?'<div id="tree"></div>':''}
+ ${l.h2||''}
+ ${l.tip?`<div class="box tip"><b>臨床提示：</b>${l.tip}</div>`:''}
+ <h2>小測驗</h2><div id="qz"></div>
+ <div class="nav">
+  ${idx>0?`<button class="btn ghost" id="prev">上一個單元</button>`:''}
+  <button class="btn" id="next">${idx<ALL.length-1?'完成，下一個單元':'完成，回首頁'}</button></div>`;
+ if(l.tree)tree();
+ quiz(d,l);
+ const pv=document.getElementById('prev');if(pv)pv.onclick=()=>lesson(ALL[idx-1].l.id);
+ document.getElementById('next').onclick=()=>{recLesson(d,l);
+  if(idx<ALL.length-1)lesson(ALL[idx+1].l.id);else home();};
+}
+function quiz(d,l){
+ const box=document.getElementById('qz');
+ box.innerHTML=l.quiz.map((q,qi)=>`<div class="quiz" data-q="${qi}"><p><b>${q.q}</b></p>
+ ${shuffle(q.o.map((_,oi)=>oi)).map(oi=>`<button class="opt" data-o="${oi}">${q.o[oi]}</button>`).join('')}
+ <div class="fbwrap"></div></div>`).join('');
+ box.querySelectorAll('.quiz').forEach(qb=>{const qi=+qb.dataset.q,q=l.quiz[qi];
+  qb.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+   const oi=+b.dataset.o,right=oi===q.a;recQuiz(d,l,qi,oi,right);
+   qb.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.o===q.a)x.classList.add('right')});
+   if(!right)b.classList.add('wrong');
+   qb.querySelector('.fbwrap').innerHTML=`<div class="fb ${right?'ok':'no'}">${right?'答對了。':'正確答案已標示。'}${q.e}</div>`;});});
+}
+function tree(){
+ const el=document.getElementById('tree');
+ let s={};
+ const Q=[{k:'f',q:'一、語言輸出流暢嗎？',o:[['流暢','y'],['不流暢','n']]},
+          {k:'c',q:'二、聽理解相對保留嗎？',o:[['相對保留','y'],['明顯受損','n']]},
+          {k:'r',q:'三、複誦能力如何？',o:[['相對好','y'],['差','n']]}];
+ const R={fyy:'命名型失語（若命名也大致正常，需考慮並非失語症）',fyn:'傳導型失語',fny:'經皮質感覺型失語',fnn:'Wernicke 型失語',
+          nyy:'經皮質運動型失語',nyn:'Broca 型失語',nny:'混合型經皮質失語',nnn:'全失語'};
+ const draw=()=>{
+  const step=!s.f?0:(!s.c?1:(!s.r?2:3));
+  const path=[s.f&&(s.f==='y'?'流暢':'不流暢'),s.c&&(s.c==='y'?'理解相對保留':'理解受損'),s.r&&(s.r==='y'?'複誦相對好':'複誦差')].filter(Boolean);
+  let body;
+  if(step<3){const q=Q[step];
+   body=`<p><b>${q.q}</b></p><div>${q.o.map(([t,v])=>`<button class="opt" data-k="${q.k}" data-v="${v}">${t}</button>`).join('')}</div>`;
+  }else{
+   const key=(s.f==='y'?'f':'n')+s.c+s.r;
+   body=`<div class="fb ok" style="font-size:16px"><b>推論結果：</b>${R[key]}</div>
+   <div class="row" style="margin-top:12px"><button class="btn ghost" id="again">再練一次</button></div>`;}
+  el.innerHTML=`<div class="tree">${path.length?`<div class="path">${path.map(p=>`<span>${p}</span>`).join('')}</div>`:''}${body}</div>`;
+  el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{s[b.dataset.k]=b.dataset.v;draw()});
+  const ag=document.getElementById('again');if(ag)ag.onclick=()=>{s={};draw()};};
+ draw();
+}
+document.getElementById('home').onclick=home;
+home();
+flush();
+restore();
+</script>
+</body>
+</html>

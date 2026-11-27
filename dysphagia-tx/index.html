@@ -504,12 +504,12 @@ function lesson(lid){
 function quiz(d,l){
  const box=document.getElementById('qz');
  box.innerHTML=l.quiz.map((q,qi)=>`<div class="quiz" data-q="${qi}"><p><b>${q.q}</b></p>
- ${q.o.map((o,oi)=>`<button class="opt" data-o="${oi}">${o}</button>`).join('')}
+ ${shuffle(q.o.map((_,oi)=>oi)).map(oi=>`<button class="opt" data-o="${oi}">${q.o[oi]}</button>`).join('')}
  <div class="fbwrap"></div></div>`).join('');
  box.querySelectorAll('.quiz').forEach(qb=>{const qi=+qb.dataset.q,q=l.quiz[qi];
   qb.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
    const oi=+b.dataset.o,right=oi===q.a;recQuiz(d,l,qi,oi,right);
-   qb.querySelectorAll('.opt').forEach((x,i)=>{x.disabled=true;if(i===q.a)x.classList.add('right')});
+   qb.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.o===q.a)x.classList.add('right')});
    if(!right)b.classList.add('wrong');
    qb.querySelector('.fbwrap').innerHTML=`<div class="fb ${right?'ok':'no'}">${right?'答對了。':'正確答案已標示。'}${q.e}</div>`;});});
 }
