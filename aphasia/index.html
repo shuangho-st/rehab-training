@@ -130,10 +130,10 @@ tr:last-child td{border-bottom:0}
  <div class="pbar"><div id="bar" style="width:0%"></div></div>
 </header>
 <main class="wrap" id="app"></main>
-<script src="content.js?v=20261125h"></script>
-<script src="plans.js?v=20261125h"></script>
-<script src="cues.js?v=20261125h"></script>
-<script src="design.js?v=20261125h"></script>
+<script src="content.js?v=20261127"></script>
+<script src="plans.js?v=20261127"></script>
+<script src="cues.js?v=20261127"></script>
+<script src="design.js?v=20261127"></script>
 <script>
 /* ===================== 設定 ===================== */
 // 貼上 Google Apps Script 部署後的網址（/exec 結尾），留空則只存在本機
@@ -149,12 +149,12 @@ const SCH=typeof SCHEDULE!=='undefined'?SCHEDULE:{};
 const wk=(d,l)=>(l&&l.week)||SCH[d.id]||0;
 const wkTag=n=>n?'<span class="wk">第 '+n+' 週</span>':'';
 const WEEKPLAN=[
- [1,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
- [2,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
- [3,'失語症：古典分類、非標準化評估、評估設計練習｜吞嚥治療：治療原則、病歷閱讀練習'],
- [4,'失語症：失語症治療、治療計畫練習、提示步驟練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
- [5,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
- [6,'運動言語：治療、臨床實務、模擬個案']];
+ [3,'吞嚥評估：吞嚥基礎、病房 BS 實務｜失語症：神經解剖與病灶'],
+ [4,'吞嚥評估：床邊臨床吞嚥評估、判讀與決策、模擬個案｜失語症：症狀學'],
+ [5,'失語症：古典分類、非標準化評估、評估設計練習｜吞嚥治療：治療原則、病歷閱讀練習'],
+ [6,'失語症：失語症治療、治療計畫練習、提示步驟練習、治療中策略選用｜吞嚥治療：復健運動與吞嚥手法、輔助方法'],
+ [7,'吞嚥治療：族群與實務、模擬個案｜運動言語：基礎與分類、評估'],
+ [8,'運動言語：治療、臨床實務、模擬個案']];
 const ld=(k,def)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):def}catch(e){return def}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let done=ld(K.done,{}),qlog=ld(K.quiz,{}),secs=ld(K.secs,{}),me=ld(K.me,null),outbox=ld(K.out,[]),sims=ld(K.sim,{});
@@ -721,7 +721,7 @@ function home(){
  ${CASES.map(c=>{const r=sims[c.id];return`<button class="card" data-c="${c.id}"><b>${esc(c.title)}</b><br><span class="small muted">${esc(c.ref)}</span>
   <span class="meta"><span class="small muted">${r?'練習 '+r.n+' 次':'尚未練習'}</span><span class="chip ${r&&r.best>=80?'done':''}">${r?'最高 '+r.best+' 分':'未完成'}</span></span></button>`}).join('')}
  ${(()=>{const n=wrongList().length;return n?`<div class="box pitfall"><b>錯題重考：</b>目前有 ${n} 題答錯、還沒重新答對。<div style="margin-top:10px"><button class="btn" id="rvb">開始錯題重考（${n} 題）</button></div></div>`:''})()}
- <details class="box goal"><summary><b>實習六週進度（四門課）</b></summary><div class="tablewrap"><table class="wkplan">${WEEKPLAN.map(w=>`<tr><td>第 ${w[0]} 週</td><td>${esc(w[1])}</td></tr>`).join('')}</table></div><p class="small muted">週次為建議進度，依實際排程調整。</p></details>
+ <details class="box goal"><summary><b>成人核心階段進度（第 3–8 週）</b></summary><div class="tablewrap"><table class="wkplan">${WEEKPLAN.map(w=>`<tr><td>第 ${w[0]} 週</td><td>${esc(w[1])}</td></tr>`).join('')}</table></div><p class="small muted">週次依 <a href="../roadmap/">20 週學習地圖</a>，依實際排程調整。</p></details>
  <div class="row"><button class="btn ghost" id="cp">複製我的學習紀錄</button><button class="linkbtn" id="sw">不是 ${esc(me.name)}？換人登錄</button></div>
  <div id="cpbox"></div>
  <div class="foot">本課程為科內自學教材，內容為學理概要；臨床判斷請以教科書、標準化測驗手冊與督導指導為準。</div>`;

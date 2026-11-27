@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>語言治療實習生學習地圖｜20 週</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 教學計畫書，清楚、可依循
+   IDEA: 一條 20 週的路線，分 5 段，督導逐步放手
+   PICTURE: 20 格週次時間軸＋階段色帶＋督導程度階梯
+   COLOUR and TYPE: 與課程同一套靛藍；五個階段各一色；Noto Serif TC 標題
+   LAYOUT: 時間軸 → 階段卡 → 能力矩陣 → 線上課程清單 → 週次表 */
+:root{
+ --bg:#F2F2F6;--surface:#FFFFFF;--surface2:#E8E8F0;--ink:#1B1C2B;--ink2:#5A5C72;--line:#D5D6E2;
+ --accent:#343C8C;--accent-soft:#DFE2F5;--ok:#2C6E49;--ok-soft:#DCEDE2;--warn:#8A4A00;--warn-soft:#F6E7D2;
+ --s1:#6B7280;--s2:#343C8C;--s3:#0D6E63;--s4:#9A4F12;--s5:#7A2E5C;
+ --s1s:#ECEDEF;--s2s:#DFE2F5;--s3s:#D7EEEA;--s4s:#F6E5D6;--s5s:#F2DDE9;
+ --sans:'Noto Sans TC','PingFang TC','Microsoft JhengHei',Arial,sans-serif;--serif:'Noto Serif TC','PMingLiU',Georgia,serif;
+ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#101222;--surface:#191B2C;--surface2:#222539;--ink:#E7E8F2;--ink2:#A7AAC2;--line:#2F3248;--accent:#9AA5F0;--accent-soft:#242945;
+ --ok:#7BC99A;--ok-soft:#17301F;--warn:#E3B778;--warn-soft:#332616;
+ --s1:#A6ACB8;--s2:#9AA5F0;--s3:#6FD0C1;--s4:#E9A86A;--s5:#E39CC6;--s1s:#24262E;--s2s:#242945;--s3s:#14302C;--s4s:#33251A;--s5s:#33202C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101222;--surface:#191B2C;--surface2:#222539;--ink:#E7E8F2;--ink2:#A7AAC2;--line:#2F3248;--accent:#9AA5F0;--accent-soft:#242945;
+ --ok:#7BC99A;--ok-soft:#17301F;--warn:#E3B778;--warn-soft:#332616;
+ --s1:#A6ACB8;--s2:#9AA5F0;--s3:#6FD0C1;--s4:#E9A86A;--s5:#E39CC6;--s1s:#24262E;--s2s:#242945;--s3s:#14302C;--s4s:#33251A;--s5s:#33202C;color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.7}
+.wrap{max-width:980px;margin:0 auto;padding-inline:18px;padding-block:22px 60px}
+h1{font-family:var(--serif);font-size:clamp(28px,5vw,40px);line-height:1.2;margin:6px 0 10px;text-wrap:balance}
+h2{font-family:var(--serif);font-size:22px;margin:38px 0 10px}
+h3{font-size:17px;margin:16px 0 6px}
+p{margin:0 0 10px}.lead{color:var(--ink2);max-width:68ch}.small{font-size:14px}.muted{color:var(--ink2)}
+ul{margin:4px 0 10px;padding-left:20px}li{margin:2px 0}
+a{color:var(--accent)}
+.eyebrow{font-size:14px;color:var(--ink2)}
+.timeline{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px;margin:18px 0 6px}
+.wk{height:52px;border-radius:6px;display:flex;align-items:flex-end;justify-content:center;font-size:12px;font-weight:700;padding-bottom:4px;color:#fff;font-variant-numeric:tabular-nums}
+.ms{position:relative}.ms::after{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;background:var(--ink);border:2px solid var(--bg)}
+.bands{display:grid;grid-template-columns:2fr 6fr 6fr 4fr 2fr;gap:3px;font-size:13px;font-weight:700}
+.bands div{padding:4px 6px;border-radius:6px;text-align:center;line-height:1.3}
+.legend{font-size:13px;color:var(--ink2);margin-top:6px}
+.ladder{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:14px 0}
+.step{border-radius:10px;padding:10px;background:var(--surface);border:1px solid var(--line);font-size:14px}
+.step b{display:block;font-size:15px}
+.step .bar{height:6px;border-radius:3px;margin:6px 0;background:var(--surface2);overflow:hidden}.step .bar i{display:block;height:100%}
+@media(max-width:700px){.timeline{grid-template-columns:repeat(10,minmax(0,1fr))}.bands{grid-template-columns:1fr;}.ladder{grid-template-columns:1fr 1fr}}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:16px 0;overflow:hidden}
+.stage .hd{padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.stage .hd h3{margin:0;font-family:var(--serif);font-size:20px}
+.stage .bd{padding:4px 18px 16px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
+@media(max-width:700px){.stage .bd{grid-template-columns:1fr}}
+.tag{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 10px}
+.full{grid-column:1/-1}
+.course{display:flex;gap:8px;align-items:flex-start;margin:5px 0}
+.st{flex:none;font-size:12px;font-weight:700;border-radius:999px;padding:1px 8px;margin-top:3px}
+.st.on{background:var(--ok-soft);color:var(--ok)}.st.plan{background:var(--warn-soft);color:var(--warn)}.st.lab{background:var(--surface2);color:var(--ink2)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.c{text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.lv1{background:var(--s1s)}.lv2{background:var(--s2s)}.lv3{background:var(--s3s)}.lv4{background:var(--s4s)}.lv5{background:var(--s5s)}
+.foot{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-size:13.5px;color:var(--ink2)}
+.box{border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--accent-soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <p class="eyebrow">復健醫學部語言治療組｜實習生培訓</p>
+ <h1>20 週學習地圖：從觀察到獨立</h1>
+ <p class="lead">五個學習階段，督導逐步放手：先觀察、再協同、在督導下執行，最後獨立負責個案。每個階段都有實體課程、線上課程、評核方式與里程碑會議；通過總結評核後，可以獨立執行語言治療業務。</p>
+
+ <div class="timeline" id="tl" aria-label="20 週時間軸"></div>
+ <div class="bands" id="bands"></div>
+ <p class="legend">● 里程碑會議：第 2、8、14、18、20 週（與督導及教學負責人共同檢視進度，決定是否進入下一階段）</p>
+
+ <h2>督導程度：逐步放手</h2>
+ <div class="ladder" id="ladder"></div>
+
+ <h2>五個學習階段</h2>
+ <div id="stages"></div>
+
+ <h2>核心能力與各階段期待程度</h2>
+ <p class="small muted">1 觀察｜2 協同執行｜3 直接督導下執行｜4 間接督導（事後檢視）｜5 獨立執行（督導可諮詢）</p>
+ <div class="tablewrap"><table id="matrix"></table></div>
+
+ <h2>線上課程總覽</h2>
+ <p class="small muted">實習生用手機或電腦登入自學，作答與練習紀錄自動回傳督導的試算表。<span class="st on">已上線</span> 可直接使用，<span class="st plan">製作中</span> 依週次陸續上線。</p>
+ <div class="tablewrap"><table id="courses"></table></div>
+
+ <h2>週次表</h2>
+ <div class="tablewrap"><table id="weeks"></table></div>
+
+ <div class="foot">本學習地圖為語言治療組實習生培訓規劃，週次、個案量與評核方式依實際排程、實習生進度與里程碑會議結果調整。評核工具：DOPS（臨床技術操作觀察）、mini-CEX（迷你臨床演練評量）、CbD（案例討論）。</div>
+</div>
+<script>
+{
+const ST=[
+ {n:1,name:'認識環境與臨床基礎',w:[1,2],lv:1,c:'--s1',cs:'--s1s',sup:'觀察',
+  goal:['熟悉院內規範、病人安全、感控與語言治療組服務流程','會操作病歷系統，讀懂會診單與初評紀錄','觀察成人病房、成人門診、兒童門診與早療的完整服務','訂出個人學習目標'],
+  live:['單位導覽與新進說明（排班、工作流程、聯絡窗口）','感控與手部衛生實作、隔離病房防護','病歷系統操作：會診單、初評紀錄、治療紀錄','跟診觀察：成人病房 BS、成人門診、兒童門診、早療（每天寫觀察日誌）','每週督導討論'],
+  online:[['臨床基礎與專業規範','plan','',1]],
+  assess:['線上課程完成','感控實作檢核','觀察日誌','第 2 週期初面談：訂學習目標'],
+  load:'不負責個案，以觀察為主'},
+ {n:2,name:'成人核心：吞嚥、失語症、運動言語',w:[3,8],lv:3,c:'--s2',cs:'--s2s',sup:'協同 → 直接督導下執行',
+  goal:['獨立完成病房床邊吞嚥評估的流程並給出安全的建議','完成失語症與運動言語障礙的評估、鑑別與治療計畫','會寫具體可執行的評估與治療紀錄','能用 SNAPPS 報告個案'],
+  live:['病房床邊吞嚥評估：觀察 → 協同 → 督導下執行','螢光吞嚥攝影、內視鏡吞嚥檢查見習','失語症評估與治療、運動言語評估','每週個案討論（SNAPPS）與病歷批改'],
+  online:[['成人吞嚥評估｜病房床邊實務','on','../dysphagia/',3],['成人失語症（含評估設計、治療計畫、提示步驟、策略選用）','on','../aphasia/',3],['成人吞嚥治療（含病歷閱讀練習）','on','../dysphagia-tx/',5],['運動言語障礙｜構音障礙與言語失用','on','../motor-speech/',7]],
+  assess:['各線上課程模擬練習達 80 分','DOPS：床邊吞嚥評估 2 次','mini-CEX：失語症評估 1 次','病歷批改','第 8 週期中里程碑會議'],
+  load:'成人個案 1–2 位，逐步增加到 4 位（督導在場）'},
+ {n:3,name:'兒童與早療',w:[9,14],lv:3,c:'--s3',cs:'--s3s',sup:'兒童直接督導｜成人轉為間接督導',
+  goal:['完成兒童語言、構音音韻與語暢的評估與治療','會做家長指導，讓練習延伸到家裡','能參與早療聯合評估並撰寫評估報告','了解兒童餵食與 NICU 的介入'],
+  live:['兒童門診：跟診 → 協同 → 督導下執行','家長指導實作（示範與回示教）','早療聯合評估見習與報告撰寫','NICU 餵食見習'],
+  online:[['兒童語言發展與評估','plan','',9],['兒童語言治療與家長指導','plan','',10],['構音與音韻障礙','plan','',11],['語暢障礙','plan','',12],['早期療育評估與家長指導','plan','',13],['兒童餵食與吞嚥（含 NICU）','plan','',14]],
+  assess:['mini-CEX：兒童語言評估 1 次','DOPS：構音評估 1 次','早療評估報告批改','第 14 週里程碑會議'],
+  load:'成人 4 位（間接督導）＋兒童 2–4 位（直接督導）'},
+ {n:4,name:'進階與整合',w:[15,18],lv:4,c:'--s4',cs:'--s4s',sup:'間接督導（關鍵處置直接督導）',
+  goal:['處理較複雜的個案：認知溝通、嗓音、氣切','能選用與建置輔助溝通系統','參與跨團隊會議與共享決策','完成一份實證個案報告'],
+  live:['氣切與說話瓣膜：見習 → 督導下試戴','護理之家見習','跨團隊會議、家庭會議與共享決策見習','個案報告準備與督導回饋'],
+  online:[['成人認知溝通障礙（右腦、腦外傷、失智）','plan','',15],['嗓音障礙','plan','',15],['氣切與說話瓣膜','plan','',16],['輔助溝通系統（AAC）','plan','',16],['跨團隊合作與共享決策','plan','',17],['實證臨床與個案報告','plan','',18]],
+  assess:['CbD：複雜個案討論 2 次','360 度回饋（護理師、家屬、團隊）','第 18 週里程碑會議：確認可進入獨立階段'],
+  load:'成人＋兒童共 8–10 位'},
+ {n:5,name:'獨立執業準備',w:[19,20],lv:5,c:'--s5',cs:'--s5s',sup:'獨立執行，督導隨時可諮詢',
+  goal:['獨立負責個案的排程、評估、治療、紀錄與交班','獨立看會診並給建議','發表個案報告','訂出結訓後的學習計畫'],
+  live:['獨立負責個案與會診','個案報告科內發表','結訓面談'],
+  online:[['綜合複習與總結評量（跨主題個案題庫）','plan','',19]],
+  assess:['總結性 mini-CEX 2 次（成人、兒童各 1）','病歷抽審','個案報告發表','第 20 週總結里程碑會議：決定可否獨立執業'],
+  load:'約正式治療師個案量的 50–70%'}];
+const COMP=[['臨床評估與鑑別',[1,2,3,4,5]],['治療計畫與執行',[1,2,3,4,5]],['吞嚥安全與風險判斷',[1,3,3,4,5]],['病歷書寫',[1,3,4,4,5]],['病人與家屬溝通、衛教',[1,2,3,4,5]],['跨團隊合作',[1,2,2,4,5]],['專業素養與自我學習',[2,3,4,4,5]]];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stOf=w=>ST.find(s=>w>=s.w[0]&&w<=s.w[1]);
+const MS=[2,8,14,18,20];
+document.getElementById('tl').innerHTML=Array.from({length:20},(_,i)=>{const w=i+1,s=stOf(w);return`<div class="wk ${MS.includes(w)?'ms':''}" style="background:var(${s.c})" title="第 ${w} 週｜${esc(s.name)}">${w}</div>`}).join('');
+document.getElementById('bands').innerHTML=ST.map(s=>`<div style="background:var(${s.cs});color:var(${s.c})">${s.n}｜${esc(s.name)}<br><span style="font-weight:500">第 ${s.w[0]}–${s.w[1]} 週</span></div>`).join('');
+document.getElementById('ladder').innerHTML=ST.map(s=>`<div class="step"><span class="tag" style="background:var(${s.cs});color:var(${s.c})">階段 ${s.n}</span><b>${esc(s.sup)}</b><div class="bar"><i style="width:${s.lv*20}%;background:var(${s.c})"></i></div><span class="small muted">${esc(s.load)}</span></div>`).join('');
+const stl={on:['on','已上線'],plan:['plan','製作中']};
+document.getElementById('stages').innerHTML=ST.map(s=>`<section class="stage" style="border-top:5px solid var(${s.c})">
+ <div class="hd" style="background:var(${s.cs})"><span class="tag" style="background:var(${s.c});color:var(--surface)">階段 ${s.n}｜第 ${s.w[0]}–${s.w[1]} 週</span><h3>${esc(s.name)}</h3><span class="small muted">督導：${esc(s.sup)}</span></div>
+ <div class="bd">
+  <div><h3>學習目標</h3><ul>${s.goal.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+  <div><h3>實體課程與臨床實作</h3><ul>${s.live.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+  <div><h3>線上課程</h3>${s.online.map(o=>`<div class="course"><span class="st ${stl[o[1]][0]}">${stl[o[1]][1]}</span><span>${o[2]?`<a href="${o[2]}">${esc(o[0])}</a>`:esc(o[0])}<span class="small muted">｜第 ${o[3]} 週起</span></span></div>`).join('')}</div>
+  <div><h3>評核與里程碑</h3><ul>${s.assess.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+  <p class="full small"><b>個案量：</b>${esc(s.load)}</p>
+ </div></section>`).join('');
+document.getElementById('matrix').innerHTML=`<tr><th>核心能力</th>${ST.map(s=>`<th style="color:var(${s.c})">階段 ${s.n}<br><span style="font-weight:500">第 ${s.w[0]}–${s.w[1]} 週</span></th>`).join('')}</tr>`+COMP.map(c=>`<tr><td>${esc(c[0])}</td>${c[1].map(v=>`<td class="c lv${v}">${v}</td>`).join('')}</tr>`).join('');
+const all=ST.flatMap(s=>s.online.map(o=>({s,o}))).sort((a,b)=>a.o[3]-b.o[3]);
+document.getElementById('courses').innerHTML=`<tr><th>週</th><th>線上課程</th><th>階段</th><th>狀態</th></tr>`+all.map(({s,o})=>`<tr><td class="c">${o[3]}</td><td>${o[2]?`<a href="${o[2]}">${esc(o[0])}</a>`:esc(o[0])}</td><td style="color:var(${s.c});font-weight:700;white-space:nowrap">階段 ${s.n}</td><td><span class="st ${stl[o[1]][0]}">${stl[o[1]][1]}</span></td></tr>`).join('');
+const WK={1:'單位導覽、感控實作、病歷系統；線上：臨床基礎與專業規範',2:'跟診觀察（成人、兒童、早療）；期初面談',3:'病房 BS 跟診；線上：吞嚥評估（基礎、BS 實務）、失語症（神經解剖）',4:'協同床邊吞嚥評估；線上：吞嚥評估（臨床評估、判讀）＋模擬個案、失語症（症狀學）',5:'督導下床邊吞嚥評估；線上：失語症（分類、非正式評估、評估設計練習）、吞嚥治療（原則、病歷閱讀）',6:'失語症評估與治療；線上：失語症治療、治療計畫、提示步驟、策略選用；吞嚥治療（運動、輔助方法）',7:'VFSS／FEES 見習、吞嚥治療；線上：吞嚥治療（族群與實務）＋模擬個案、運動言語（分類、評估）',8:'運動言語評估；線上：運動言語（治療、實務）＋模擬個案；期中里程碑會議',9:'兒童門診跟診；線上：兒童語言發展與評估',10:'協同兒童語言治療、家長指導；線上：兒童語言治療與家長指導',11:'構音評估與治療；線上：構音與音韻障礙',12:'語暢評估；線上：語暢障礙',13:'早療聯合評估見習；線上：早期療育評估與家長指導',14:'NICU 餵食見習；線上：兒童餵食與吞嚥；里程碑會議',15:'複雜成人個案；線上：認知溝通障礙、嗓音障礙',16:'氣切與說話瓣膜；線上：氣切與說話瓣膜、AAC',17:'護理之家見習、跨團隊會議；線上：跨團隊合作與共享決策',18:'個案報告準備；線上：實證臨床與個案報告；里程碑會議',19:'獨立負責個案與會診；線上：綜合複習與總結評量',20:'個案報告發表、總結評核、結訓面談'};
+document.getElementById('weeks').innerHTML=`<tr><th>週</th><th>階段</th><th>重點</th></tr>`+Object.keys(WK).map(w=>{const s=stOf(+w);return`<tr><td class="c">${w}${MS.includes(+w)?' ●':''}</td><td style="color:var(${s.c});font-weight:700;white-space:nowrap">${s.n}｜${esc(s.name)}</td><td>${esc(WK[w])}</td></tr>`}).join('');
+}
+</script>
+</body>
+</html>
